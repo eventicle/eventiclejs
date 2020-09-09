@@ -82,6 +82,6 @@
   "author": "",
   "license": "COMMERCIAL",
   "publishConfig": {
-    "@aurena-tech:registry": "https://gitlab.com/api/v4/projects/18168486/packages/npm/"
+    "@eventicle:registry": "https://gitlab.com/api/v4/projects/21025492/packages/npm/"
   }
 }
