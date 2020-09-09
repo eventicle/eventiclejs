@@ -1,5 +1,5 @@
 {
-  "name": "@aurena-tech/node-service-blueprint",
+  "name": "@eventicle/eventicle-internal-event-client",
   "version": "0.0.2",
   "description": "",
   "main": "dist/index.ts",
