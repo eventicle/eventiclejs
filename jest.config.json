@@ -1,0 +1,19 @@
+{
+    "transform": {
+        "^.+\\.ts?$": "ts-jest"
+    },
+    "globals": {
+        "ts-jest": {
+            "tsConfig": {
+                "sourceMap": true,
+                "inlineSourceMap": true
+            }
+        }
+    },
+    "clearMocks": true,
+    "timers": "real",
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testRegex": "/test/.*\\.(test|integration)?\\.(ts|tsx)$",
+    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"]
+}
