@@ -7,4 +7,5 @@ export { dispatchCommand, registerCommand, Command, CommandIntent, CommandReturn
 export { registerView, EventView } from "./events/view";
 export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAllNotifyIntents, removeAllSagas } from "./events/saga";
 export { default as InMemoryDatastore } from "./datastore/inmem-data-store"
-export { DataStore, Record, setDataStore } from "./datastore/index"
+export { DataStore, Record, setDataStore, dataStore } from "./datastore/index"
+export { setLogApi } from "./logger"

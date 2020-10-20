@@ -1,10 +1,38 @@
 'use strict';
 
-// const httpContext = require('express-http-context');
-const loggerApi = require('sexylog');
+export interface LogApi {
+  error(message: string, arg?: any)
+  info(message: string, arg?: any)
+  warn(message: string, arg?: any)
+  trace(message: string, arg?: any)
+  debug(message: string, arg?: any)
+  rainbow(message: string, arg?: any)
+}
 
-// as we're using a proxy logger (this file) we need to increment stack depth to log file/lien correctly
-loggerApi.incrementStackDepth(1);
+export function setLogApi(log: LogApi) {
+  loggerApi = log
+}
+
+let loggerApi: LogApi = {
+  debug(message: string, arg?: any) {
+    console.log(`DEBUG: ${message}: ${JSON.stringify(arg)}`)
+  },
+  error(message: string, arg?: any) {
+    console.log(`ERROR: ${message}: ${JSON.stringify(arg)}`)
+  },
+  info(message: string, arg?: any) {
+    console.log(`INFO: ${message}: ${JSON.stringify(arg)}`)
+  },
+  rainbow(message: string, arg?: any) {
+    console.log(`RAINBOW: ${message}: ${JSON.stringify(arg)}`)
+  },
+  trace(message: string, arg?: any) {
+    console.log(`TRACE: ${message}: ${JSON.stringify(arg)}`)
+  },
+  warn(message: string, arg?: any) {
+    console.log(`WARN: ${message}: ${JSON.stringify(arg)}`)
+  }
+}
 
 // Wrap logger to print reqId in each log
 var formatMessage = function(message) {

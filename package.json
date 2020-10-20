@@ -1,6 +1,6 @@
 {
   "name": "@eventicle/eventiclejs",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,13 +13,12 @@
     "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
-    "@types/uuid": "^8.3.0",
     "kafkajs": "^1.14.0",
-    "sexylog": "^1.1.1",
-    "ts-node": "^9.0.0",
     "uuid": "^8.3.1"
   },
   "devDependencies": {
+    "ts-node": "^9.0.0",
+    "@types/uuid": "^8.3.0",
     "@types/jest": "^26.0.14",
     "@types/loglevel": "^1.5.4",
     "@types/node": "^14.11.10",
