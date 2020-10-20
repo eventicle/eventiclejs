@@ -4,7 +4,6 @@ import logger from "../../logger";
 export async function registerView(view: EventView): Promise<void> {
 
   for(let s of view.streamsToSubscribe) {
-    // todo infer the consumer group from some process information ...
     await eventClient().coldHotStream({
       handler: async event => {
         await view.handleEvent(event)
@@ -12,13 +11,14 @@ export async function registerView(view: EventView): Promise<void> {
       onError: error => {
         logger.error("Error in view", error)
       },
-      groupId: "",
+      groupId: view.consumerGroup,
       stream: s
     })
   }
 }
 
 export interface EventView {
+  consumerGroup: string
   handleEvent: (event: EventicleEvent) => Promise<void>
   streamsToSubscribe: string[]
 }
