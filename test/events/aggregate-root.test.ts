@@ -81,7 +81,7 @@ describe('Aggregate Root', function() {
     user.name = "Simple Person"
 
     let events = user.newEvents
-    let replay = await aggregates.history("user", user.id)
+    let replay = await aggregates.history(User, user.id)
 
     expect(user.name).toBe("Simple Person");
     expect(events.length).toBe(1);

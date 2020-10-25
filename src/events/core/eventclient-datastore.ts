@@ -82,6 +82,15 @@ async function tickSubs() {
   subscriptions.forEach(value => value.process())
 }
 
+/**
+ * This is a test capable event client.
+ *
+ * It fully implements the event client semantics, and persists its events into the given data store.
+ *
+ * Good to pair with the InMemDataStore for testing and local dev usage.
+ *
+ * Not recommended for production (really!), as you disable any possibility of distribution
+ */
 export function eventClientOnDatastore(): EventClient {
   return new EventclientDatastore()
 }

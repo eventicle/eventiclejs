@@ -7,7 +7,7 @@
     "module": "commonjs",
     "target": "es2018",
     "incremental": true,
-    "removeComments": true,
+    "removeComments": false,
     "allowJs": true,
     "allowUnreachableCode": false,
     "alwaysStrict": true,

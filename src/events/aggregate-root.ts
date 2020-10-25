@@ -28,15 +28,20 @@ export abstract class AggregateRoot {
   }
 }
 
+function eventstreamname<T extends AggregateRoot>(type: { new (): T }) {
+  let t = new type()
+  return "aggregate-events-" + t.type
+}
+
 export default {
   /**
    * Replay and build an aggregate root into its current state.
    * @param type
    * @param id
    */
-  load: async<T>(type: any, id: string): Promise<T> => {
+  load: async<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<T> => {
     let t = new type()
-    let ret = await dataStore().findEntity("system", "aggregate-events-" + t.type, { domainId: id })
+    let ret = await dataStore().findEntity("system", eventstreamname(type), { domainId: id })
 
     if (ret && ret.length > 0) {
       ret[0].content.history.forEach(value => t.handleEvent(value))
@@ -51,8 +56,8 @@ export default {
    * @param type
    * @param id
    */
-  history: async<T>(type: string, id: string): Promise<EventicleEvent[]> => {
-    let ret = await dataStore().findEntity("system", "aggregate-events-" + type, { domainId: id })
+  history: async<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<EventicleEvent[]> => {
+    let ret = await dataStore().findEntity("system", eventstreamname(type), { domainId: id })
 
     if (ret && ret.length > 0) {
       return ret[0].content.history

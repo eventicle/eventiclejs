@@ -13,24 +13,6 @@ export async function connectBroker(config: {
     clientId: config.clientId,
     brokers: config.brokers
   })
-  //
-  // const admin = eventclientKafka.admin()
-  // let ret = await admin.connect()
-  // console.log(await admin.listTopics())
-  //
-  // await admin.createTopics({
-  //     // validateOnly: false,
-  //     // waitForLeaders: false,
-  //     // timeout: 2000,
-  //     topics: [{
-  //         topic: "test-topic"
-  //     }],
-  // })
-
-  // await admin.disconnect()
-
-  // await producer()
-  // await consumer()
 }
 
 let DomainAwarePartitioner: ICustomPartitioner = () => {
@@ -41,50 +23,13 @@ let DomainAwarePartitioner: ICustomPartitioner = () => {
   }
 }
 
-async function producer() {
-  let num = 0
-  const producer = kafka.producer({
-    createPartitioner: DomainAwarePartitioner
-  })
-
-  await producer.connect()
-
-  setInterval(() => {
-    producer.send({
-      topic: 'test-topic',
-      messages: [
-        {value: 'Hello KafkaJS user! ' + (num++)},
-      ],
-    })
-  }, 5000)
-
-  console.log("HAVE FINISHED PRODUCER")
-}
-
-async function consumer() {
-  const consumer = kafka.consumer({groupId: 'uber-group-2'})
-
-  await consumer.connect()
-  await consumer.subscribe({topic: 'test-topic', fromBeginning: true})
-
-  await consumer.run({
-    eachMessage: async ({topic, partition, message}) => {
-
-      console.log({
-        value: message.value.toString(),
-      })
-    },
-  })
-
-  console.log("HAVE FINISHED CONSUMER")
-}
-
 class EventclientKafka implements EventClient {
 
   producer: Producer
 
   async connect(): Promise<EventclientKafka> {
     this.producer = kafka.producer({
+      maxInFlightRequests: 1, idempotent: true,
       createPartitioner: DomainAwarePartitioner
     })
     await this.producer.connect()
@@ -119,7 +64,7 @@ class EventclientKafka implements EventClient {
 
     cons.run({
       eachMessage: async payload => {
-        logger.info("GOT ME A MESSAGE ", payload)
+        logger.trace(`[${config.groupId}] message received`, payload)
         await config.handler({
           domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
           type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
@@ -138,7 +83,8 @@ class EventclientKafka implements EventClient {
 
   async coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
 
-    let cons = kafka.consumer({groupId: uuid.v4()})
+    const groupId = uuid.v4()
+    let cons = kafka.consumer({groupId})
 
     let adm = kafka.admin()
     await adm.connect()
@@ -147,7 +93,7 @@ class EventclientKafka implements EventClient {
     let latestOffset = Math.max(...partitionOffsets.map(value => parseInt(value.offset)))
     await adm.disconnect()
 
-    console.log("WILL SEEK TO " + latestOffset)
+    logger.debug(`Cold replay of ${stream} by [${groupId}], seek till ${latestOffset}`)
 
     await cons.connect()
 
@@ -155,10 +101,9 @@ class EventclientKafka implements EventClient {
 
     cons.run({
       eachMessage: async payload => {
-        logger.info("Cold message lands", payload)
+        logger.trace("Cold message lands", payload)
         // TODO, compare the current offset with the greatest calculated offset above. if equal or greater than, bail out now
         try {
-          console.log("GOT A COLD MESSAGE " + payload.message.offset)
           await handler({
             domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
             type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
@@ -167,7 +112,7 @@ class EventclientKafka implements EventClient {
           })
         } finally {
           if (parseInt(payload.message.offset) >= latestOffset - 1) {
-            logger.info("FOUND THE END, BAILING")
+            logger.debug(`Group ID [${groupId}] finishes cold replay on offset ${payload.message.offset}`)
             onDone()
             await cons.disconnect()
           }

@@ -9,3 +9,6 @@ export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAll
 export { default as InMemoryDatastore } from "./datastore/inmem-data-store"
 export { DataStore, Record, setDataStore, dataStore } from "./datastore/index"
 export { setLogApi } from "./logger"
+export { aggregateObservationAdapter, createAggregateObservationAdapter, aggregateObserver} from "./events/adapter/AggregateObservationAdapter"
+export { EventAdapter, registerAdapter } from "./events/adapter"
+export { LogApi } from "./logger"
