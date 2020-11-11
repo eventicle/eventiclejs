@@ -11,8 +11,6 @@ let emitter = new InternalEv()
 
 const streams = new Map()
 
-
-
 interface InternalEvent {
   id: string
   stream: string
@@ -176,7 +174,7 @@ class EventclientDatastore implements EventClient {
 
     for (let ev of event) {
 
-      ev.date = new Date().toISOString()
+      ev.createdAt = new Date().getTime()
 
       await dataStore().createEntity("system", "event-stream", {
         streamId: stream, internal: ev

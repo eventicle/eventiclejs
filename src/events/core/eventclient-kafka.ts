@@ -1,5 +1,5 @@
 import {ICustomPartitioner, Kafka, PartitionerArgs, Producer} from "kafkajs";
-import {EventClient, EventicleEvent, EventSubscriptionControl} from "./event-client";
+import {EventClient, eventClientCodec, EventicleEvent, eventSourceName, EventSubscriptionControl} from "./event-client";
 import * as uuid from "uuid"
 import logger from "../../logger";
 
@@ -15,17 +15,32 @@ export async function connectBroker(config: {
   })
 }
 
-let DomainAwarePartitioner: ICustomPartitioner = () => {
-  return args => {
+function hashStr(str) {
+  let hash = 0;
+  for (var i = 0; i < str.length; i++) {
+    var charCode = str.charCodeAt(i);
+    hash += charCode;
+  }
+  return hash;
+}
 
-    // TODO, partition based on the domain ID, if none exists, then .... ?
+let DomainAwarePartitioner: ICustomPartitioner = () => {
+  return ({ topic, partitionMetadata, message }) => {
+
+    // const numPartitions = partitionMetadata.length
+    // let key = message.headers["domainId"] || message.key
+    // return  hashStr(key) % numPartitions
     return 0
   }
 }
 
 class EventclientKafka implements EventClient {
-
+  JavaCompatiblePartitioner
   producer: Producer
+
+  broker(): Kafka {
+    return kafka
+  }
 
   async connect(): Promise<EventclientKafka> {
     this.producer = kafka.producer({
@@ -53,6 +68,7 @@ class EventclientKafka implements EventClient {
   async coldHotStream(config: { stream: string, groupId: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
 
     if (!config.groupId) {
+      logger.trace("Auto set groupId for cold/hot replay")
       config.groupId = uuid.v4()
     }
 
@@ -65,12 +81,13 @@ class EventclientKafka implements EventClient {
     cons.run({
       eachMessage: async payload => {
         logger.trace(`[${config.groupId}] message received`, payload)
-        await config.handler({
-          domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
-          type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
-          id: payload.message.headers.id && payload.message.headers.id.toString("utf8"),
-          data: JSON.parse(payload.message.value.toString("utf8"))
+
+        let decoded = await eventClientCodec().decode({
+          headers: payload.message.headers,
+          buffer: payload.message.value
         })
+
+        await config.handler(decoded)
       }
     })
 
@@ -102,9 +119,16 @@ class EventclientKafka implements EventClient {
     cons.run({
       eachMessage: async payload => {
         logger.trace("Cold message lands", payload)
-        // TODO, compare the current offset with the greatest calculated offset above. if equal or greater than, bail out now
         try {
+          let decoded = await eventClientCodec().decode({
+            headers: payload.message.headers,
+            buffer: payload.message.value
+          })
           await handler({
+            causedById: payload.message.headers.causedById as string,
+            causedByType: payload.message.headers.causedByType as string,
+            createdAt: payload.message.headers.createdAt && parseInt(payload.message.headers.createdAt.toString("utf8")),
+            source: payload.message.headers.source as string,
             domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
             type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
             id: payload.message.headers.id && payload.message.headers.id.toString("utf8"),
@@ -129,28 +153,17 @@ class EventclientKafka implements EventClient {
 
   async emit(events: EventicleEvent[], stream: string): Promise<void> {
 
-    let messages = events.map(event => {
-      const headers = {
-        type: event.type,
-        id: event.id
-      } as any
+    let messages = []
 
-      if (event.date) {
-        headers.date = event.date
-      } else {
-        headers.date = new Date().toISOString()
-      }
+    for (let event of events) {
+      let encoded = await eventClientCodec().encode(event)
 
-      if (event.domainId) {
-        headers.domainId = event.domainId
-      }
-
-      return {
-        value: JSON.stringify(event.data),    // TODO, convert to appropriate avro message, how to lookup?
-        timestamp: event.date,
-        headers
-      }
-    })
+      messages.push({
+        value: encoded.buffer,
+        timestamp: `${event.createdAt}`,
+        headers: encoded.headers
+      })
+    }
 
     try {
       await this.producer.send({
@@ -171,13 +184,9 @@ class EventclientKafka implements EventClient {
 
     await cons.run({
       eachMessage: async payload => {
-        await consumer({
-          domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
-          type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
-          id: payload.message.headers.id && payload.message.headers.id.toString("utf8"),
-
-          data: JSON.parse(payload.message.value.toString("utf8"))
-        })
+        await consumer(await eventClientCodec().decode({
+          headers: payload.message.headers, buffer: payload.message.value
+        }))
       }
     })
 

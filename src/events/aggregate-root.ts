@@ -1,4 +1,4 @@
-import {EventicleEvent} from "./core/event-client";
+import {EventicleEvent, eventSourceName} from "./core/event-client";
 import uuid = require("uuid");
 import {dataStore} from "../datastore";
 
@@ -12,8 +12,11 @@ export abstract class AggregateRoot {
 
   raiseEvent(event: EventicleEvent) {
     event.id = uuid.v4()
-    if (!event.data.id) {
-      event.data.id = this.id
+    if (!event.createdAt) {
+      event.createdAt = new Date().getTime()
+    }
+    if (!event.source) {
+      event.source = eventSourceName()
     }
     if (!event.domainId) {
       event.domainId = this.id

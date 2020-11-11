@@ -19,11 +19,17 @@ beforeAll(async function () {
     brokers: ['192.168.99.103:30992'], clientId: clientId
   }))
   await testDbPurge();
+  await (eventClient() as any).clear(["mystream", "thestream", "test-mystream", "last-stream"])
+  await pause(5000)
 });
-
+beforeEach(async () => {
+  console.log("STARTING DATA PUURGE")
+  await testDbPurge();
+  await (eventClient() as any).clear(["mystream", "thestream", "test-mystream", "last-stream"])
+})
 afterEach(async () => {
   await testDbPurge();
-  await (eventClient() as any).clear(["mystream", "thestream", "test-mystream"])
+  await (eventClient() as any).clear(["mystream", "thestream", "test-mystream"], "last-stream")
 })
 
 test('hot stream recieves events', async function () {
@@ -39,11 +45,14 @@ test('hot stream recieves events', async function () {
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
-    id: "epic"
+    id: "epic",
+    createdAt: new Date().getTime()
   }], "mystream")
 
   await pause(1500)
   await consumer.close()
+
+  console.log("DOOPEY")
 
   expect(myevents.length).toEqual(1);
   expect(myevents[0].id).toEqual("epic");
@@ -58,19 +67,22 @@ test('cold stream fully replays historical', async function (done) {
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
-    id: uuid.v4()
+    id: uuid.v4(),
+    createdAt: new Date().getTime()
   }], "thestream")
 
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
-    id: uuid.v4()
+    id: uuid.v4(),
+    createdAt: new Date().getTime()
   }], "thestream")
 
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
-    id: uuid.v4()
+    id: uuid.v4(),
+    createdAt: new Date().getTime()
   }], "thestream")
 
   await pause(100).catch(reason => console.log(reason))
@@ -99,13 +111,14 @@ test('cold hot stream fully replays historical and also events afterwards', asyn
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
-    id: "epic"
-  }], "mystream")
+    id: "epic",
+    createdAt: new Date().getTime()
+  }], "last-stream")
 
   await pause(500)
 
   let control = await eventClient().coldHotStream({
-    stream: "mystream",
+    stream: "last-stream",
     handler: async event => {
       myevents.push(event)
     },
@@ -115,11 +128,14 @@ test('cold hot stream fully replays historical and also events afterwards', asyn
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
-    id: "epic2"
-  }], "mystream")
+    id: "epic2",
+    createdAt: new Date().getTime()
+  }], "last-stream")
 
   await pause(3000)
   await control.close()
+
+  console.log(myevents)
 
   expect(myevents.length).toEqual(2);
   expect(myevents[0].id).toEqual("epic");

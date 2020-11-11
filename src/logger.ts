@@ -19,6 +19,7 @@ let loggerApi: LogApi = {
   },
   error(message: string, arg?: any) {
     console.log(`ERROR: ${message}: ${JSON.stringify(arg)}`)
+    console.log(new Error().stack)
   },
   info(message: string, arg?: any) {
     console.log(`INFO: ${message}: ${JSON.stringify(arg)}`)

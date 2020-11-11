@@ -8,6 +8,10 @@ class InternalEv extends EventEmitter {}
 
 let emitter = new InternalEv()
 
+/**
+ * Reads streams and allows short lived observers to be notified if a particular AggregateRoot instance has been modified.
+ * This is picked out based on the `domainId` of the event.
+ */
 class AggregateObservationAdapter implements EventAdapter {
 
   constructor(readonly streamsToSubscribe: string[]) {
@@ -17,8 +21,7 @@ class AggregateObservationAdapter implements EventAdapter {
   readonly consumerGroup = "aggregate-observation-" + uuid.v4()
 
   async handleEvent(event: EventicleEvent): Promise<void> {
-    logger.info("AR Obs has an event", event)
-
+    logger.trace("AR Observer has an event", event)
     emitter.emit("event", event)
   }
 }
