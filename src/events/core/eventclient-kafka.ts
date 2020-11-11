@@ -1,18 +1,19 @@
-import {ICustomPartitioner, Kafka, PartitionerArgs, Producer} from "kafkajs";
+import {ICustomPartitioner, Kafka, KafkaConfig, PartitionerArgs, Producer} from "kafkajs";
 import {EventClient, eventClientCodec, EventicleEvent, eventSourceName, EventSubscriptionControl} from "./event-client";
 import * as uuid from "uuid"
 import logger from "../../logger";
 
 let kafka: Kafka
 
-export async function connectBroker(config: {
-  clientId: string, brokers: string[]
-}) {
-  kafka = new Kafka({
-    ssl: false,
-    clientId: config.clientId,
-    brokers: config.brokers
-  })
+/**
+ * Access the low level kafka client used by the event client
+ */
+export function getKafkaClient(): Kafka {
+  return kafka;
+}
+
+export async function connectBroker(config: KafkaConfig) {
+  kafka = new Kafka(config)
 }
 
 function hashStr(str) {
@@ -198,9 +199,7 @@ class EventclientKafka implements EventClient {
   }
 }
 
-export async function eventClientOnKafka(config: {
-  clientId: string, brokers: string[]
-}): Promise<EventClient> {
+export async function eventClientOnKafka(config: KafkaConfig): Promise<EventClient> {
   await connectBroker(config)
   return new EventclientKafka().connect()
 }
