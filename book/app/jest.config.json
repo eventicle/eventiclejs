@@ -1,0 +1,33 @@
+{
+    "transform": {
+        "^.+\\.ts?$": "ts-jest"
+    },
+    "globals": {
+        "ts-jest": {
+            "tsConfig": {
+                "sourceMap": true,
+                "inlineSourceMap": true
+            }
+        }
+    },
+    "transformIgnorePatterns": [
+
+    ],
+    "reporters": ["default", "jest-junit"],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+        "**/src/module/**/*.ts",
+        "!**/tests/**"
+    ],
+    "coverageReporters": [
+        "json",
+        "lcov",
+        "text-summary"
+    ],
+    "clearMocks": true,
+    "timers": "real",
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testRegex": "/tests/.*\\.(test|spec|unit|integration)?\\.(ts|tsx)$",
+    "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"]
+}

@@ -1,0 +1,50 @@
+= Eventicle JS
+
+Full documentation can be found in the Book Of Eventicle
+// TODO, link
+== Quickstart
+
+*Install*
+```
+npm install @eventicle/eventiclejs
+```
+
+*Configure*
+
+index.ts
+```
+import {setEventSourceName,
+  eventClientOnDatastore,
+  InMemoryDatastore,
+  setDataStore,
+  setEventClient} from '@eventicle/eventiclejs';
+
+// the "source" of the events created by this application
+setEventSourceName('my-cool-service');
+
+// in service data storage abstraction. Used by the internals of eventicle, can also be used in app code
+setDataStore(new InMemoryDatastore());
+
+// The connection to the event transport, this is in memory and stores events and state in the current datastore
+setEventClient(eventClientOnDatastore());
+
+```
+
+Now that you have the basic Eventicle infrastructure running, you can start to emit and observe events using the event client.
+
+```
+
+
+
+```
+
+* emit an event
+* observe an event
+
+* Manage state with an event sourced Aggregate Root
+* Use a command to change state and emit events
+* Use a View to create optimised representations of your data
+* Make event driven workflows using a saga
+
+Full documentation can be found in the Book Of Eventicle
+// TODO, link

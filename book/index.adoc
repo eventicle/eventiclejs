@@ -1,0 +1,145 @@
+:source-highlighter: highlight.js
+
+= Book Of Eventicle
+
+== Intro
+
+what is an event based system?
+
+what is DDD?
+
+== Quick Start
+
+.Install
+[source,bash]
+----
+yarn add @eventicle/eventiclejs
+----
+
+.Configure Eventicle
+
+[source,typescript]
+----
+include::app/src/config.ts[tags=deps;config]
+----
+
+.Observe an event
+_Treat an event stream as a simple Topic, do not request any historical data._
+
+[source,typescript]
+----
+include::app/src/config.ts[tags=observe]
+----
+
+.Emit an event
+_Emit an event to a stream, all following Eventicle event machinery is built on this_
+
+[source,typescript]
+----
+include::app/src/config.ts[tags=emit]
+----
+<1> The event payload
+
+.Fully replay an event stream
+_This starts at the beginning of stream `app.streamname`, and will receive all historical events, then finish.
+_Mostly used for offline, batch or automation actions, such as a view upgrade or full stream schema update_
+
+[source,typescript]
+----
+include::app/src/config.ts[tags=replay]
+----
+
+.Fully replay an event stream and continue to observe
+_This starts at the beginning of stream `app.streamname`, and will receive all historical events. It will then continue
+to observe the stream._
+_Used for most runtime stream consumption_
+
+[source,typescript]
+----
+include::app/src/config.ts[tags=replay]
+----
+
+=== Next ...
+
+Now you've seen the basics of an event based system, the creation and observation of events, you can start to
+add in more conceptual pieces.
+
+* _Views_, a way to process streams of events into data structures that can be queried efficiently.
+* _Aggregate Roots_, components that store state, generate events, and enforce rules about how they relate to each other.
+* _Commands_, components that record changes to the system by taking events and emitting them to streams.
+* _Sagas_,
+
+=== Internals: Event Client
+
+
+=== Internals: Datastore
+
+== Querying Data: Views
+
+An event View is a component that observes event streams and applies a _Reducer_ function to them to generate a data structure
+that is suitable for querying.
+
+.An example View: Users
+_Create a list of users from `user.created` events and provider operations for users.
+[source,typescript]
+----
+include::app/src/view-1.ts[]
+----
+<1> The consumer group is the same as for Redis Streams/ Kafka. Multiple view instances across processes will share processing.
+<2> 1..n streams to subscribe to.
+<3> View must handle all the potential event types in the stream. Normally this is done by picking out the required types and ignoring any others.
+<4> An operation on a view does not have to be a simple query, it can be more advanced, as with a login check. It does though, always have to be read only to preserve the 1 way data flow semantics of the system
+<5> A simple select all query on the view data structure.
+<6> Register the view with Eventicle for it to attach the streams to the view.  Maintain a reference to it for your use to query the view data.
+<7> View will have the user record when this event has been async processed.
+
+=== In Memory Views
+
+
+
+==== Aggregate Root Event Observation Adapter
+
+== Building Blocks: Commands and Events
+
+
+
+== Managing State: Aggregate Roots
+
+event sourcing
+
+observing and waiting for async state changes in an AR with observationAdapter
+
+== Complex Interaction: Sagas and Workflows
+
+== Local Data: The Datastore
+
+== Testing Eventicle Components and Systems
+
+=== Testing Overview
+
+=== Unit Tests: Commands
+
+=== Unit Tests: Aggregate Roots
+
+=== Unit Tests: Sagas
+
+=== Integration Tests
+
+== Designing Eventicle Event Systems
+
+Event Storm
+Design Happy Path workflows
+
+Derive Desired Interactions.
+* Sagas should exist as their own logical entity, no matter their physical location.
+
+== Further Usage
+
+=== Event Client: Using with Kafka
+
+=== Event Client: Transport Event Encoding
+
+=== Improving Use of Typescript Types When Using Events
+
+
+

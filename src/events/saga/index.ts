@@ -89,6 +89,9 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
 
   let matchingNotifies = notifies.filter(value => {
     if(value && value.hasOwnProperty('filterProp')) {
+      if (event.hasOwnProperty(value.filterProp)) {
+        return event[value.filterProp] == value.filterVal
+      }
       return event.data[value.filterProp] == value.filterVal
     } else {
       return false
