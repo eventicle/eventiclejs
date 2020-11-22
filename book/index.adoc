@@ -67,10 +67,11 @@ add in more conceptual pieces.
 * _Views_, a way to process streams of events into data structures that can be queried efficiently.
 * _Aggregate Roots_, components that store state, generate events, and enforce rules about how they relate to each other.
 * _Commands_, components that record changes to the system by taking events and emitting them to streams.
-* _Sagas_,
+* _Sagas_, event driven workflows. Implement asynchronous business logic
 
 === Internals: Event Client
 
+consumer groups
 
 === Internals: Datastore
 
@@ -80,7 +81,7 @@ An event View is a component that observes event streams and applies a _Reducer_
 that is suitable for querying.
 
 .An example View: Users
-_Create a list of users from `user.created` events and provider operations for users.
+Create a list of users from `user.created` events and provider operations for users.
 [source,typescript]
 ----
 include::app/src/view-1.ts[]
@@ -95,23 +96,42 @@ include::app/src/view-1.ts[]
 
 === In Memory Views
 
+The persisted nature of event streams means that you can use the event stream as the system persistence Then have your views
+be purely in memory. This means that they will rebuild each time the application starts, but will require no external data storage.
+
+.An example View: Count of Users
+Count the user registrations.
+[source,typescript]
+----
+include::app/src/view-memory.ts[]
+----
+<1> Set the consumer group to be random. This means this instance will fully replay every time it connects to the event stream, and will receive all events, not share with other instances.
+<2> The view state, in this case as simple integer count.
+<3> Implement eventual consistency of the user counter via the event stream reducer in this view.
+<4> Will output `1`, showing that the view observed the event that was emitted before it was connected, due to the full replay of the stream.
+<5> Eventicle will connect the view to the requested event streams.
+
+== Managing Local State: Aggregate Roots
 
 
-==== Aggregate Root Event Observation Adapter
-
-== Building Blocks: Commands and Events
-
-
-
-== Managing State: Aggregate Roots
 
 event sourcing
 
 observing and waiting for async state changes in an AR with observationAdapter
 
+== Changing Global State: Commands
+
+An Eventicle command is responsible for mutating state and notifying the rest of the system about the state change via
+one or more events on the shared event streams.
+
+
 == Complex Interaction: Sagas and Workflows
 
 == Local Data: The Datastore
+
+== Idiomatic APIs that use Eventicle
+
+==== Aggregate Root Event Observation Adapter
 
 == Testing Eventicle Components and Systems
 
