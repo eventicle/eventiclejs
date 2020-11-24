@@ -1,5 +1,5 @@
 import * as uuid from 'uuid';
-import {DataStore, Record} from "./index";
+import {DataStore, PagedRecords, Record} from "./index";
 
 let tenants:any = {};
 
@@ -55,11 +55,19 @@ export default class implements DataStore {
    * @param {*} page page count
    * @param {*} pageSize page size
    */
-  async findEntityPaginated(workspaceId: string, type: any, query: any, page: number, pageSize: number) {
+  async findEntityPaginated(workspaceId: string, type: any, query: any, page: number, pageSize: number): Promise<PagedRecords> {
     const results = await this.findEntity(workspaceId, type, query);
     const startIndex = pageSize * page;
     const endIndex = startIndex + pageSize;
-    return Promise.resolve(results.slice(startIndex, endIndex));
+
+    return {
+      entries: results.slice(startIndex, endIndex),
+      totalCount: results.length,
+      pageInfo: {
+        currentPage: page,
+        pageSize
+      }
+    }
   }
 
   /**

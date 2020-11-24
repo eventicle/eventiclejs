@@ -1,4 +1,13 @@
 
+export interface PagedRecords {
+  totalCount: number;
+  pageInfo: {
+    currentPage: number;
+    pageSize: number;
+  };
+  entries: Record[]
+}
+
 export interface Record {
   type: string
   id: string
@@ -24,7 +33,7 @@ export interface DataStore {
    * @param {*} page page count
    * @param {*} pageSize page size
    */
-  findEntityPaginated(workspaceId: string, type: any, query: any, page: number, pageSize: number): Promise<Record[]>
+  findEntityPaginated(workspaceId: string, type: any, query: any, page: number, pageSize: number): Promise<PagedRecords>
 
   /**
    *
