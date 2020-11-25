@@ -157,7 +157,7 @@ export async function registerSaga(saga: Saga): Promise<void> {
 }
 
 export async function allSagaInstances(): Promise<SagaInstance[]> {
-  let ret =  (await dataStore().findEntity("system", "saga-instance", {}))
+  let ret =  (await dataStore().findEntity("system", "saga-instance", {}, {}))
 
   if (!ret) return []
   return ret.map(value => new SagaInstance(value.content))

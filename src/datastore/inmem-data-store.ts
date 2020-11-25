@@ -1,5 +1,6 @@
 import * as uuid from 'uuid';
-import {DataStore, PagedRecords, Record} from "./index";
+import {DataSorting, DataStore, PagedRecords, Record} from "./index";
+import logger from "../logger";
 
 let tenants:any = {};
 
@@ -25,10 +26,12 @@ export default class implements DataStore {
 
   /**
    *
+   * @param workspaceId
    * @param {*} type Entity type or "table" name
    * @param {*} query  Json object to match fields
+   * @param sorting
    */
-  public async findEntity(workspaceId: string, type: any, query: any): Promise<Record[]> {
+  public async findEntity(workspaceId: string, type: any, query: any, sorting: DataSorting = {}): Promise<Record[]> {
     const table = getStoreForWorkspace(workspaceId)[type];
     if (!table) return [];
     const results: any = [];
@@ -45,18 +48,37 @@ export default class implements DataStore {
       }
     });
 
+    let sorts = Object.keys(sorting)
+    if (sorts.length > 0) {
+      if (sorts.length > 1) {
+        logger.warn("Trying to sort with more than one key, InMemDatastore doesn't support this and will pick the first key ", {
+          type, query, sorting,
+          chosenKey: sorts[0] })
+      }
+      results.sort((a, b) => {
+        const p1 = a[sorts[0]];
+        const p2 = b[sorts[0]];
+
+        if (p1 < p2) return -1;
+        if (p1 > p2) return 1;
+        return 0;
+      })
+    }
+
     return results;
   }
 
   /**
    *
+   * @param workspaceId
    * @param {*} type Entity type or "table" name
    * @param {*} query  Json object to match fields
+   * @param sorting
    * @param {*} page page count
    * @param {*} pageSize page size
    */
-  async findEntityPaginated(workspaceId: string, type: any, query: any, page: number, pageSize: number): Promise<PagedRecords> {
-    const results = await this.findEntity(workspaceId, type, query);
+  async findEntityPaginated(workspaceId: string, type: any, query: any, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords> {
+    const results = await this.findEntity(workspaceId, type, query, sorting);
     const startIndex = pageSize * page;
     const endIndex = startIndex + pageSize;
 
