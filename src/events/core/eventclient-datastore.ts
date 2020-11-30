@@ -1,6 +1,7 @@
 import {EncodedEvent, EventClient, eventClientCodec, EventicleEvent, EventSubscriptionControl} from "./event-client";
 import {EventEmitter} from "events"
 import {dataStore} from "../../datastore";
+import logger from "../../logger";
 // import logger from "../../logger";
 
 class InternalEv extends EventEmitter {}
@@ -100,7 +101,15 @@ class EventclientDatastore implements EventClient {
   async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
 
     let coldReplay = async() => {
-      const str = await dataStore().findEntity("system", "event-stream", { streamId: config.stream })
+      const str = []
+
+      if (Array.isArray(config.stream)) {
+        for (let stream of config.stream) {
+          str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}))
+        }
+      } else {
+        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: config.stream}))
+      }
 
       if (!str) {
         config.onError(`No such stream ${config.stream}`)
@@ -142,14 +151,21 @@ class EventclientDatastore implements EventClient {
 
   async coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
 
-    const str = await dataStore().findEntity("system", "event-stream", { streamId: stream })
+    const str = []
+    if (Array.isArray(stream)) {
+      for (let theStream of stream) {
+        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: theStream}))
+      }
+    } else {
+      str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}))
+    }
 
     if (!str) {
       onError(`No such stream ${stream}`)
       return
     }
 
-    // logger.debug("stream", str)
+    logger.debug("stream", str)
 
     // todo, should be done in the datastore.
     // let streamEntries = str.sort((a, b) => a.createdAt.getDate() - b.createdAt.getDate())
@@ -197,8 +213,9 @@ class EventclientDatastore implements EventClient {
     let tombstoned = false
     let exec = async (ev: InternalEvent) => {
       if (tombstoned) return
-      if (ev.stream == stream) {
-        // await handler(await decryptEvent(ev.event))
+      if (Array.isArray(stream) && stream.includes(ev.stream)) {
+        await handler(await eventClientCodec().decode(ev.event))
+      } else if (ev.stream == stream) {
         await handler(await eventClientCodec().decode(ev.event))
       }
     }

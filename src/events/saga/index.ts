@@ -154,6 +154,7 @@ export async function registerSaga(saga: Saga): Promise<void> {
 
   saga.streamSubs.push(await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
+    logger.debug(`Saga ${saga.name} received event `, event)
       if (saga.starts.has(event.type)) {
         await startSagaInstance(saga, event)
       } else if (saga.eventHandler.has(event.type)) {
