@@ -1,4 +1,4 @@
-import {EventClient, EventicleEvent, EventSubscriptionControl} from "./event-client";
+import {EncodedEvent, EventClient, eventClientCodec, EventicleEvent, EventSubscriptionControl} from "./event-client";
 import {EventEmitter} from "events"
 import {dataStore} from "../../datastore";
 // import logger from "../../logger";
@@ -14,7 +14,7 @@ const streams = new Map()
 interface InternalEvent {
   id: string
   stream: string
-  event: EventicleEvent
+  event: EncodedEvent
 }
 
 class Stream {
@@ -97,7 +97,7 @@ class EventclientDatastore implements EventClient {
 
   constructor() {}
 
-  async coldHotStream(config: { stream: string, from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
+  async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
 
     let coldReplay = async() => {
       const str = await dataStore().findEntity("system", "event-stream", { streamId: config.stream })
@@ -110,7 +110,7 @@ class EventclientDatastore implements EventClient {
       // todo, improved by having a hot buffer and storing until replay is made.  This seems to pass reliably in process, so .... meh
       emitter.addListener("event", async (ev: InternalEvent) => {
         if (ev.stream == config.stream) {
-          await config.handler(ev.event)
+          await config.handler(await eventClientCodec().decode(ev.event))
         }
       })
 
@@ -170,8 +170,6 @@ class EventclientDatastore implements EventClient {
 
   async emit (event: EventicleEvent[], stream: string) {
 
-    // let ev = await encryptEvent(event)
-
     for (let ev of event) {
 
       ev.createdAt = new Date().getTime()
@@ -181,7 +179,7 @@ class EventclientDatastore implements EventClient {
       })
 
       let internal = {
-        event: ev, stream, id: ev.id
+        event: await eventClientCodec().encode(ev), stream, id: ev.id
       } as InternalEvent
       // TODO, remove when coldHot ports to event log
       emitter.emit("event", internal)
@@ -191,7 +189,7 @@ class EventclientDatastore implements EventClient {
     await tickSubs()
   }
 
-  async hotStream(stream: string,
+  async hotStream(stream: string | string[],
                   consumerName: string,
                   handler: (event: EventicleEvent) => Promise<void>,
                   onError: (error: any) => void) {
@@ -201,12 +199,17 @@ class EventclientDatastore implements EventClient {
       if (tombstoned) return
       if (ev.stream == stream) {
         // await handler(await decryptEvent(ev.event))
-        await handler(ev.event)
+        await handler(await eventClientCodec().decode(ev.event))
       }
     }
 
-    subscriptions.push(new StreamSubscription(`${stream}:${consumerName}`, getStream(stream), exec))
-
+    if (Array.isArray(stream)) {
+      for (let str of stream) {
+        subscriptions.push(new StreamSubscription(`${stream}:${consumerName}`, getStream(str), exec))
+      }
+    } else {
+      subscriptions.push(new StreamSubscription(`${stream}:${consumerName}`, getStream(stream), exec))
+    }
     return {
       close: async () => {
         tombstoned = true

@@ -48,7 +48,11 @@ export class Saga {
 
   starts: Map<string, (saga: SagaInstance, event: EventicleEvent) => void> = new Map()
   eventHandler: Map<string, (saga: SagaInstance, event: EventicleEvent) => void> = new Map()
-
+  errorHandler: (saga, event: EventicleEvent, error: Error) => void = (saga, event, error) => {
+    logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
+      saga, event, error
+    })
+  }
   constructor(readonly name: string) {}
 
   subscribeStreams(streams: string[]): Saga {
@@ -63,6 +67,11 @@ export class Saga {
 
   on(eventName: string, handler: (saga: SagaInstance, event: EventicleEvent) => void): Saga {
     this.eventHandler.set(eventName, handler)
+    return this
+  }
+
+  onError(handler: (saga, event: EventicleEvent, error: Error) => void): Saga {
+    this.errorHandler = handler
     return this
   }
 }
@@ -143,7 +152,7 @@ export async function registerSaga(saga: Saga): Promise<void> {
 
   SAGAS.push(saga)
 
-  saga.streamSubs.push(...await Promise.all(saga.streams.map(value => eventClient().hotStream(value,
+  saga.streamSubs.push(await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
       if (saga.starts.has(event.type)) {
         await startSagaInstance(saga, event)
@@ -151,9 +160,10 @@ export async function registerSaga(saga: Saga): Promise<void> {
         await checkNotifyIntents(saga, event)
       }
     }, error => {
-
-      console.info(error)
-    }))))
+      logger.error("Error subscribing to streams", {
+        error, saga: saga.name
+      })
+    }))
 }
 
 export async function allSagaInstances(): Promise<SagaInstance[]> {

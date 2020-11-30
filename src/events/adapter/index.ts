@@ -4,11 +4,16 @@ import logger from "../../logger";
 export async function registerAdapter(view: EventAdapter): Promise<void> {
 
   for(let s of view.streamsToSubscribe) {
-    await eventClient().hotStream(s, view.consumerGroup, async event => {
+    await eventClient().coldHotStream({
+      handler: async event => {
         await view.handleEvent(event)
-      }, error => {
-        logger.error("Error in view", error)
-      })
+      },
+      onError: error => {
+        logger.error("Error in adapter", error)
+      },
+      groupId: view.consumerGroup,
+      stream: view.streamsToSubscribe
+    })
   }
 }
 

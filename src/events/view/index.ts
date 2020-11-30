@@ -12,7 +12,7 @@ export async function registerView(view: EventView): Promise<void> {
         logger.error("Error in view", error)
       },
       groupId: view.consumerGroup,
-      stream: s
+      stream: view.streamsToSubscribe
     })
   }
 }

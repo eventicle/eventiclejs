@@ -5,6 +5,9 @@ import logger from "../../logger";
 
 let kafka: Kafka
 
+let consumerGroups = []
+
+
 /**
  * Access the low level kafka client used by the event client
  */
@@ -73,9 +76,24 @@ class EventclientKafka implements EventClient {
       config.groupId = uuid.v4()
     }
 
+    if (consumerGroups.includes(config.groupId)) {
+      logger.error("Consumer Group has subscribed multiple times, error: "+ config.groupId, new Error("Consumer Group has subscribed multiple times, error " + config.groupId))
+      throw new Error("Consumer Group has subscribed multiple times, error " + config.groupId)
+    }
+
+    consumerGroups.push(config.groupId)
+
     let cons = kafka.consumer({groupId: uuid.v4()})
 
     await cons.connect()
+
+    if (Array.isArray(config.stream)) {
+      for (let str of config.stream) {
+        await cons.subscribe({topic: str, fromBeginning: true})
+      }
+    } else {
+      await cons.subscribe({topic: config.stream, fromBeginning: true})
+    }
 
     await cons.subscribe({topic: config.stream, fromBeginning: true})
 
@@ -176,12 +194,25 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async hotStream(stream: string, consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+
+    if (consumerGroups.includes(consumerName)) {
+      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + consumerName))
+      throw new Error("Consumer Group has subscribed multiple times, this is a bug, error " + consumerName)
+    }
+
+    consumerGroups.push(consumerName)
 
     let cons = kafka.consumer({groupId: consumerName})
 
     await cons.connect()
-    await cons.subscribe({topic: stream})
+    if (Array.isArray(stream)) {
+      for (let str of stream) {
+        await cons.subscribe({topic: str})
+      }
+    } else {
+      await cons.subscribe({topic: stream})
+    }
 
     await cons.run({
       eachMessage: async payload => {

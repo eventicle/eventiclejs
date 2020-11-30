@@ -26,16 +26,7 @@ export interface EventClientCodec {
 class EventClientJsonCodec implements EventClientCodec {
   decode(encoded: EncodedEvent): Promise<EventicleEvent> {
     let content = JSON.parse(encoded.buffer.toString("utf8"))
-    return Promise.resolve({
-      createdAt: encoded.headers.createdAt && encoded.headers.createdAt.toString(),
-      source: encoded.headers.source && encoded.headers.source.toString(),
-      id: encoded.headers.id && encoded.headers.id.toString(),
-      causedByType: encoded.headers.causedByType && encoded.headers.causedByType.toString(),
-      causedById: encoded.headers.causedById && encoded.headers.causedById.toString(),
-      domainId: encoded.headers.domainId && encoded.headers.domainId.toString(),
-      type: encoded.headers.type && encoded.headers.type.toString(),
-      data: content
-    });
+    return Promise.resolve(content);
   }
 
   encode(event: EventicleEvent): Promise<EncodedEvent> {
@@ -44,9 +35,9 @@ class EventClientJsonCodec implements EventClientCodec {
         type: event.type,
         domainId: event.domainId || "",
         id: event.id,
-        source: "",
-        causedById: "",
-        causedByType: "",
+        source: event.source,
+        causedById: event.causedById,
+        causedByType: event.causedByType,
         createdAt: `${event.createdAt}`
       },
       buffer: Buffer.from(JSON.stringify(event), "utf8")
@@ -96,7 +87,7 @@ export interface EventClient {
      * @param handler
      * @param onError
      */
-    hotStream: (stream: string,
+    hotStream: (stream: string | string[],
                 consumerName: string,
                 handler: (event: EventicleEvent) => Promise<void>,
                 onError: (error: any) => void) => Promise<EventSubscriptionControl>
@@ -110,7 +101,7 @@ export interface EventClient {
      * @param onDone
      */
     coldHotStream: (config: {
-        stream: string,
+        stream: string | string[],
         groupId?: string,
         handler: (event: EventicleEvent) => Promise<void>,
         onError: (error: any) => void
