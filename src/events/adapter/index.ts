@@ -2,19 +2,16 @@ import {eventClient, EventicleEvent} from "../core/event-client";
 import logger from "../../logger";
 
 export async function registerAdapter(view: EventAdapter): Promise<void> {
-
-  for(let s of view.streamsToSubscribe) {
-    await eventClient().coldHotStream({
-      handler: async event => {
-        await view.handleEvent(event)
-      },
-      onError: error => {
-        logger.error("Error in adapter", error)
-      },
-      groupId: view.consumerGroup,
-      stream: view.streamsToSubscribe
-    })
-  }
+  await eventClient().coldHotStream({
+    handler: async event => {
+      await view.handleEvent(event)
+    },
+    onError: error => {
+      logger.error("Error in adapter", error)
+    },
+    groupId: view.consumerGroup,
+    stream: view.streamsToSubscribe
+  })
 }
 
 /**

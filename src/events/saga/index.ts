@@ -48,12 +48,14 @@ export class Saga {
 
   starts: Map<string, (saga: SagaInstance, event: EventicleEvent) => void> = new Map()
   eventHandler: Map<string, (saga: SagaInstance, event: EventicleEvent) => void> = new Map()
-  errorHandler: (saga, event: EventicleEvent, error: Error) => void = (saga, event, error) => {
+  errorHandler: (saga, event: EventicleEvent, error: Error) => Promise<void> = async (saga, event, error) => {
     logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
       saga, event, error
     })
   }
-  constructor(readonly name: string) {}
+
+  constructor(readonly name: string) {
+  }
 
   subscribeStreams(streams: string[]): Saga {
     this.streams = streams
@@ -70,7 +72,7 @@ export class Saga {
     return this
   }
 
-  onError(handler: (saga, event: EventicleEvent, error: Error) => void): Saga {
+  onError(handler: (saga, event: EventicleEvent, error: Error) => Promise<void>): Saga {
     this.errorHandler = handler
     return this
   }
@@ -79,7 +81,7 @@ export class Saga {
 const SAGAS: Saga[] = []
 
 export async function removeAllNotifyIntents(sagaInstance: SagaInstance): Promise<void> {
-  let notifies = await dataStore().findEntity("system", "saga-notify-intent", { instanceId: sagaInstance.internalData.instanceId})
+  let notifies = await dataStore().findEntity("system", "saga-notify-intent", {instanceId: sagaInstance.internalData.instanceId})
 
   await Promise.all(notifies.map(value => dataStore().deleteEntity("system", "saga-notify-intent", value.id)))
 }
@@ -97,7 +99,7 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
   })).map(value => value.content)
 
   let matchingNotifies = notifies.filter(value => {
-    if(value && value.hasOwnProperty('filterProp')) {
+    if (value && value.hasOwnProperty('filterProp')) {
       if (event.hasOwnProperty(value.filterProp)) {
         return event[value.filterProp] == value.filterVal
       }
@@ -105,11 +107,11 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
     } else {
       return false
     }
-  } )
+  })
 
   await Promise.all(matchingNotifies.map(async value => {
 
-    let instanceData = await dataStore().findEntity("system", "saga-instance", { instanceId: value.instanceId })
+    let instanceData = await dataStore().findEntity("system", "saga-instance", {instanceId: value.instanceId})
 
     let instance = new SagaInstance(instanceData[0].content, instanceData[0])
 
@@ -124,13 +126,13 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
 }
 
 async function startSagaInstance(saga: Saga, startEvent: EventicleEvent) {
-  let instance = new SagaInstance({ saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent] })
+  let instance = new SagaInstance({saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
 
   await saga.starts.get(startEvent.type).call(instance, instance, startEvent)
 
   let internal = instance.internalData
 
-  dataStore().createEntity("system", "saga-instance", internal)
+  await dataStore().createEntity("system", "saga-instance", internal)
 
   await persistNotificationSubs(saga, instance)
 }
@@ -154,11 +156,15 @@ export async function registerSaga(saga: Saga): Promise<void> {
 
   saga.streamSubs.push(await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
-    logger.debug(`Saga ${saga.name} received event `, event)
-      if (saga.starts.has(event.type)) {
-        await startSagaInstance(saga, event)
-      } else if (saga.eventHandler.has(event.type)) {
-        await checkNotifyIntents(saga, event)
+      logger.debug(`Saga ${saga.name} event`, event)
+      try {
+        if (saga.starts.has(event.type)) {
+          await startSagaInstance(saga, event)
+        } else if (saga.eventHandler.has(event.type)) {
+          await checkNotifyIntents(saga, event)
+        }
+      } catch (e) {
+        await saga.errorHandler(saga, event, e)
       }
     }, error => {
       logger.error("Error subscribing to streams", {
@@ -168,7 +174,7 @@ export async function registerSaga(saga: Saga): Promise<void> {
 }
 
 export async function allSagaInstances(): Promise<SagaInstance[]> {
-  let ret =  (await dataStore().findEntity("system", "saga-instance", {}, {}))
+  let ret = (await dataStore().findEntity("system", "saga-instance", {}, {}))
 
   if (!ret) return []
   return ret.map(value => new SagaInstance(value.content))

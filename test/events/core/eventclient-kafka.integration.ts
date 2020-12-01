@@ -16,7 +16,7 @@ beforeAll(async function () {
 
   setDataStore(new InMemDatastore())
   setEventClient(await eventClientOnKafka({
-    brokers: ['192.168.99.103:30992'], clientId: clientId
+    brokers: ['localhost:9092'], clientId: clientId
   }))
   await testDbPurge();
   await (eventClient() as any).clear(["mystream", "thestream", "test-mystream", "last-stream"])
@@ -46,7 +46,11 @@ test('hot stream recieves events', async function () {
     data: {message: "ends"},
     type: "fake-event",
     id: "epic",
-    createdAt: new Date().getTime()
+    createdAt: new Date().getTime(),
+    causedByType: "",
+    causedById: "",
+    source: "",
+    domainId: uuid.v4()
   }], "mystream")
 
   await pause(1500)
@@ -68,21 +72,33 @@ test('cold stream fully replays historical', async function (done) {
     data: {message: "ends"},
     type: "fake-event",
     id: uuid.v4(),
-    createdAt: new Date().getTime()
+    createdAt: new Date().getTime(),
+    causedByType: "",
+    causedById: "",
+    source: "",
+    domainId: uuid.v4()
   }], "thestream")
 
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
     id: uuid.v4(),
-    createdAt: new Date().getTime()
+    createdAt: new Date().getTime(),
+    causedByType: "",
+    causedById: "",
+    source: "",
+    domainId: uuid.v4()
   }], "thestream")
 
   await eventClient().emit([{
     data: {message: "ends"},
     type: "fake-event",
     id: uuid.v4(),
-    createdAt: new Date().getTime()
+    createdAt: new Date().getTime(),
+    causedByType: "",
+    causedById: "",
+    source: "",
+    domainId: uuid.v4()
   }], "thestream")
 
   await pause(100).catch(reason => console.log(reason))
@@ -112,7 +128,11 @@ test('cold hot stream fully replays historical and also events afterwards', asyn
     data: {message: "ends"},
     type: "fake-event",
     id: "epic",
-    createdAt: new Date().getTime()
+    createdAt: new Date().getTime(),
+    causedByType: "",
+    causedById: "",
+    source: "",
+    domainId: uuid.v4()
   }], "last-stream")
 
   await pause(500)
@@ -129,7 +149,11 @@ test('cold hot stream fully replays historical and also events afterwards', asyn
     data: {message: "ends"},
     type: "fake-event",
     id: "epic2",
-    createdAt: new Date().getTime()
+    createdAt: new Date().getTime(),
+    causedByType: "",
+    causedById: "",
+    source: "",
+    domainId: uuid.v4()
   }], "last-stream")
 
   await pause(3000)

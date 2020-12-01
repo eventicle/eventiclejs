@@ -1,7 +1,8 @@
-import {ICustomPartitioner, Kafka, KafkaConfig, PartitionerArgs, Producer} from "kafkajs";
-import {EventClient, eventClientCodec, EventicleEvent, eventSourceName, EventSubscriptionControl} from "./event-client";
+import {ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
+import {EventClient, eventClientCodec, EventicleEvent, EventSubscriptionControl} from "./event-client";
 import * as uuid from "uuid"
 import logger from "../../logger";
+import {ThrottledProducer} from "./kafka-throttle";
 
 let kafka: Kafka
 
@@ -39,19 +40,17 @@ let DomainAwarePartitioner: ICustomPartitioner = () => {
 }
 
 class EventclientKafka implements EventClient {
-  JavaCompatiblePartitioner
-  producer: Producer
+
+  throttle: ThrottledProducer
 
   broker(): Kafka {
     return kafka
   }
 
   async connect(): Promise<EventclientKafka> {
-    this.producer = kafka.producer({
-      maxInFlightRequests: 1, idempotent: true,
-      createPartitioner: DomainAwarePartitioner
-    })
-    await this.producer.connect()
+    // Use this throttle to work around this - https://github.com/tulios/kafkajs/issues/598
+    this.throttle = new ThrottledProducer(this.broker())
+    await this.throttle.connect()
     return this
   }
 
@@ -94,8 +93,6 @@ class EventclientKafka implements EventClient {
     } else {
       await cons.subscribe({topic: config.stream, fromBeginning: true})
     }
-
-    await cons.subscribe({topic: config.stream, fromBeginning: true})
 
     cons.run({
       eachMessage: async payload => {
@@ -172,25 +169,14 @@ class EventclientKafka implements EventClient {
 
   async emit(events: EventicleEvent[], stream: string): Promise<void> {
 
-    let messages = []
-
     for (let event of events) {
       let encoded = await eventClientCodec().encode(event)
 
-      messages.push({
+      await this.throttle.send({
         value: encoded.buffer,
         timestamp: `${event.createdAt}`,
         headers: encoded.headers
-      })
-    }
-
-    try {
-      await this.producer.send({
-        topic: stream,
-        messages,
-      })
-    } catch (e) {
-      logger.error("Failed in message send", e)
+      }, stream)
     }
   }
 
