@@ -67,7 +67,8 @@ add in more conceptual pieces.
 * _Views_, a way to process streams of events into data structures that can be queried efficiently.
 * _Aggregate Roots_, components that store state, generate events, and enforce rules about how they relate to each other.
 * _Commands_, components that record changes to the system by taking events and emitting them to streams.
-* _Sagas_, event driven workflows. Implement asynchronous business logic
+* _Sagas_, event driven workflows. Implementing asynchronous business logic and integration with external systems in a way that safely isolates
+them from your core application logic.
 
 === Internals: Event Client
 
@@ -111,8 +112,18 @@ include::app/src/view-memory.ts[]
 <4> Will output `1`, showing that the view observed the event that was emitted before it was connected, due to the full replay of the stream.
 <5> Eventicle will connect the view to the requested event streams.
 
-== Managing Local State: Aggregate Roots
+== Managing Local State: Domain Entities and Aggregate Roots
 
+[mermaid]
+....
+graph TD
+  A[Christmas] -->|Get money| B(Go shopping)
+  B --> C{Let me think}
+  C -->|One| D[Laptop]
+  C -->|Two| E[iPhonesss]
+  C -->|Three| F[fa:fa-car Car]
+
+....
 
 
 event sourcing
@@ -135,7 +146,35 @@ one or more events on the shared event streams.
 
 == Testing Eventicle Components and Systems
 
-=== Testing Overview
+Testing event systems is essential, as their interactions are asynchronous and oftentimes with an implicit, or "choreographed" behaviour.
+
+Eventicle is designed to be easy to test, and each type of component has an idiomatic approach for testing it.
+
+
+
+==== consumeFullEventLog - Check event stream consistency
+
+A common requirement when building event log based systems is to ensure that once an operation or workflow has completed,
+that the log is in an expected consistent state.
+
+This can be verified in testing using the `consumeFullEventLog` function.
+
+[source, typescript]
+----
+// ... perform an operation/ workflow that emit events
+let events = await consumeFullEventLog("user")
+
+// verify that the event types we expect are in the log, in the right order, and there aren't any extra events
+// or duplicates present
+expect(events.map(value => value.type)).toStrictEqual([
+  "user.created",
+  "user.password_set",
+  "user.approved",
+  "user.account_locked",
+]);
+----
+
+
 
 === Unit Tests: Commands
 

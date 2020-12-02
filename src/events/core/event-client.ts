@@ -1,7 +1,7 @@
 /**
  * Low level event stream client
  */
-
+import * as uuid from "uuid"
 
 let EVENT_SOURCE = "unknown-service"
 
@@ -34,10 +34,10 @@ class EventClientJsonCodec implements EventClientCodec {
       headers: {
         type: event.type,
         domainId: event.domainId || "",
-        id: event.id,
-        source: event.source,
-        causedById: event.causedById,
-        causedByType: event.causedByType,
+        id: event.id || uuid.v4(),
+        source: event.source || "",
+        causedById: event.causedById || "",
+        causedByType: event.causedByType || "",
         createdAt: `${event.createdAt}`
       },
       buffer: Buffer.from(JSON.stringify(event), "utf8")
