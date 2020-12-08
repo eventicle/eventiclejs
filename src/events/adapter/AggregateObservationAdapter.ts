@@ -14,6 +14,8 @@ let emitter = new InternalEv()
  */
 class AggregateObservationAdapter implements EventAdapter {
 
+  readonly name = "aggregate-observer"
+
   constructor(readonly streamsToSubscribe: string[]) {
     logger.debug("Aggregate Observer Started for streams ", streamsToSubscribe)
   }

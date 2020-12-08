@@ -165,7 +165,8 @@ This can be verified in testing using the `consumeFullEventLog` function.
 let events = await consumeFullEventLog("user")
 
 // verify that the event types we expect are in the log, in the right order, and there aren't any extra events
-// or duplicates present
+// or duplicates present, here with Jest expectations. Insert assertion library of your choice.
+
 expect(events.map(value => value.type)).toStrictEqual([
   "user.created",
   "user.password_set",
@@ -192,7 +193,113 @@ Design Happy Path workflows
 Derive Desired Interactions.
 * Sagas should exist as their own logical entity, no matter their physical location.
 
-== Further Usage
+== Monitoring
+
+=== APM
+_Support for distributed tracing is experimental, and the API is subject to change_
+
+Distributed Tracing is a very useful tool for monitoring system health and diagnosing issues in distributed systems.
+
+Eventicle is event based, which poses some challenges to implementing distributed tracing, which normally assumes
+that a transaction is RPC based and forms a tree structure in its interactions.
+
+Event based systems do not generally form an interaction tree, instead they form a graph structure that when visualised will
+give overlapping concepts of a "transaction".
+
+Given that, distributed tracing is not universally useful in an Eventicle system in the way that it is in an HTTP/ RPC system.
+
+It is most useful when you use it from the point of view of your API layer, and use it to trace interactions that relate to that API.
+
+This is supported in Eventicle, via the `ApmApi` object.
+
+Currently, only Elastic APM is supported, and can be enabled like so
+
+```
+// at the start of your index file, before any imports, to enable the agent to instrument correctly.
+const apm = require('elastic-apm-node').start({
+    serviceName: 'my-cool-service'
+  });
+
+import {apm as eventicleApm} from "@eventicle/eventiclejs";
+
+eventicleApm.setEventicleApm(eventicleApm.elasticApmEventicle(apm))
+
+```
+
+This will generate APM spans (and transactions) using the underlying API, and attach trace information to events. Transmitting
+that information across transports is specific to the transport.  The codec will also need to ensure that it
+collects that information and recreates it appropriately.
+
+The default `EventClientJsonCodec` and both the `eventClientOnDatastore` and `eventClientOnKafka` support distributed trace headers.
+`EventClientJsonCodec` currently sets trace headers compatible with Elastic APM.
+
+When loaded, the following tracing will occur :-
+
+* Each Command execution will exist in a span and have the type `Command`
+* Saga steps will exist in individual transactions/ spans, and will have the type `SagaStep`. They will join the transaction that
+create the source event, if the information exists.
+
+=== Gathering Metrics
+
+The highly asynchronous nature of Event systems requires different monitoring.  Eventicle gathers some metrics for you to aid in this.
+
+Eventicle will automatically gather runtime metrics for the following :-
+
+* View event latency, latest value.
+* Adapter event latency, latest value.
+* Saga event latency (for each event step), latest value.
+
+These are all lazily created, and so the metric will only exist if the view/ adapter/ saga has received an event.
+
+They can be obtained like so
+
+[source, typescript]
+----
+import {metrics} from "@eventicle/eventiclejs";
+
+let metricDoc = metrics()
+console.log(metricDoc)
+
+{
+"view-latency":
+   {
+      "user-view": {
+         "latest": 40,           <1>
+         "user.created": 40      <2>
+      },
+      "user-view-v2":{
+          "latest": 4403371,      <3>
+          "user.created": 4403371,
+          "user.delete": 440971,
+      },
+    },
+"saga-latency" : { .. as above },
+"adapter-latency" : { .. as above }
+}
+
+----
+<1> A view, with the consumer group "user-view". This view has a low latency and appears to be running well.
+<2> The individual event types that the view has received are given their own latency, plus the last event received in the "latest" property.
+<3> This view has very high latencies, and is most likely performing a historical replay.
+
+Care needs to be taken during initial View creation, as they will perform a full event replay of their streams, and so
+will start to show latency metrics for the event they are currently at.   This will rapidly change as they replay the stream,
+but may start far in the past and so will show excessively high apparent latencies.
+
+Once the view has come up to near current, latencies will be reasonable and can be used to monitor view consistency health.
+This will only be true if events are still being produced as the view is replaying. If the view is only replaying historical data,
+then the latency will continue to show the time from the last event createdAt time and the time the view processed the event.
+
+Metrics do not persist beyond application restart.
+
+Latency metrics should be used to monitor if one of the above components is processing events too slowly and is falling behind.
+
+They should not be used to understand if a view/ saga is "up to date". This is conceptually difficult in an eventually consistent, as there
+is no globally consistent view of what "up to date" or "current" actually is.
+
+If you wish to know if a view is consistent with some action, structure your view such that it can answer if it has
+successfully processed the event(s) that were created by the action. This gives you a specific form of consistency check
+that is straightforward to implement.
 
 === Event Client: Using with Kafka
 

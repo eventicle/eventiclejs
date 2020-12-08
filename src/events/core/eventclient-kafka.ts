@@ -192,6 +192,7 @@ class EventclientKafka implements EventClient {
     let cons = kafka.consumer({groupId: consumerName})
 
     await cons.connect()
+
     if (Array.isArray(stream)) {
       for (let str of stream) {
         await cons.subscribe({topic: str})

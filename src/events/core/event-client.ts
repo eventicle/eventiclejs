@@ -2,6 +2,8 @@
  * Low level event stream client
  */
 import * as uuid from "uuid"
+import {hasOwnProperty} from "tslint/lib/utils";
+import {getApmTraceparent} from "../../apm";
 
 let EVENT_SOURCE = "unknown-service"
 
@@ -25,11 +27,25 @@ export interface EventClientCodec {
 
 class EventClientJsonCodec implements EventClientCodec {
   decode(encoded: EncodedEvent): Promise<EventicleEvent> {
-    let content = JSON.parse(encoded.buffer.toString("utf8"))
+    const addTrace = (ev: EventicleEvent) => {
+      if (encoded.headers.traceparent && encoded.headers.traceparent.toString().length > 0) {
+        (ev as any).apmTrace = encoded.headers.traceparent.toString();
+      }
+      return ev
+    }
+
+    let content = addTrace(JSON.parse(encoded.buffer.toString("utf8")))
     return Promise.resolve(content);
   }
 
   encode(event: EventicleEvent): Promise<EncodedEvent> {
+    let traceparent
+    if (hasOwnProperty(event, "apmTrace")) {
+      traceparent = (event as any).apmTrace
+    } else {
+      traceparent = getApmTraceparent()
+    }
+
     return Promise.resolve({
       headers: {
         type: event.type,
@@ -38,7 +54,8 @@ class EventClientJsonCodec implements EventClientCodec {
         source: event.source || "",
         causedById: event.causedById || "",
         causedByType: event.causedByType || "",
-        createdAt: `${event.createdAt}`
+        createdAt: `${event.createdAt}`,
+        traceparent:  traceparent || ""
       },
       buffer: Buffer.from(JSON.stringify(event), "utf8")
     });

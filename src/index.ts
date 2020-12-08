@@ -13,3 +13,10 @@ export { aggregateObservationAdapter, createAggregateObservationAdapter, aggrega
 export { EventAdapter, registerAdapter } from "./events/adapter"
 export { LogApi } from "./logger"
 export { consumeFullEventLog } from "./testing"
+export { metrics } from "./metrics"
+
+import * as apm from "./apm";
+
+export {
+  apm
+}

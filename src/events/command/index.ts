@@ -1,4 +1,5 @@
 import {eventClient, EventicleEvent} from "../core/event-client";
+import {span} from "../../apm";
 
 const COMMAND = new Map<string, Command<any>>()
 
@@ -24,15 +25,19 @@ export function registerCommand(command: Command<any>): void {
 
 export async function dispatchCommand(commandIntent: CommandIntent): Promise<CommandReturn> {
 
-  let command = COMMAND.get(commandIntent.type)
+  return await span(`Command ${commandIntent.type} - execute`, {}, async (span) => {
+    if (span) span.setType("Command")
 
-  if (!command) throw new Error(`Command not found ${commandIntent.type}`)
+    let command = COMMAND.get(commandIntent.type)
 
-  let event = await command.execute(commandIntent.data)
+    if (!command) throw new Error(`Command not found ${commandIntent.type}`)
 
-  if (event.events) {
-    await eventClient().emit(event.events, command.streamToEmit)
-  }
+    let event = await command.execute(commandIntent.data)
 
-  return event
+    if (event.events) {
+      await eventClient().emit(event.events, command.streamToEmit)
+    }
+
+    return event
+  })
 }

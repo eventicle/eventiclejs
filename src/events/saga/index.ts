@@ -2,6 +2,27 @@ import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/eve
 import {dataStore, Record} from "../../datastore";
 import uuid = require("uuid");
 import logger from "../../logger";
+import {apmJoinEvent, span, withAPM} from "../../apm";
+import {hasOwnProperty} from "tslint/lib/utils";
+
+let metrics = {
+
+} as any
+
+function updateLatency(view: Saga, event: EventicleEvent) {
+  if (!hasOwnProperty(metrics, view.name)) {
+    metrics[view.name] = { latest: 0}
+  }
+  if (!hasOwnProperty(metrics[view.name], event.type)) {
+    metrics[view.name][event.type] = 0
+  }
+  metrics[view.name][event.type] = new Date().getTime() - event.createdAt
+  metrics[view.name].latest = new Date().getTime() - event.createdAt
+}
+
+export function getSagaMetrics() {
+  return metrics
+}
 
 interface NotifySub {
   id?: number
@@ -36,8 +57,9 @@ export class SagaInstance {
     })
   }
 
-  endSaga() {
+  endSaga(preserveInstanceData: boolean = false) {
     this.internalData.ended = true
+    this.internalData.preserveInstanceData = preserveInstanceData
   }
 }
 
@@ -45,13 +67,15 @@ export class Saga {
 
   streams: string[]
   streamSubs: EventSubscriptionControl[] = []
+  startMatcher: (event: EventicleEvent) => Promise<boolean> = async event => true;
 
   starts: Map<string, (saga: SagaInstance, event: EventicleEvent) => void> = new Map()
   eventHandler: Map<string, (saga: SagaInstance, event: EventicleEvent) => void> = new Map()
   errorHandler: (saga, event: EventicleEvent, error: Error) => Promise<void> = async (saga, event, error) => {
     logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
-      saga, event, error
+      saga, event
     })
+    logger.error("Saga error", error)
   }
 
   constructor(readonly name: string) {
@@ -59,6 +83,11 @@ export class Saga {
 
   subscribeStreams(streams: string[]): Saga {
     this.streams = streams
+    return this
+  }
+
+  startOnMatch(eventMatcher: (event: EventicleEvent) => Promise<boolean>): Saga {
+    this.startMatcher = eventMatcher
     return this
   }
 
@@ -110,31 +139,46 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
   })
 
   await Promise.all(matchingNotifies.map(async value => {
-
+    await apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
+    await span(event.type, {}, async theSpan => {
     let instanceData = await dataStore().findEntity("system", "saga-instance", {instanceId: value.instanceId})
 
     let instance = new SagaInstance(instanceData[0].content, instanceData[0])
 
     logger.info(instance)
-
-    await saga.eventHandler.get(event.type).call(instance, instance, event)
-    instance.internalData.events.push(event)
-    instance.record.content = instance.internalData
-    await dataStore().saveEntity("system", "saga-instance", instance.record)
-    await persistNotificationSubs(saga, instance)
+      if (theSpan) theSpan.setType("SagaStep")
+      await saga.eventHandler.get(event.type).call(instance, instance, event)
+      instance.internalData.events.push(event)
+      instance.record.content = instance.internalData
+      await dataStore().saveEntity("system", "saga-instance", instance.record)
+      await persistNotificationSubs(saga, instance)
+      if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
+        await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
+      }
+    })
+    if(matchingNotifies.length > 0) {
+      updateLatency(saga, event)
+    }
+    await withAPM(async apm => apm.endTransaction())
   }))
 }
 
 async function startSagaInstance(saga: Saga, startEvent: EventicleEvent) {
   let instance = new SagaInstance({saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
 
-  await saga.starts.get(startEvent.type).call(instance, instance, startEvent)
+  await apmJoinEvent(startEvent, saga.name + ":" + startEvent.type, "saga-step-" + saga.name, startEvent.type)
+  await span(startEvent.type, {}, async theSpan => {
+    if (theSpan) theSpan.setType("SagaStep")
+    await saga.starts.get(startEvent.type).call(instance, instance, startEvent)
 
-  let internal = instance.internalData
+    let internal = instance.internalData
 
-  await dataStore().createEntity("system", "saga-instance", internal)
+    await dataStore().createEntity("system", "saga-instance", internal)
 
-  await persistNotificationSubs(saga, instance)
+    await persistNotificationSubs(saga, instance)
+  })
+  updateLatency(saga, startEvent)
+  await withAPM(async apm => apm.endTransaction())
 }
 
 async function persistNotificationSubs(saga: Saga, instance: SagaInstance) {
@@ -158,7 +202,7 @@ export async function registerSaga(saga: Saga): Promise<void> {
     `saga-${saga.name}`, async (event: EventicleEvent) => {
       logger.debug(`Saga ${saga.name} event`, event)
       try {
-        if (saga.starts.has(event.type)) {
+        if (saga.starts.has(event.type) && await saga.startMatcher(event)) {
           await startSagaInstance(saga, event)
         } else if (saga.eventHandler.has(event.type)) {
           await checkNotifyIntents(saga, event)
@@ -173,8 +217,9 @@ export async function registerSaga(saga: Saga): Promise<void> {
     }))
 }
 
-export async function allSagaInstances(): Promise<SagaInstance[]> {
-  let ret = (await dataStore().findEntity("system", "saga-instance", {}, {}))
+export async function allSagaInstances(workspaceId?: string): Promise<SagaInstance[]> {
+  if (!workspaceId) workspaceId = "system"
+  let ret = (await dataStore().findEntity(workspaceId, "saga-instance", {}, {}))
 
   if (!ret) return []
   return ret.map(value => new SagaInstance(value.content))
