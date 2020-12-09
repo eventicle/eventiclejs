@@ -22,17 +22,13 @@ export function getAdapterMetrics() {
 }
 
 export async function registerAdapter(view: EventAdapter): Promise<void> {
-  await eventClient().coldHotStream({
-    handler: async event => {
+  await eventClient().hotStream(view.streamsToSubscribe, view.consumerGroup, async event => {
       await view.handleEvent(event)
       updateLatency(view, event)
     },
-    onError: error => {
+   error => {
       logger.error("Error in adapter", error)
-    },
-    groupId: view.consumerGroup,
-    stream: view.streamsToSubscribe
-  })
+    })
 }
 
 /**

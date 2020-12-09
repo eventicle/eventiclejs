@@ -82,7 +82,7 @@ class EventclientKafka implements EventClient {
 
     consumerGroups.push(config.groupId)
 
-    let cons = kafka.consumer({groupId: uuid.v4()})
+    let cons = kafka.consumer({groupId: config.groupId})
 
     await cons.connect()
 
@@ -95,6 +95,9 @@ class EventclientKafka implements EventClient {
     }
 
     cons.run({
+      autoCommit: true,
+      autoCommitInterval: 500,
+      autoCommitThreshold: 50,
       eachMessage: async payload => {
         logger.trace(`[${config.groupId}] message received`, payload)
 
@@ -104,6 +107,8 @@ class EventclientKafka implements EventClient {
         })
 
         await config.handler(decoded)
+
+        await cons.commitOffsets([{ topic: config.stream, partition: payload.partition, offset: `${parseInt(payload.message.offset) +1}` }])
       }
     })
 
@@ -133,6 +138,9 @@ class EventclientKafka implements EventClient {
     await cons.subscribe({topic: stream, fromBeginning: true})
 
     cons.run({
+      autoCommit: true,
+      autoCommitInterval: 500,
+      autoCommitThreshold: 50,
       eachMessage: async payload => {
         logger.trace("Cold message lands", payload)
         try {
@@ -202,7 +210,10 @@ class EventclientKafka implements EventClient {
     }
 
     await cons.run({
-      eachMessage: async payload => {
+      autoCommit: true,
+      autoCommitInterval: 500,
+      autoCommitThreshold: 50,
+      eachMessage: async (payload) => {
         await consumer(await eventClientCodec().decode({
           headers: payload.message.headers, buffer: payload.message.value
         }))
