@@ -3,17 +3,16 @@ import {dataStore, Record} from "../../datastore";
 import uuid = require("uuid");
 import logger from "../../logger";
 import {apmJoinEvent, span, withAPM} from "../../apm";
-import {hasOwnProperty} from "tslint/lib/utils";
 
 let metrics = {
 
 } as any
 
 function updateLatency(view: Saga, event: EventicleEvent) {
-  if (!hasOwnProperty(metrics, view.name)) {
+  if (!metrics.hasOwnProperty(view.name)) {
     metrics[view.name] = { latest: 0}
   }
-  if (!hasOwnProperty(metrics[view.name], event.type)) {
+  if (!metrics[view.name].hasOwnProperty(event.type)) {
     metrics[view.name][event.type] = 0
   }
   metrics[view.name][event.type] = new Date().getTime() - event.createdAt

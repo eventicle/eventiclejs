@@ -1,16 +1,15 @@
 import {eventClient, EventicleEvent} from "../core/event-client";
 import logger from "../../logger";
-import {hasOwnProperty} from "tslint/lib/utils";
 
 let metrics = {
 
 } as any
 
 function updateViewLatency(view: EventView, event: EventicleEvent) {
-  if (!hasOwnProperty(metrics, view.consumerGroup)) {
+  if (!metrics.hasOwnProperty(view.consumerGroup)) {
     metrics[view.consumerGroup] = { latest: 0 }
   }
-  if (!hasOwnProperty(metrics[view.consumerGroup], event.type)) {
+  if (!metrics[view.consumerGroup].hasOwnProperty(event.type)) {
     metrics[view.consumerGroup][event.type] = 0
   }
   metrics[view.consumerGroup][event.type] = new Date().getTime() - event.createdAt

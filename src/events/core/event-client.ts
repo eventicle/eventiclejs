@@ -2,7 +2,6 @@
  * Low level event stream client
  */
 import * as uuid from "uuid"
-import {hasOwnProperty} from "tslint/lib/utils";
 import {getApmTraceparent} from "../../apm";
 
 let EVENT_SOURCE = "unknown-service"
@@ -40,7 +39,7 @@ class EventClientJsonCodec implements EventClientCodec {
 
   encode(event: EventicleEvent): Promise<EncodedEvent> {
     let traceparent
-    if (hasOwnProperty(event, "apmTrace")) {
+    if (event.hasOwnProperty("apmTrace")) {
       traceparent = (event as any).apmTrace
     } else {
       traceparent = getApmTraceparent()
@@ -55,7 +54,7 @@ class EventClientJsonCodec implements EventClientCodec {
         causedById: event.causedById || "",
         causedByType: event.causedByType || "",
         createdAt: `${event.createdAt}`,
-        traceparent:  traceparent || ""
+        traceparent: traceparent || ""
       },
       buffer: Buffer.from(JSON.stringify(event), "utf8")
     });
@@ -75,54 +74,58 @@ export interface EventicleEvent {
 }
 
 export interface EventSubscriptionControl {
-    close: () => Promise<void>
+  close: () => Promise<void>
+}
+
+export interface EventHotSubscriptionControl extends EventSubscriptionControl {
+  addStream: (name: string) => Promise<void>
 }
 
 export interface EventClient {
-    /**
-     *
-     * @param event
-     * @param stream
-     */
-    emit: (event: EventicleEvent[], stream: string) => Promise<void>
-    /**
-     * Play from persisted storage
-     * @param stream
-     * @param from
-     * @param handler
-     * @param onError
-     * @param onDone
-     */
-    coldStream: (stream: string,
-                 handler: (event: EventicleEvent) => Promise<void>,
-                 onError: (error: any) => void,
-                 onDone: () => void) => Promise<EventSubscriptionControl>
-    /**
-     * Only play hot data.
-     * @param stream
-     * @param consumerName
-     * @param handler
-     * @param onError
-     */
-    hotStream: (stream: string | string[],
-                consumerName: string,
-                handler: (event: EventicleEvent) => Promise<void>,
-                onError: (error: any) => void) => Promise<EventSubscriptionControl>
+  /**
+   *
+   * @param event
+   * @param stream
+   */
+  emit: (event: EventicleEvent[], stream: string) => Promise<void>
+  /**
+   * Play from persisted storage
+   * @param stream
+   * @param from
+   * @param handler
+   * @param onError
+   * @param onDone
+   */
+  coldStream: (stream: string,
+               handler: (event: EventicleEvent) => Promise<void>,
+               onError: (error: any) => void,
+               onDone: () => void) => Promise<EventSubscriptionControl>
+  /**
+   * Only play hot data.
+   * @param stream
+   * @param consumerName
+   * @param handler
+   * @param onError
+   */
+  hotStream: (stream: string | string[],
+              consumerName: string,
+              handler: (event: EventicleEvent) => Promise<void>,
+              onError: (error: any) => void) => Promise<EventHotSubscriptionControl>
 
-    /**
-     * Play from persisted storage the continue from in memory
-     * @param stream
-     * @param from
-     * @param handler
-     * @param onError
-     * @param onDone
-     */
-    coldHotStream: (config: {
-        stream: string | string[],
-        groupId?: string,
-        handler: (event: EventicleEvent) => Promise<void>,
-        onError: (error: any) => void
-    }) => Promise<EventSubscriptionControl>
+  /**
+   * Play from persisted storage the continue from in memory
+   * @param stream
+   * @param from
+   * @param handler
+   * @param onError
+   * @param onDone
+   */
+  coldHotStream: (config: {
+    stream: string | string[],
+    groupId?: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  }) => Promise<EventHotSubscriptionControl>
 }
 
 let EVENT_CLIENT: EventClient

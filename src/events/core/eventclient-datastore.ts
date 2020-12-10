@@ -1,4 +1,11 @@
-import {EncodedEvent, EventClient, eventClientCodec, EventicleEvent, EventSubscriptionControl} from "./event-client";
+import {
+  EncodedEvent,
+  EventClient,
+  eventClientCodec,
+  EventHotSubscriptionControl,
+  EventicleEvent,
+  EventSubscriptionControl
+} from "./event-client";
 import {EventEmitter} from "events"
 import {dataStore} from "../../datastore";
 import logger from "../../logger";
@@ -98,7 +105,7 @@ class EventclientDatastore implements EventClient {
 
   constructor() {}
 
-  async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
+  async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventHotSubscriptionControl> {
 
     let coldReplay = async() => {
       const str = []
@@ -118,7 +125,9 @@ class EventclientDatastore implements EventClient {
 
       // todo, improved by having a hot buffer and storing until replay is made.  This seems to pass reliably in process, so .... meh
       emitter.addListener("event", async (ev: InternalEvent) => {
-        if (ev.stream == config.stream) {
+        if (Array.isArray(config.stream) && config.stream.indexOf(ev.stream)) {
+          await config.handler(await eventClientCodec().decode(ev.event))
+        } else if (ev.stream == config.stream) {
           await config.handler(await eventClientCodec().decode(ev.event))
         }
       })
@@ -137,6 +146,12 @@ class EventclientDatastore implements EventClient {
     return {
       close: async () => {
 
+      },
+      addStream: async (name: string) => {
+        if (!Array.isArray(config.stream)) {
+          config.stream = [config.stream]
+          config.stream.push(name)
+        }
       }
     }
   };
@@ -209,27 +224,34 @@ class EventclientDatastore implements EventClient {
                   consumerName: string,
                   handler: (event: EventicleEvent) => Promise<void>,
                   onError: (error: any) => void) {
+    let theStream = stream
     //todo, ACTUALLY REMOVE THE SUB, this is a resource leak
     let tombstoned = false
     let exec = async (ev: InternalEvent) => {
       if (tombstoned) return
-      if (Array.isArray(stream) && stream.includes(ev.stream)) {
+      if (Array.isArray(theStream) && theStream.includes(ev.stream)) {
         await handler(await eventClientCodec().decode(ev.event))
-      } else if (ev.stream == stream) {
+      } else if (ev.stream == theStream) {
         await handler(await eventClientCodec().decode(ev.event))
       }
     }
 
-    if (Array.isArray(stream)) {
-      for (let str of stream) {
-        subscriptions.push(new StreamSubscription(`${stream}:${consumerName}`, getStream(str), exec))
+    if (Array.isArray(theStream)) {
+      for (let str of theStream) {
+        subscriptions.push(new StreamSubscription(`${theStream}:${consumerName}`, getStream(str), exec))
       }
     } else {
-      subscriptions.push(new StreamSubscription(`${stream}:${consumerName}`, getStream(stream), exec))
+      subscriptions.push(new StreamSubscription(`${theStream}:${consumerName}`, getStream(theStream), exec))
     }
     return {
       close: async () => {
         tombstoned = true
+      },
+      addStream: async (name: string) => {
+        if (!Array.isArray(theStream)) {
+          theStream = [theStream]
+          theStream.push(name)
+        }
       }
     }
   }

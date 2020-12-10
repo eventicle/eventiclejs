@@ -1,5 +1,4 @@
 import logger from "./logger";
-import {hasOwnProperty} from "tslint/lib/utils";
 import {EventicleEvent} from "./events/core/event-client";
 
 let APM: ApmApi = {
@@ -35,7 +34,7 @@ export function setEventicleApm(apm: ApmApi) {
 }
 
 export function apmJoinEvent(event: EventicleEvent, name: string, type:string, subtype: string) {
-  if (APM && hasOwnProperty(event, "apmTrace")) {
+  if (APM && event.hasOwnProperty("apmTrace")) {
     APM.startTransaction(name, type, subtype, (event as any).apmTrace)
   } else {
     logger.trace("Tried joining a distributed trace on an event that has no tracing", event)
