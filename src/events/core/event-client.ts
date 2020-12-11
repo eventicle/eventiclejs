@@ -110,7 +110,7 @@ export interface EventClient {
   hotStream: (stream: string | string[],
               consumerName: string,
               handler: (event: EventicleEvent) => Promise<void>,
-              onError: (error: any) => void) => Promise<EventHotSubscriptionControl>
+              onError: (error: any) => void) => Promise<EventHotSubscriptionControl | EventSubscriptionControl>
 
   /**
    * Play from persisted storage the continue from in memory
@@ -125,7 +125,7 @@ export interface EventClient {
     groupId?: string,
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void
-  }) => Promise<EventHotSubscriptionControl>
+  }) => Promise<EventHotSubscriptionControl | EventSubscriptionControl>
 }
 
 let EVENT_CLIENT: EventClient
