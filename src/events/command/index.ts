@@ -1,5 +1,7 @@
 import {eventClient, EventicleEvent} from "../core/event-client";
 import {span} from "../../apm";
+import logger from "../../logger";
+import {serializeError} from "serialize-error";
 
 const COMMAND = new Map<string, Command<any>>()
 
@@ -32,12 +34,18 @@ export async function dispatchCommand(commandIntent: CommandIntent): Promise<Com
 
     if (!command) throw new Error(`Command not found ${commandIntent.type}`)
 
-    let event = await command.execute(commandIntent.data)
+    try {
+      let event = await command.execute(commandIntent.data)
+      if (event.events) {
+        await eventClient().emit(event.events, command.streamToEmit)
+      }
 
-    if (event.events) {
-      await eventClient().emit(event.events, command.streamToEmit)
+      return event
+    } catch (e) {
+      logger.error("An untrapped error occured in a command " + e.message, {
+        commandIntent, error: serializeError(e)
+      })
+      throw e
     }
-
-    return event
   })
 }

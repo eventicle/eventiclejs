@@ -26,8 +26,7 @@ describe('Aggregate Observer', function() {
     ]))
 
     // simulate command execution
-    let user = new User()
-    user.name = "Fakeson"
+    let user = User.create("Fakeson")
     let events = await aggregates.persist(user)
     await eventClient().emit(events, "user")
 

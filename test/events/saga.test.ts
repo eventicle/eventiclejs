@@ -89,7 +89,7 @@ describe('Sagas', function () {
 
     console.log("Emitted event 1")
 
-    await eventClient().emit([{
+    eventClient().emit([{
       data: { id },
       type: "UserDidStuff",
       id: "epic"

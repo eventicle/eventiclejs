@@ -1,6 +1,8 @@
 import {EventicleEvent, eventSourceName} from "./core/event-client";
 import uuid = require("uuid");
 import {dataStore} from "../datastore";
+import logger from "../logger";
+import {hashCode, lockManager} from "./lock-manager";
 
 export abstract class AggregateRoot {
 
@@ -28,6 +30,7 @@ export abstract class AggregateRoot {
   handleEvent(event: EventicleEvent) {
     let func = this.reducers[event.type]
     if (func) func.call(this, event)
+    logger.trace(`${this.type} after applying ${event.type}`, this)
   }
 }
 
@@ -70,28 +73,32 @@ export default {
   },
 
   persist: async<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]> => {
+    return lockManager().withLock(hashCode(aggregate.id), async () => {
 
-    let storeType = "aggregate-events-" + aggregate.type
-    let ret = JSON.parse(JSON.stringify(aggregate.newEvents))
-    aggregate.newEvents.length = 0
+      let storeType = "aggregate-events-" + aggregate.type
+      let ret = JSON.parse(JSON.stringify(aggregate.newEvents))
+      aggregate.newEvents.length = 0
 
-    let entity = await dataStore().findEntity("system", storeType, { domainId: aggregate.id })
+      let entity = await dataStore().findEntity("system", storeType, { domainId: aggregate.id })
 
-    if (!entity || entity.length == 0) {
+      if (!entity || entity.length == 0) {
 
-      let instance = {
-        domainId: aggregate.id,
-        history: ret
+        let instance = {
+          domainId: aggregate.id,
+          history: ret
+        }
+
+        await dataStore().createEntity("system", storeType, instance)
+
+      } else {
+        let instance = entity[0]
+        instance.content.history.push(...ret)
+        await dataStore().saveEntity("system", storeType, instance)
       }
 
-      await dataStore().createEntity("system", storeType, instance)
-
-    } else {
-      let instance = entity[0]
-      instance.content.history.push(...ret)
-      await dataStore().saveEntity("system", storeType, instance)
-    }
-
-    return ret
+      return ret
+    }, () => {
+      logger.warn("Failed to do the thing")
+    })
   }
 }
