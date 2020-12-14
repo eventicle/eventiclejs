@@ -13,7 +13,7 @@ export class EventStreamObservationAdapter implements EventAdapter {
   readonly consumerGroup = `event-stream-observation-${uuid.v4()}`
 
   async handleEvent(event: EventicleEvent): Promise<void> {
-    emitter.emit("event", event)
+    emitter.emit("hot-event", event)
   }
 }
 
@@ -47,11 +47,11 @@ export const eventStreamObserver = async (type: string, id: string, timeout: num
         internalContext = {...internalContext, ...event}
         if(exec(event)) {
           clearTimeout(timeoutHandler)
-          emitter.removeListener("event", listener)
+          emitter.removeListener("hot-event", listener)
           resolve(internalContext)
         }
       }
     }
-    emitter.addListener(`event`, listener)
+    emitter.addListener(`hot-event`, listener)
   })
 }
