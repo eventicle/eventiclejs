@@ -79,6 +79,8 @@ export default {
 
     if (!entity || entity.length == 0) {
 
+      console.log("Creating!", aggregate)
+
       let instance = {
         domainId: aggregate.id,
         history: ret
