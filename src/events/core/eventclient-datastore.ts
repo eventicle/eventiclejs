@@ -112,10 +112,10 @@ class EventclientDatastore implements EventClient {
 
       if (Array.isArray(config.stream)) {
         for (let stream of config.stream) {
-          str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}))
+          str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}, { createdAt: "ASC"}))
         }
       } else {
-        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: config.stream}))
+        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: config.stream}, {createdAt: "ASC"}))
       }
 
       if (!str) {
@@ -125,20 +125,14 @@ class EventclientDatastore implements EventClient {
 
       // todo, improved by having a hot buffer and storing until replay is made.  This seems to pass reliably in process, so .... meh
       emitter.addListener("event", async (ev: InternalEvent) => {
+        if (!ev) throw new Error("Received an undefined or null InternalEvent, this is a bug: " + JSON.stringify(ev.event))
+
         if (Array.isArray(config.stream) && config.stream.indexOf(ev.stream)) {
           await config.handler(await eventClientCodec().decode(ev.event))
         } else if (ev.stream == config.stream) {
           await config.handler(await eventClientCodec().decode(ev.event))
         }
       })
-
-      for(let entry in str) {
-        await config.handler({
-          id: "epic",
-          type: "epic",
-          data: "woop"
-        } as EventicleEvent)
-      }
     }
 
     coldReplay()
@@ -169,10 +163,10 @@ class EventclientDatastore implements EventClient {
     const str = []
     if (Array.isArray(stream)) {
       for (let theStream of stream) {
-        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: theStream}))
+        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: theStream}, { createdAt : "ASC"} ))
       }
     } else {
-      str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}))
+      str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}, { createdAt : "ASC"}))
     }
 
     if (!str) {
@@ -180,13 +174,7 @@ class EventclientDatastore implements EventClient {
       return
     }
 
-    logger.debug("stream", str)
-
-    // todo, should be done in the datastore.
-    // let streamEntries = str.sort((a, b) => a.createdAt.getDate() - b.createdAt.getDate())
-
     for(let entry of str) {
-      // await handler(await decryptEvent(entry.internal))
       await handler(entry.content.internal)
     }
 
@@ -209,8 +197,15 @@ class EventclientDatastore implements EventClient {
         streamId: stream, internal: ev
       })
 
+      let event = await eventClientCodec().encode(ev)
+
+      if (!event) {
+        logger.error("An encoding error occurred. An event encoded to undefined or null. This is a bug", {
+          event, source_event:ev
+        })
+      }
       let internal = {
-        event: await eventClientCodec().encode(ev), stream, id: ev.id
+        event, stream, id: ev.id
       } as InternalEvent
       // TODO, remove when coldHot ports to event log
       emitter.emit("event", internal)

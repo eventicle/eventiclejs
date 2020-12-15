@@ -15,6 +15,7 @@ export { EventAdapter, registerAdapter } from "./events/adapter"
 export { LogApi } from "./logger"
 export { consumeFullEventLog } from "./testing"
 export { metrics } from "./metrics"
+export { lockManager, setLockManager } from "./events/lock-manager"
 
 import * as apm from "./apm";
 

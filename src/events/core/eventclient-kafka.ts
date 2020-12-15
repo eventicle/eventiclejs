@@ -1,5 +1,11 @@
 import {ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
-import {EventClient, eventClientCodec, EventicleEvent, EventSubscriptionControl} from "./event-client";
+import {
+  EventClient,
+  eventClientCodec,
+  EventHotSubscriptionControl,
+  EventicleEvent,
+  EventSubscriptionControl
+} from "./event-client";
 import * as uuid from "uuid"
 import logger from "../../logger";
 import {ThrottledProducer} from "./kafka-throttle";
@@ -18,15 +24,6 @@ export function getKafkaClient(): Kafka {
 
 export async function connectBroker(config: KafkaConfig) {
   kafka = new Kafka(config)
-}
-
-function hashStr(str) {
-  let hash = 0;
-  for (var i = 0; i < str.length; i++) {
-    var charCode = str.charCodeAt(i);
-    hash += charCode;
-  }
-  return hash;
 }
 
 let DomainAwarePartitioner: ICustomPartitioner = () => {
@@ -68,7 +65,7 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async coldHotStream(config: { stream: string, groupId: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
+  async coldHotStream(config: { stream: string, groupId: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventHotSubscriptionControl> {
 
     if (!config.groupId) {
       logger.trace("Auto set groupId for cold/hot replay")
@@ -115,6 +112,9 @@ class EventclientKafka implements EventClient {
     return {
       close: async () => {
         await cons.disconnect()
+      },
+      addStream: async (name: string) => {
+        await cons.subscribe({ topic: name, fromBeginning: true })
       }
     }
   }
@@ -188,7 +188,7 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventHotSubscriptionControl> {
 
     if (consumerGroups.includes(consumerName)) {
       logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + consumerName))
@@ -223,6 +223,9 @@ class EventclientKafka implements EventClient {
     return {
       close: async () => {
         await cons.disconnect()
+      },
+      addStream: async (name: string) => {
+        await cons.subscribe({ topic: name, fromBeginning: false })
       }
     }
   }
