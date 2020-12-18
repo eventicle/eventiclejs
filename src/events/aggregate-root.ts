@@ -3,6 +3,7 @@ import uuid = require("uuid");
 import {dataStore} from "../datastore";
 import logger from "../logger";
 import {hashCode, lockManager} from "./lock-manager";
+import aggregatesTenant from "./tenant-aggregate-root";
 
 export abstract class AggregateRoot {
 
@@ -34,11 +35,6 @@ export abstract class AggregateRoot {
   }
 }
 
-function eventstreamname<T extends AggregateRoot>(type: { new (): T }) {
-  let t = new type()
-  return "aggregate-events-" + t.type
-}
-
 export default {
   /**
    * Replay and build an aggregate root into its current state.
@@ -47,14 +43,7 @@ export default {
    */
   load: async<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<T> => {
     let t = new type()
-    let ret = await dataStore().findEntity("system", eventstreamname(type), { domainId: id })
-
-    if (ret && ret.length > 0) {
-      ret[0].content.history.forEach(value => t.handleEvent(value))
-      return t
-    }
-
-    return null
+    return aggregatesTenant.load(t, "system", id)
   },
 
   /**
@@ -63,42 +52,11 @@ export default {
    * @param id
    */
   history: async<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<EventicleEvent[]> => {
-    let ret = await dataStore().findEntity("system", eventstreamname(type), { domainId: id })
-
-    if (ret && ret.length > 0) {
-      return ret[0].content.history
-    }
-
-    return null
+    let t = new type()
+    return aggregatesTenant.history(t.type, "system", id)
   },
 
   persist: async<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]> => {
-    return lockManager().withLock(hashCode(aggregate.id), async () => {
-
-      let storeType = "aggregate-events-" + aggregate.type
-      let ret = JSON.parse(JSON.stringify(aggregate.newEvents))
-      aggregate.newEvents.length = 0
-
-      let entity = await dataStore().findEntity("system", storeType, { domainId: aggregate.id })
-
-      if (!entity || entity.length == 0) {
-
-        let instance = {
-          domainId: aggregate.id,
-          history: ret
-        }
-
-        await dataStore().createEntity("system", storeType, instance)
-
-      } else {
-        let instance = entity[0]
-        instance.content.history.push(...ret)
-        await dataStore().saveEntity("system", storeType, instance)
-      }
-
-      return ret
-    }, () => {
-      logger.warn("Failed to do the thing")
-    })
+    return aggregatesTenant.persist(aggregate, "system")
   }
 }

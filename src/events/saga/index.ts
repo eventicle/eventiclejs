@@ -4,13 +4,11 @@ import uuid = require("uuid");
 import logger from "../../logger";
 import {apmJoinEvent, span, withAPM} from "../../apm";
 
-let metrics = {
-
-} as any
+let metrics = {} as any
 
 function updateLatency(view: Saga, event: EventicleEvent) {
   if (!metrics.hasOwnProperty(view.name)) {
-    metrics[view.name] = { latest: 0}
+    metrics[view.name] = {latest: 0}
   }
   if (!metrics[view.name].hasOwnProperty(event.type)) {
     metrics[view.name][event.type] = 0
@@ -140,11 +138,10 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
   await Promise.all(matchingNotifies.map(async value => {
     await apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
     await span(event.type, {}, async theSpan => {
-    let instanceData = await dataStore().findEntity("system", "saga-instance", {instanceId: value.instanceId})
+      let instanceData = await dataStore().findEntity("system", "saga-instance", {instanceId: value.instanceId})
 
-    let instance = new SagaInstance(instanceData[0].content, instanceData[0])
+      let instance = new SagaInstance(instanceData[0].content, instanceData[0])
 
-    logger.info(instance)
       if (theSpan) theSpan.setType("SagaStep")
       await saga.eventHandler.get(event.type).call(instance, instance, event)
       instance.internalData.events.push(event)
@@ -155,7 +152,7 @@ async function checkNotifyIntents(saga: Saga, event: EventicleEvent) {
         await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
       }
     })
-    if(matchingNotifies.length > 0) {
+    if (matchingNotifies.length > 0) {
       updateLatency(saga, event)
     }
     await withAPM(async apm => apm.endTransaction())

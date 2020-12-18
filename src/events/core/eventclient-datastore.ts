@@ -107,19 +107,21 @@ class EventclientDatastore implements EventClient {
 
   async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventHotSubscriptionControl> {
 
+    let streams = JSON.parse(JSON.stringify(config.stream))
+
     let coldReplay = async() => {
       const str = []
 
-      if (Array.isArray(config.stream)) {
-        for (let stream of config.stream) {
+      if (Array.isArray(streams)) {
+        for (let stream of streams) {
           str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}, { createdAt: "ASC"}))
         }
       } else {
-        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: config.stream}, {createdAt: "ASC"}))
+        str.push(...await dataStore().findEntity("system", "event-stream", {streamId: streams}, {createdAt: "ASC"}))
       }
 
       if (!str) {
-        config.onError(`No such stream ${config.stream}`)
+        config.onError(`No such stream ${streams}`)
         return
       }
 
@@ -127,7 +129,7 @@ class EventclientDatastore implements EventClient {
       emitter.addListener("event", async (ev: InternalEvent) => {
         if (!ev) throw new Error("Received an undefined or null InternalEvent, this is a bug: " + JSON.stringify(ev.event))
 
-        if (Array.isArray(config.stream) && config.stream.indexOf(ev.stream)) {
+        if (Array.isArray(streams) && streams.includes(ev.stream)) {
           await config.handler(await eventClientCodec().decode(ev.event))
         } else if (ev.stream == config.stream) {
           await config.handler(await eventClientCodec().decode(ev.event))
@@ -143,9 +145,9 @@ class EventclientDatastore implements EventClient {
       },
       addStream: async (name: string) => {
         if (!Array.isArray(config.stream)) {
-          config.stream = [config.stream]
-          config.stream.push(name)
+          streams = [streams]
         }
+        streams.push(name)
       }
     }
   };
