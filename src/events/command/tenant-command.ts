@@ -39,7 +39,7 @@ export async function dispatchCommand(commandIntent: TenantCommandIntent<any>): 
     }
 
     try {
-      let event = await command.execute(commandIntent.data)
+      let event = await command.execute(commandIntent)
       if (event.events) {
         await eventClient().emit(event.events, str)
       }
