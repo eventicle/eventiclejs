@@ -25,5 +25,5 @@ export function registerCommand(command: Command<any>): void {
 export async function dispatchCommand(commandIntent: CommandIntent): Promise<CommandReturn> {
   return tenant.dispatchCommand({
     workspaceId: "single", data: commandIntent.data, type: commandIntent.type
-  })
+  }, true)
 }
