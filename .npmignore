@@ -6,3 +6,4 @@ jest.config.json
 .gitignore
 .editorconfig
 .idea/
+book/
