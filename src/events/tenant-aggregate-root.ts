@@ -20,6 +20,7 @@ export default {
 
     if (ret && ret.length > 0) {
       ret[0].content.history.forEach(value => emptyInstance.handleEvent(value))
+      emptyInstance.history = ret[0].content.history
       return emptyInstance
     }
 

@@ -7,6 +7,7 @@ import aggregatesTenant from "./tenant-aggregate-root";
 
 export abstract class AggregateRoot {
 
+  history: EventicleEvent[] = []
   readonly newEvents: EventicleEvent[] = []
   id: string;
   reducers: any
