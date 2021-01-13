@@ -49,9 +49,8 @@ export interface EventView {
 }
 
 export async function addTenantToView(view: EventView, tenant: string) {
-  console.log(viewControls)
   let control: EventHotSubscriptionControl = viewControls[view.consumerGroup]
-  logger.debug(`Adding tenant ${tenant} to subscription streams `, view.streamsToSubscribe)
+  logger.trace(`Adding tenant ${tenant} to subscription streams `, view.streamsToSubscribe)
   for (let str of view.streamsToSubscribe) {
     await control.addStream(tenant + "." + str)
   }
