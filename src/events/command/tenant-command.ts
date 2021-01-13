@@ -23,7 +23,7 @@ export function registerCommand(command: Command<any>): void {
   COMMAND.set(command.type, command)
 }
 
-export async function dispatchCommand(commandIntent: TenantCommandIntent<any>): Promise<CommandReturn> {
+export async function dispatchCommand(commandIntent: TenantCommandIntent<any>, dataOnly=false): Promise<CommandReturn> {
 
   return await span(`Command ${commandIntent.type} - execute`, {}, async (span) => {
     if (span) span.setType("Command")
@@ -39,7 +39,12 @@ export async function dispatchCommand(commandIntent: TenantCommandIntent<any>): 
     }
 
     try {
-      let event = await command.execute(commandIntent.data)
+      let event
+      if (dataOnly) {
+        event = await command.execute(commandIntent.data)
+      } else {
+        event = await command.execute(commandIntent)
+      }
       if (event.events) {
         await eventClient().emit(event.events, str)
       }

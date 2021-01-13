@@ -1,4 +1,4 @@
-import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
+import {eventClient, EventHotSubscriptionControl, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import {dataStore, Record} from "../../datastore";
 import uuid = require("uuid");
 import logger from "../../logger";
@@ -190,11 +190,11 @@ async function persistNotificationSubs(saga: Saga, instance: SagaInstance) {
   })))
 }
 
-export async function registerSaga(saga: Saga): Promise<void> {
+export async function registerSaga(saga: Saga): Promise<EventHotSubscriptionControl> {
 
   SAGAS.push(saga)
 
-  saga.streamSubs.push(await eventClient().hotStream(saga.streams,
+  let control = await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
       logger.debug(`Saga ${saga.name} event`, event)
       try {
@@ -210,7 +210,11 @@ export async function registerSaga(saga: Saga): Promise<void> {
       logger.error("Error subscribing to streams", {
         error, saga: saga.name
       })
-    }))
+    });
+
+  saga.streamSubs.push(control);
+
+  return control;
 }
 
 export async function allSagaInstances(workspaceId?: string): Promise<SagaInstance[]> {
