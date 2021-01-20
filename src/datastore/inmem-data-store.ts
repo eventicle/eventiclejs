@@ -71,9 +71,6 @@ export default class implements DataStore {
               }
               break;
             case "BETWEEN":
-              console.log({
-                data, start: val.value[0], end: val.value[1], match: data >= val.value[0] && data <= val.value[1]
-              })
               if (!(data >= val.value[0] && data <= val.value[1])) {
                 fieldsAllMatch = false
               }
@@ -99,7 +96,6 @@ export default class implements DataStore {
         const p1 = a.content[sorts[0]];
         const p2 = b.content[sorts[0]];
 
-        console.log({ sorts: sorts[0], type: sorting[sorts[0]], p1, p2, a, b })
         if (sorting[sorts[0]] === "DESC") {
           if (p1 > p2) return -1;
           if (p1 < p2) return 1;
