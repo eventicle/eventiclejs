@@ -1,4 +1,4 @@
-import {eventClient, EventHotSubscriptionControl, EventicleEvent} from "../core/event-client";
+import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import logger from "../../logger";
 
 let viewControls = {} as any
@@ -22,7 +22,7 @@ export function getViewMetrics() {
   return metrics
 }
 
-export async function registerView(view: EventView): Promise<EventHotSubscriptionControl> {
+export async function registerView(view: EventView): Promise<EventSubscriptionControl> {
   let control = await eventClient().coldHotStream({
     handler: async event => {
       await view.handleEvent(event)
@@ -46,12 +46,4 @@ export interface EventView {
   consumerGroup: string
   handleEvent: (event: EventicleEvent) => Promise<void>
   streamsToSubscribe: string[]
-}
-
-export async function addTenantToView(view: EventView, tenant: string) {
-  let control: EventHotSubscriptionControl = viewControls[view.consumerGroup]
-  logger.trace(`Adding tenant ${tenant} to subscription streams `, view.streamsToSubscribe)
-  for (let str of view.streamsToSubscribe) {
-    await control.addStream(tenant + "." + str)
-  }
 }

@@ -1,4 +1,4 @@
-import {eventClient, EventHotSubscriptionControl, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
+import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import {dataStore, Record} from "../../datastore";
 import uuid = require("uuid");
 import logger from "../../logger";
@@ -190,7 +190,7 @@ async function persistNotificationSubs(saga: Saga, instance: SagaInstance) {
   })))
 }
 
-export async function registerSaga(saga: Saga): Promise<EventHotSubscriptionControl> {
+export async function registerSaga(saga: Saga): Promise<EventSubscriptionControl> {
 
   SAGAS.push(saga)
 
@@ -198,11 +198,15 @@ export async function registerSaga(saga: Saga): Promise<EventHotSubscriptionCont
     `saga-${saga.name}`, async (event: EventicleEvent) => {
       logger.debug(`Saga ${saga.name} event`, event)
       try {
+        logger.debug(`  start`)
         if (saga.starts.has(event.type) && await saga.startMatcher(event)) {
           await startSagaInstance(saga, event)
-        } else if (saga.eventHandler.has(event.type)) {
+        }
+        logger.debug(`  Done starter`)
+        if (saga.eventHandler.has(event.type)) {
           await checkNotifyIntents(saga, event)
         }
+        logger.debug(`  done intents`)
       } catch (e) {
         await saga.errorHandler(saga, event, e)
       }

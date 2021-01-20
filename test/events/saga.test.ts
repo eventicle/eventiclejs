@@ -27,6 +27,8 @@ describe('Sagas', function () {
     //   brokers: ['192.168.99.103:30992'], clientId: "COOL_AWESOME" + uuid.v4()
     // }))
     setEventClient(eventClientOnDatastore())
+
+
   })
 
   beforeEach(async function() {
@@ -79,7 +81,7 @@ describe('Sagas', function () {
 
     console.log("STARTING WITH EXEC " + id)
 
-    eventClient().emit([{
+    await eventClient().emit([{
       data: { id },
       type: "UserCreated",
       id: "epic"
@@ -89,7 +91,7 @@ describe('Sagas', function () {
 
     console.log("Emitted event 1")
 
-    eventClient().emit([{
+    await eventClient().emit([{
       data: { id },
       type: "UserDidStuff",
       id: "epic"

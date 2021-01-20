@@ -2,7 +2,6 @@ import {ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
 import {
   EventClient,
   eventClientCodec,
-  EventHotSubscriptionControl,
   EventicleEvent,
   EventSubscriptionControl
 } from "./event-client";
@@ -65,7 +64,7 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async coldHotStream(config: { stream: string, groupId: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventHotSubscriptionControl> {
+  async coldHotStream(config: { stream: string, groupId: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
 
     if (!config.groupId) {
       logger.trace("Auto set groupId for cold/hot replay")
@@ -112,9 +111,6 @@ class EventclientKafka implements EventClient {
     return {
       close: async () => {
         await cons.disconnect()
-      },
-      addStream: async (name: string) => {
-        await cons.subscribe({ topic: name, fromBeginning: true })
       }
     }
   }
@@ -188,7 +184,7 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventHotSubscriptionControl> {
+  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
 
     if (consumerGroups.includes(consumerName)) {
       logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + consumerName))
@@ -223,9 +219,6 @@ class EventclientKafka implements EventClient {
     return {
       close: async () => {
         await cons.disconnect()
-      },
-      addStream: async (name: string) => {
-        await cons.subscribe({ topic: name, fromBeginning: false })
       }
     }
   }

@@ -8,14 +8,14 @@ export { dispatchCommand, registerCommand, Command, CommandIntent, CommandReturn
 export { registerView, EventView } from "./events/view";
 export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAllNotifyIntents, removeAllSagas } from "./events/saga";
 export { default as InMemoryDatastore } from "./datastore/inmem-data-store"
-export { DataStore, Record, setDataStore, dataStore } from "./datastore/index"
+export { DataStore, Record, setDataStore, dataStore, DataSorting, DataQuery, PagedRecords } from "./datastore/index"
 export { setLogApi } from "./logger"
 export { aggregateObservationAdapter, createAggregateObservationAdapter, aggregateObserver} from "./events/adapter/AggregateObservationAdapter"
 export { EventAdapter, registerAdapter } from "./events/adapter"
 export { LogApi } from "./logger"
 export { consumeFullEventLog } from "./testing"
 export { metrics } from "./metrics"
-export { lockManager, setLockManager } from "./events/lock-manager"
+export { lockManager, setLockManager, LockManager} from "./events/lock-manager"
 
 import * as apm from "./apm";
 

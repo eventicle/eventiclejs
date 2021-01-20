@@ -2,7 +2,6 @@ import {
   EncodedEvent,
   EventClient,
   eventClientCodec,
-  EventHotSubscriptionControl,
   EventicleEvent,
   EventSubscriptionControl
 } from "./event-client";
@@ -105,7 +104,7 @@ class EventclientDatastore implements EventClient {
 
   constructor() {}
 
-  async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventHotSubscriptionControl> {
+  async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
 
     let streams = JSON.parse(JSON.stringify(config.stream))
 
@@ -142,12 +141,6 @@ class EventclientDatastore implements EventClient {
     return {
       close: async () => {
 
-      },
-      addStream: async (name: string) => {
-        if (!Array.isArray(config.stream)) {
-          streams = [streams]
-        }
-        streams.push(name)
       }
     }
   };
@@ -243,12 +236,6 @@ class EventclientDatastore implements EventClient {
     return {
       close: async () => {
         tombstoned = true
-      },
-      addStream: async (name: string) => {
-        if (!Array.isArray(theStream)) {
-          theStream = [theStream]
-          theStream.push(name)
-        }
       }
     }
   }

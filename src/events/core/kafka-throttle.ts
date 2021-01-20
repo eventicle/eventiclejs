@@ -26,7 +26,7 @@ export class ThrottledProducer {
 
   private producer: Producer;
   private isConnected: boolean = false;
-  private intervalTimeout: NodeJS.Timeout;
+  private intervalTimeout: any;
   private recordQueue: IQueuedRecord[] = [];
   private isFlushing = false;
 

@@ -1,5 +1,5 @@
 import * as uuid from 'uuid';
-import {DataSorting, DataStore, PagedRecords, Record} from "./index";
+import {DataQuery, DataSorting, DataStore, PagedRecords, Record} from "./index";
 import logger from "../logger";
 
 let tenants:any = {};
@@ -31,7 +31,9 @@ export default class implements DataStore {
    * @param {*} query  Json object to match fields
    * @param sorting
    */
-  public async findEntity(workspaceId: string, type: any, query: any, sorting: DataSorting = {}): Promise<Record[]> {
+  public async findEntity(workspaceId: string, type: any, query: {
+    [key: string]: string | number | DataQuery
+  }, sorting: DataSorting = {}): Promise<Record[]> {
     const table = getStoreForWorkspace(workspaceId)[type];
     if (!table) return [];
     const results: any = [];
@@ -39,7 +41,45 @@ export default class implements DataStore {
       const entry = table[id];
       var fieldsAllMatch = true;
       Object.keys(query).forEach(key => {
-        if (query[key] !== entry.content[key]) {
+        if (typeof query[key] === "object") {
+          let val = query[key] as DataQuery
+          let data = entry.content[key]
+          switch(val.op) {
+            case "EQ":
+              if (data !== val.value) {
+                fieldsAllMatch = false
+              }
+              break;
+            case "GT":
+              if (data <= val.value) {
+                fieldsAllMatch = false
+              }
+              break;
+            case "GTE":
+              if (data < val.value) {
+                fieldsAllMatch = false
+              }
+              break;
+            case "LT":
+              if (data >= val.value) {
+                fieldsAllMatch = false
+              }
+              break;
+            case "LTE":
+              if (data > val.value) {
+                fieldsAllMatch = false
+              }
+              break;
+            case "BETWEEN":
+              console.log({
+                data, start: val.value[0], end: val.value[1], match: data >= val.value[0] && data <= val.value[1]
+              })
+              if (!(data >= val.value[0] && data <= val.value[1])) {
+                fieldsAllMatch = false
+              }
+              break;
+          }
+        } else if (query[key] !== entry.content[key]) {
           fieldsAllMatch = false;
         }
       });
@@ -56,12 +96,19 @@ export default class implements DataStore {
           chosenKey: sorts[0] })
       }
       results.sort((a, b) => {
-        const p1 = a[sorts[0]];
-        const p2 = b[sorts[0]];
+        const p1 = a.content[sorts[0]];
+        const p2 = b.content[sorts[0]];
 
-        if (p1 < p2) return -1;
-        if (p1 > p2) return 1;
-        return 0;
+        console.log({ sorts: sorts[0], type: sorting[sorts[0]], p1, p2, a, b })
+        if (sorting[sorts[0]] === "DESC") {
+          if (p1 > p2) return -1;
+          if (p1 < p2) return 1;
+          return 0;
+        } else {
+          if (p1 < p2) return -1;
+          if (p1 > p2) return 1;
+          return 0;
+        }
       })
     }
 
@@ -77,7 +124,9 @@ export default class implements DataStore {
    * @param {*} page page count
    * @param {*} pageSize page size
    */
-  async findEntityPaginated(workspaceId: string, type: any, query: any, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords> {
+  async findEntityPaginated(workspaceId: string, type: string, query: {
+    [key: string]: string | number | DataQuery
+  }, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords> {
     const results = await this.findEntity(workspaceId, type, query, sorting);
     const startIndex = pageSize * page;
     const endIndex = startIndex + pageSize;
@@ -97,7 +146,7 @@ export default class implements DataStore {
    * @param {*} type Entity type or "table" name
    * @param {*} item
    */
-  async createEntity(workspaceId: string, type: any, item: any) {
+  async createEntity(workspaceId: string, type: string, item: any) {
     if (item.id) {
       // log.info(item)
       throw new Error("ID is set, tihs is not allowed")
@@ -114,13 +163,13 @@ export default class implements DataStore {
     return Promise.resolve(getStoreForWorkspace(workspaceId)[type][id]);
   }
 
-  async saveEntity(workspaceId: string, type: any, item: Record) {
+  async saveEntity(workspaceId: string, type: string, item: Record) {
     if (!item.id) throw new Error("Failed to save, has no ID, use create")
     getStoreForWorkspace(workspaceId)[type][item.id] = JSON.parse(JSON.stringify(item));
     return Promise.resolve(item);
   }
 
-  async deleteEntity(workspaceId: string, type: any, id: string): Promise<void> {
+  async deleteEntity(workspaceId: string, type: string, id: string): Promise<void> {
     if (!getStoreForWorkspace(workspaceId)[type]) return Promise.resolve();
     delete getStoreForWorkspace(workspaceId)[type][id];
     return Promise.resolve();

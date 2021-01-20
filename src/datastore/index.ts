@@ -15,13 +15,18 @@ export interface Record {
   createdAt: Date
 }
 
+export interface DataQuery {
+  value: string | number | [number, number]
+  op: "EQ" | "LT" | "GT" | "LTE" | "GTE" | "BETWEEN"
+}
+
 export interface DataSorting {
   [key:string]: 'ASC' | 'DESC'
 }
 
 export interface DataStore {
 
-  getEntity(workspaceId: string, type: any, id: string): Promise<Record>
+  getEntity(workspaceId: string, type: string, id: string): Promise<Record>
 
   /**
    *
@@ -30,7 +35,9 @@ export interface DataStore {
    * @param {*} query  Json object to match fields
    * @param sorting
    */
-  findEntity(workspaceId: string, type: any, query: any, sorting?: DataSorting): Promise<Record[]>
+  findEntity(workspaceId: string, type: any, query: {
+    [key: string]: string | number | DataQuery
+  }, sorting?: DataSorting): Promise<Record[]>
 
   /**
    *
@@ -41,18 +48,20 @@ export interface DataStore {
    * @param {*} page page count
    * @param {*} pageSize page size
    */
-  findEntityPaginated(workspaceId: string, type: any, query: any, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords>
+  findEntityPaginated(workspaceId: string, type: string, query: {
+    [key: string]: string | number | DataQuery
+  }, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords>
 
   /**
    *
    * @param {*} type Entity type or "table" name
    * @param {*} item
    */
-  createEntity(workspaceId: string, type: any, content: any): Promise<Record>
+  createEntity(workspaceId: string, type: string, content: any): Promise<Record>
 
-  saveEntity(workspaceId: string, type: any, item: Record): Promise<Record>
+  saveEntity(workspaceId: string, type: string, item: Record): Promise<Record>
 
-  deleteEntity(workspaceId: string, type: any, id: string): Promise<void>
+  deleteEntity(workspaceId: string, type: string, id: string): Promise<void>
 }
 
 let dataStoreModule: DataStore;
