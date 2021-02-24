@@ -1,4 +1,4 @@
-import {CompressionTypes, Kafka, Message, Producer, ProducerConfig, ProducerRecord} from "kafkajs";
+import {CompressionTypes, Kafka, Message, Partitioners, Producer, ProducerConfig, ProducerRecord} from "kafkajs";
 import logger, {LogApi} from "../../logger";
 import {pause} from "../../util";
 import * as uuid from "uuid";
@@ -43,7 +43,7 @@ export class ThrottledProducer {
     this.createProducer();
   }
 
-  public async send(event: Message, stream: string) {
+  public send(event: Message, stream: string) {
     if (!this.isConnected) {
       throw new Error('You must .connect before producing actions');
     }
@@ -71,14 +71,8 @@ export class ThrottledProducer {
     }
 
     const flushIntervalMs = this.producerConfig.flushIntervalMs || 100;
-
-    logger.debug('Connecting producer');
     await this.producer.connect();
-    logger.debug('Connected producer');
-
-    logger.debug('Creating flush interval', {flushIntervalMs});
     this.intervalTimeout = setInterval(this.flush, flushIntervalMs);
-    logger.debug('Created flush interval');
 
     this.isConnected = true;
   };
@@ -163,7 +157,7 @@ export class ThrottledProducer {
       return;
     } catch (error) {
       /**
-       * If for some reason this producer is no longer recognized by the broker,
+       * If for some reason this producer is no longer recognized by th\\e broker,
        * create a new producer.
        */
       if (isKafkaJSProtocolError(error) && error.type === 'UNKNOWN_PRODUCER_ID') {

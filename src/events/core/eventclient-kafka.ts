@@ -1,4 +1,4 @@
-import {ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
+import {ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
 import {
   EventClient,
   eventClientCodec,
@@ -12,7 +12,28 @@ import {ThrottledProducer} from "./kafka-throttle";
 let kafka: Kafka
 
 let consumerGroups = []
-
+let consumerConfigFactory: ConsumerConfigFactory = {
+  consumerConfig: (stream, consumerName, type) => {
+    return {
+      maxWaitTimeInMs: 100,
+      groupId: consumerName}
+  },
+  consumerRunConfig: (stream, consumerName, type) => {
+    if (type === "COLD") {
+      return {
+        autoCommit: true,
+        autoCommitInterval: 500,
+        autoCommitThreshold: 50
+      }
+    }
+    return {
+      autoCommit: true,
+      autoCommitInterval: 500,
+      autoCommitThreshold: 50,
+      partitionsConsumedConcurrently: 50,
+    }
+  }
+}
 
 /**
  * Access the low level kafka client used by the event client
@@ -23,16 +44,6 @@ export function getKafkaClient(): Kafka {
 
 export async function connectBroker(config: KafkaConfig) {
   kafka = new Kafka(config)
-}
-
-let DomainAwarePartitioner: ICustomPartitioner = () => {
-  return ({ topic, partitionMetadata, message }) => {
-
-    // const numPartitions = partitionMetadata.length
-    // let key = message.headers["domainId"] || message.key
-    // return  hashStr(key) % numPartitions
-    return 0
-  }
 }
 
 class EventclientKafka implements EventClient {
@@ -78,7 +89,12 @@ class EventclientKafka implements EventClient {
 
     consumerGroups.push(config.groupId)
 
-    let cons = kafka.consumer({groupId: config.groupId})
+    let newConf = consumerConfigFactory.consumerConfig(config.stream, config.groupId, "COLD_HOT")
+
+    let cons = kafka.consumer({
+      groupId: newConf.groupId || config.groupId,
+      ...newConf
+    })
 
     await cons.connect()
 
@@ -90,10 +106,9 @@ class EventclientKafka implements EventClient {
       await cons.subscribe({topic: config.stream, fromBeginning: true})
     }
 
+    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT")
     cons.run({
-      autoCommit: true,
-      autoCommitInterval: 500,
-      autoCommitThreshold: 50,
+      ...newRunConf,
       eachMessage: async payload => {
         logger.trace(`[${config.groupId}] message received`, payload)
 
@@ -103,8 +118,6 @@ class EventclientKafka implements EventClient {
         })
 
         await config.handler(decoded)
-
-        await cons.commitOffsets([{ topic: config.stream, partition: payload.partition, offset: `${parseInt(payload.message.offset) +1}` }])
       }
     })
 
@@ -118,7 +131,12 @@ class EventclientKafka implements EventClient {
   async coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
 
     const groupId = uuid.v4()
-    let cons = kafka.consumer({groupId})
+    let newConf = consumerConfigFactory.consumerConfig(stream, groupId, "COLD")
+
+    let cons = kafka.consumer({
+      groupId: newConf.groupId || groupId,
+      ...newConf
+    })
 
     let adm = kafka.admin()
     await adm.connect()
@@ -132,11 +150,10 @@ class EventclientKafka implements EventClient {
     await cons.connect()
 
     await cons.subscribe({topic: stream, fromBeginning: true})
+    let newRunConf = consumerConfigFactory.consumerRunConfig(stream, groupId, "COLD")
 
     cons.run({
-      autoCommit: true,
-      autoCommitInterval: 500,
-      autoCommitThreshold: 50,
+      ...newRunConf,
       eachMessage: async payload => {
         logger.trace("Cold message lands", payload)
         try {
@@ -152,7 +169,7 @@ class EventclientKafka implements EventClient {
             domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
             type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
             id: payload.message.headers.id && payload.message.headers.id.toString("utf8"),
-            data: JSON.parse(payload.message.value.toString("utf8"))
+            data: decoded
           })
         } finally {
           if (parseInt(payload.message.offset) >= latestOffset - 1) {
@@ -193,7 +210,12 @@ class EventclientKafka implements EventClient {
 
     consumerGroups.push(consumerName)
 
-    let cons = kafka.consumer({groupId: consumerName})
+    let newConf = consumerConfigFactory.consumerConfig(stream, consumerName, "HOT")
+
+    let cons = kafka.consumer({
+      groupId: newConf.groupId || consumerName,
+      ...newConf
+    })
 
     await cons.connect()
 
@@ -205,10 +227,10 @@ class EventclientKafka implements EventClient {
       await cons.subscribe({topic: stream})
     }
 
+    let newRunConf = consumerConfigFactory.consumerRunConfig(stream, consumerName, "HOT")
+
     await cons.run({
-      autoCommit: true,
-      autoCommitInterval: 500,
-      autoCommitThreshold: 50,
+      ...newRunConf,
       eachMessage: async (payload) => {
         await consumer(await eventClientCodec().decode({
           headers: payload.message.headers, buffer: payload.message.value
@@ -224,7 +246,17 @@ class EventclientKafka implements EventClient {
   }
 }
 
-export async function eventClientOnKafka(config: KafkaConfig): Promise<EventClient> {
+export type ConsumerConfigStreamType = "HOT" | "COLD" | "COLD_HOT"
+
+export interface ConsumerConfigFactory {
+  consumerConfig: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerConfig>;
+  consumerRunConfig: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerRunConfig>;
+}
+
+export async function eventClientOnKafka(config: KafkaConfig, consumerConfigFactory?: ConsumerConfigFactory): Promise<EventClient> {
+  if (!consumerConfigFactory) {
+
+  }
   await connectBroker(config)
   return new EventclientKafka().connect()
 }
