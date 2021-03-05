@@ -117,6 +117,8 @@ class EventclientKafka implements EventClient {
           buffer: payload.message.value
         })
 
+        decoded.stream = payload.topic
+
         await config.handler(decoded)
       }
     })
@@ -161,16 +163,10 @@ class EventclientKafka implements EventClient {
             headers: payload.message.headers,
             buffer: payload.message.value
           })
-          await handler({
-            causedById: payload.message.headers.causedById as string,
-            causedByType: payload.message.headers.causedByType as string,
-            createdAt: payload.message.headers.createdAt && parseInt(payload.message.headers.createdAt.toString("utf8")),
-            source: payload.message.headers.source as string,
-            domainId: payload.message.headers.domainId && payload.message.headers.domainId.toString("utf8"),
-            type: payload.message.headers.type && payload.message.headers.type.toString("utf8"),
-            id: payload.message.headers.id && payload.message.headers.id.toString("utf8"),
-            data: decoded
-          })
+
+          decoded.stream = payload.topic
+
+          await handler(decoded)
         } finally {
           if (parseInt(payload.message.offset) >= latestOffset - 1) {
             logger.debug(`Group ID [${groupId}] finishes cold replay on offset ${payload.message.offset}`)
@@ -232,11 +228,17 @@ class EventclientKafka implements EventClient {
     await cons.run({
       ...newRunConf,
       eachMessage: async (payload) => {
-        await consumer(await eventClientCodec().decode({
+
+        let decoded = await eventClientCodec().decode({
           headers: payload.message.headers, buffer: payload.message.value
-        }))
+        })
+
+        decoded.stream = payload.topic
+
+        await consumer(decoded)
       }
     })
+
 
     return {
       close: async () => {

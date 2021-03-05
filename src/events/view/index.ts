@@ -1,7 +1,9 @@
 import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import logger from "../../logger";
 
-let viewControls = {} as any
+let viewControls = {} as {
+  [key: string]: EventSubscriptionControl
+}
 
 let metrics = {
 

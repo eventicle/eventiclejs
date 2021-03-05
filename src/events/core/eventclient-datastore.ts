@@ -187,6 +187,7 @@ class EventclientDatastore implements EventClient {
     for (let ev of event) {
 
       ev.createdAt = new Date().getTime()
+      ev.stream = stream
 
       await dataStore().createEntity("system", "event-stream", {
         streamId: stream, internal: ev

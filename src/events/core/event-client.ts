@@ -68,6 +68,7 @@ export interface EventicleEvent {
   source?: string
   causedById?: string
   causedByType?: string
+  stream?: string
   domainId?: string
   createdAt?: number
   data: any

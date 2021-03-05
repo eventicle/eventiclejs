@@ -1,5 +1,9 @@
-import {eventClient, EventicleEvent} from "../core/event-client";
+import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import logger from "../../logger";
+
+let viewControls = {} as {
+  [key: string]: EventSubscriptionControl
+}
 
 let metrics = {
 
@@ -20,14 +24,20 @@ export function getAdapterMetrics() {
   return metrics
 }
 
-export async function registerAdapter(view: EventAdapter): Promise<void> {
-  await eventClient().hotStream(view.streamsToSubscribe, view.consumerGroup, async event => {
+export async function registerAdapter(view: EventAdapter): Promise<EventSubscriptionControl> {
+  let control = await eventClient().hotStream(view.streamsToSubscribe, view.consumerGroup, async event => {
       await view.handleEvent(event)
       updateLatency(view, event)
     },
    error => {
       logger.error("Error in adapter", error)
     })
+
+  viewControls[view.consumerGroup] = control
+
+  logger.debug("Added view to the controls", viewControls)
+
+  return control
 }
 
 /**
