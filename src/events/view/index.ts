@@ -1,4 +1,4 @@
-import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
+import {EncodedEvent, eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import logger from "../../logger";
 
 let viewControls = {} as {
@@ -8,6 +8,13 @@ let viewControls = {} as {
 let metrics = {
 
 } as any
+
+function updateRawLatency(view: RawEventView, event: EncodedEvent) {
+  if (!metrics.hasOwnProperty(view.consumerGroup)) {
+    metrics[view.consumerGroup] = { latest: 0 }
+  }
+  metrics[view.consumerGroup].latest = new Date().getTime() - event.timestamp
+}
 
 function updateViewLatency(view: EventView, event: EventicleEvent) {
   if (!metrics.hasOwnProperty(view.consumerGroup)) {
@@ -44,8 +51,36 @@ export async function registerView(view: EventView): Promise<EventSubscriptionCo
   return control
 }
 
+
+export async function registerRawView(view: RawEventView): Promise<EventSubscriptionControl> {
+  let control = await eventClient().coldHotStream({
+    rawEvents: true,
+    handler: async event => {
+      await view.handleEvent(event)
+      updateRawLatency(view, event)
+    },
+    onError: error => {
+      logger.error("Error in view", error)
+    },
+    groupId: view.consumerGroup,
+    stream: view.streamsToSubscribe
+  })
+
+  viewControls[view.consumerGroup] = control
+
+  logger.debug("Added view to the controls", viewControls)
+
+  return control
+}
+
 export interface EventView {
   consumerGroup: string
   handleEvent: (event: EventicleEvent) => Promise<void>
+  streamsToSubscribe: string[]
+}
+
+export interface RawEventView {
+  consumerGroup: string
+  handleEvent: (event: EncodedEvent) => Promise<void>
   streamsToSubscribe: string[]
 }

@@ -1,9 +1,10 @@
 import {ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
 import {
+  EncodedEvent,
   EventClient,
   eventClientCodec,
   EventicleEvent,
-  EventSubscriptionControl
+  EventSubscriptionControl, isRawEvent
 } from "./event-client";
 import * as uuid from "uuid"
 import logger from "../../logger";
@@ -75,8 +76,15 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async coldHotStream(config: { stream: string, groupId: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
+  async coldHotStream(config: {
+    rawEvents?: boolean,
+    stream: string | string[],
+    groupId?: string,
+    handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
 
+    let id = uuid.v4()
     if (!config.groupId) {
       logger.trace("Auto set groupId for cold/hot replay")
       config.groupId = uuid.v4()
@@ -110,16 +118,27 @@ class EventclientKafka implements EventClient {
     cons.run({
       ...newRunConf,
       eachMessage: async payload => {
-        logger.trace(`[${config.groupId}] message received`, payload)
+        logger.debug(`[${config.groupId}] message received on sub id ` + id, payload)
 
-        let decoded = await eventClientCodec().decode({
-          headers: payload.message.headers,
-          buffer: payload.message.value
-        })
+        if (config.rawEvents) {
+          await config.handler({
+            timestamp: payload.message.timestamp ? parseInt(payload.message.timestamp) : 0,
+            key: payload.message.key ? payload.message.key.toString() : null,
+            buffer: payload.message.value,
+            headers: payload.message.headers
+          })
+        } else {
+          let decoded = await eventClientCodec().decode({
+            timestamp: parseInt(payload.message.timestamp),
+            key: payload.message.key ? payload.message.key.toString() : null,
+            headers: payload.message.headers,
+            buffer: payload.message.value
+          })
 
-        decoded.stream = payload.topic
+          decoded.stream = payload.topic
 
-        await config.handler(decoded)
+          await config.handler(decoded)
+        }
       }
     })
 
@@ -160,6 +179,8 @@ class EventclientKafka implements EventClient {
         logger.trace("Cold message lands", payload)
         try {
           let decoded = await eventClientCodec().decode({
+            timestamp: parseInt(payload.message.timestamp),
+            key: payload.message.key ? payload.message.key.toString() : null,
             headers: payload.message.headers,
             buffer: payload.message.value
           })
@@ -184,16 +205,26 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async emit(events: EventicleEvent[], stream: string): Promise<void> {
+  async emit(events: EventicleEvent[] | EncodedEvent[], stream: string): Promise<void> {
 
     for (let event of events) {
-      let encoded = await eventClientCodec().encode(event)
-
-      await this.throttle.send({
-        value: encoded.buffer,
-        timestamp: `${event.createdAt}`,
-        headers: encoded.headers
-      }, stream)
+      if (isRawEvent(event)) {
+        let encoded = event
+        await this.throttle.send({
+          value: encoded.buffer,
+          key: event.key,
+          timestamp: `${event.timestamp}`,
+          headers: encoded.headers
+        }, stream)
+      } else {
+        let encoded = await eventClientCodec().encode(event)
+        await this.throttle.send({
+          value: encoded.buffer,
+          key: encoded.key,
+          timestamp: `${event.createdAt}`,
+          headers: encoded.headers
+        }, stream)
+      }
     }
   }
 
@@ -228,8 +259,9 @@ class EventclientKafka implements EventClient {
     await cons.run({
       ...newRunConf,
       eachMessage: async (payload) => {
-
         let decoded = await eventClientCodec().decode({
+          timestamp: parseInt(payload.message.timestamp),
+          key: payload.message.key ? payload.message.key.toString() : null,
           headers: payload.message.headers, buffer: payload.message.value
         })
 

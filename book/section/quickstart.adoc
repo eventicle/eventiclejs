@@ -1,0 +1,50 @@
+== Quick Start
+
+.Install
+[source,bash]
+----
+yarn add @eventicle/eventiclejs
+----
+
+.Configure Eventicle
+
+[source,typescript]
+----
+include::../app/src/config.ts[tags=deps;config]
+----
+
+.Observe an event
+_Treat an event stream as a simple Topic, do not request any historical data._
+
+[source,typescript]
+----
+include::../app/src/config.ts[tags=observe]
+----
+
+.Emit an event
+_Emit an event to a stream, all following Eventicle event machinery is built on this_
+
+[source,typescript]
+----
+include::../app/src/config.ts[tags=emit]
+----
+<1> The event payload
+
+.Fully replay an event stream
+_This starts at the beginning of stream `app.streamname`, and will receive all historical events, then finish.
+_Mostly used for offline, batch or automation actions, such as a view upgrade or full stream schema update_
+
+[source,typescript]
+----
+include::../app/src/config.ts[tags=replay]
+----
+
+.Fully replay an event stream and continue to observe
+_This starts at the beginning of stream `app.streamname`, and will receive all historical events. It will then continue
+to observe the stream._
+_Used for most runtime stream consumption_
+
+[source,typescript]
+----
+include::../app/src/config.ts[tags=replay]
+----

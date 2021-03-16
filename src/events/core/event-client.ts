@@ -14,8 +14,14 @@ export function eventSourceName(): string {
   return EVENT_SOURCE
 }
 
+export function isRawEvent(event: EncodedEvent | EventicleEvent): event is EncodedEvent  {
+  return event.hasOwnProperty("buffer")
+}
+
 export interface EncodedEvent {
   buffer: Buffer
+  key: string
+  timestamp: number,
   headers: { [key: string]: any }
 }
 
@@ -46,6 +52,8 @@ class EventClientJsonCodec implements EventClientCodec {
     }
 
     return Promise.resolve({
+      timestamp: event.createdAt,
+      key: event.domainId || event.id,
       headers: {
         type: event.type,
         domainId: event.domainId || "",
@@ -84,7 +92,7 @@ export interface EventClient {
    * @param event
    * @param stream
    */
-  emit: (event: EventicleEvent[], stream: string) => Promise<void>
+  emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>
   /**
    * Play from persisted storage
    * @param stream
@@ -118,6 +126,18 @@ export interface EventClient {
    * @param onDone
    */
   coldHotStream: (config: {
+    rawEvents: true,
+    stream: string | string[],
+    groupId?: string,
+    handler: (event: EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  } | {
+    rawEvents: false,
+    stream: string | string[],
+    groupId?: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  } | {
     stream: string | string[],
     groupId?: string,
     handler: (event: EventicleEvent) => Promise<void>,

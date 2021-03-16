@@ -1,0 +1,36 @@
+
+== Querying Data: Views
+
+An event View is a component that observes event streams and applies a _Reducer_ function to them to generate a data structure
+that is suitable for querying.
+
+.An example View: Users
+Create a list of users from `user.created` events and provider operations for users.
+[source,typescript]
+----
+include::../app/src/view-1.ts[]
+----
+<1> The consumer group is the same as for Redis Streams/ Kafka. Multiple view instances across processes will share processing.
+<2> 1..n streams to subscribe to.
+<3> View must handle all the potential event types in the stream. Normally this is done by picking out the required types and ignoring any others.
+<4> An operation on a view does not have to be a simple query, it can be more advanced, as with a login check. It does though, always have to be read only to preserve the 1 way data flow semantics of the system
+<5> A simple select all query on the view data structure.
+<6> Register the view with Eventicle for it to attach the streams to the view.  Maintain a reference to it for your use to query the view data.
+<7> View will have the user record when this event has been async processed.
+
+=== In Memory Views
+
+The persisted nature of event streams means that you can use the event stream as the system persistence Then have your views
+be purely in memory. This means that they will rebuild each time the application starts, but will require no external data storage.
+
+.An example View: Count of Users
+Count the user registrations.
+[source,typescript]
+----
+include::../app/src/view-memory.ts[]
+----
+<1> Set the consumer group to be random. This means this instance will fully replay every time it connects to the event stream, and will receive all events, not share with other instances.
+<2> The view state, in this case as simple integer count.
+<3> Implement eventual consistency of the user counter via the event stream reducer in this view.
+<4> Will output `1`, showing that the view observed the event that was emitted before it was connected, due to the full replay of the stream.
+<5> Eventicle will connect the view to the requested event streams.

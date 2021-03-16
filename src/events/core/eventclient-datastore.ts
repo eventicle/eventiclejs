@@ -3,12 +3,14 @@ import {
   EventClient,
   eventClientCodec,
   EventicleEvent,
-  EventSubscriptionControl
+  EventSubscriptionControl, isRawEvent
 } from "./event-client";
 import {EventEmitter} from "events"
 import {dataStore} from "../../datastore";
 import logger from "../../logger";
+import {listenerCount} from "cluster";
 // import logger from "../../logger";
+import * as uuid from "uuid"
 
 class InternalEv extends EventEmitter {}
 
@@ -104,9 +106,37 @@ class EventclientDatastore implements EventClient {
 
   constructor() {}
 
-  async coldHotStream(config: { stream: string | string[], from: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void }): Promise<EventSubscriptionControl> {
+  async coldHotStream(config: {
+    rawEvents?: boolean,
+    stream: string | string[],
+    groupId?: string,
+    handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
+
+    let id = uuid.v4()
 
     let streams = JSON.parse(JSON.stringify(config.stream))
+    let listener = async (ev: InternalEvent) => {
+      if (!ev) throw new Error("Received an undefined or null InternalEvent, this is a bug: " + JSON.stringify(ev.event))
+
+      if (Array.isArray(streams) && streams.includes(ev.stream)) {
+        logger.trace(`Processing event [${ev.id}] in sub [${config.groupId}] / [${id}]`)
+
+        if (config.rawEvents) {
+          await config.handler(ev.event)
+        } else {
+          await config.handler(await eventClientCodec().decode(ev.event))
+        }
+      } else if (ev.stream == config.stream) {
+        logger.trace(`Processing event [${ev.id}] in sub [${config.groupId}] / [${id}]`)
+        if (config.rawEvents) {
+          await config.handler(ev.event)
+        } else {
+          await config.handler(await eventClientCodec().decode(ev.event))
+        }
+      }
+    }
 
     let coldReplay = async() => {
       const str = []
@@ -124,23 +154,14 @@ class EventclientDatastore implements EventClient {
         return
       }
 
-      // todo, improved by having a hot buffer and storing until replay is made.  This seems to pass reliably in process, so .... meh
-      emitter.addListener("event", async (ev: InternalEvent) => {
-        if (!ev) throw new Error("Received an undefined or null InternalEvent, this is a bug: " + JSON.stringify(ev.event))
-
-        if (Array.isArray(streams) && streams.includes(ev.stream)) {
-          await config.handler(await eventClientCodec().decode(ev.event))
-        } else if (ev.stream == config.stream) {
-          await config.handler(await eventClientCodec().decode(ev.event))
-        }
-      })
+      emitter.addListener("event", listener)
     }
 
     coldReplay()
 
     return {
       close: async () => {
-
+        emitter.removeListener("event", listener)
       }
     }
   };
@@ -182,26 +203,40 @@ class EventclientDatastore implements EventClient {
     }
   }
 
-  async emit (event: EventicleEvent[], stream: string) {
+  async emit (event: EventicleEvent[] | EncodedEvent[], stream: string) {
 
     for (let ev of event) {
 
-      ev.createdAt = new Date().getTime()
-      ev.stream = stream
+      if (isRawEvent(ev)) {
+
+      } else {
+        ev.createdAt = new Date().getTime()
+        ev.stream = stream
+      }
 
       await dataStore().createEntity("system", "event-stream", {
         streamId: stream, internal: ev
       })
 
-      let event = await eventClientCodec().encode(ev)
+      let encoded: EncodedEvent
 
-      if (!event) {
+      let id
+      if (isRawEvent(ev)) {
+        id = ev.headers.id.toString()
+        encoded = ev
+      } else {
+        id = ev.id
+        encoded = await eventClientCodec().encode(ev)
+      }
+
+      if (!encoded) {
         logger.error("An encoding error occurred. An event encoded to undefined or null. This is a bug", {
-          event, source_event:ev
+          encoded, source_event:ev
         })
       }
+
       let internal = {
-        event, stream, id: ev.id
+        event: encoded, stream, id
       } as InternalEvent
       // TODO, remove when coldHot ports to event log
       emitter.emit("event", internal)

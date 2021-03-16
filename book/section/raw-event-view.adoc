@@ -1,0 +1,90 @@
+== Raw Events and Event Encoding
+
+The event client provides an abstraction over an event broker, for example, Kafka.
+
+The event broker does not understand the Eventicle format directly, and so it must be translated into its native format via an Eventicle `Codec`.
+
+=== Event Client Codec
+
+The chosen `eventClient()` (eg, eventClientOnKafka, or eventClientOnDatastore) uses the codec to convert the EventicleEvent into a simpler `EncodedEvent` that is made
+up of a payload Buffer and message headers more suitable for putting onto a broker.
+
+[source,typescript]
+----
+export interface EventClientCodec {
+  encode: (event: EventicleEvent) => Promise<EncodedEvent>
+  decode: (encoded: EncodedEvent) => Promise<EventicleEvent>
+}
+----
+
+The default codec is `EventClientJsonCodec`. This uses binary encoded JSON as the transmission format, and has excellent portability.
+
+You may use the Codec system to use another encoding format, for example Avro or Thrift, or to implement a data Encryption scheme to protect data being persisted to an event broker.
+
+=== Access Raw Events
+
+Generally, higher level components, such as Views and Sagas, do not have access to the source `EncodedEvent`, and only see the EventicleEvent output by the current Codec.
+
+It is possible to access them, if you require, via the EventClient interface and also via a higher level `RawEventView` (see below for an example)
+
+This is not a common use case, but may be useful in backup or data sync where the event payload doesn't need to be
+decoded for transmission.
+
+[source,typescript]
+----
+eventClient().emit([{        <1>
+    headers: {},             <2>
+    timestamp: Date.now(),
+    buffer:                  <3>
+  }], "my-cool-stream")
+----
+<1> Emit a raw EncodedEvent to the given stream
+<2> The headers should carry the event meta data normally set by the EventCodec
+<3> Buffer containing a full EventicleEvent, encoded to binary _somehow_
+
+This bypasses the EventCodec completely.
+
+[source,typescript]
+----
+eventClient().coldHotStream({
+    rawEvents: true,           <1>
+    groupId: "my-group-id",
+    stream: "my-cool-stream",
+    onError: error => {},
+    handler: async (event: EncodedEvent) => {
+                               <2>
+    }
+  })
+----
+<1> Request raw events be passed to the handler
+<2> Process the raw event somehow
+
+
+==== Raw Event Example: Event Backup
+
+You can pull the raw message buffers out of the EncodedEvent and persist them to some backup.
+
+[source, typescript]
+----
+
+class BackupAdapter implements RawEventView {
+
+  readonly consumerGroup: string
+
+  constructor(readonly streamsToSubscribe: string[]) {
+    this.consumerGroup = 'backup-adapter-' + streamsToSubscribe[0]   <1>
+  }
+
+  async handleEvent(event: EncodedEvent): Promise<void> {     <2>
+    try {
+      await dataStore().createEntity("system", "event-backup", {
+        stream: this.streamsToSubscribe[0],
+        headers: Object.keys(event.headers).map((value, index) => ),
+        eventId: event.headers.id.toString(), data: event.buffer.toString("base64")
+      })
+    } catch (e) {
+      logger.error("Unable to persist backup event", event.headers)
+    }
+  }
+}
+----
