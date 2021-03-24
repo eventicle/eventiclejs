@@ -1,4 +1,4 @@
-import {ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
+import {Consumer, ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
 import {
   EncodedEvent,
   EventClient,
@@ -10,9 +10,25 @@ import * as uuid from "uuid"
 import logger from "../../logger";
 import {ThrottledProducer} from "./kafka-throttle";
 
+interface KafkaClientHealth {
+  healthy: boolean
+  consumers: { [key: string] : HealthCheckStatus }
+  producer: HealthCheckStatus
+}
+
+export interface HealthCheckStatus {
+  name: string
+  status: "connected" | "disconnected" | "error" | "active"
+  healthy: boolean
+}
+
 let kafka: Kafka
 
+let producerHealth:HealthCheckStatus
 let consumerGroups = []
+let consumerGroupHealth: {
+  [key: string] : HealthCheckStatus
+} = {}
 let consumerConfigFactory: ConsumerConfigFactory = {
   consumerConfig: (stream, consumerName, type) => {
     return {
@@ -43,6 +59,14 @@ export function getKafkaClient(): Kafka {
   return kafka;
 }
 
+export function getKafkaClientHealth(): KafkaClientHealth {
+  return {
+    consumers: consumerGroupHealth,
+    producer: producerHealth,
+    healthy: producerHealth.healthy && !Object.keys(consumerGroupHealth).find(value => !consumerGroupHealth[value].healthy)
+  }
+}
+
 export async function connectBroker(config: KafkaConfig) {
   kafka = new Kafka(config)
 }
@@ -57,7 +81,10 @@ class EventclientKafka implements EventClient {
 
   async connect(): Promise<EventclientKafka> {
     // Use this throttle to work around this - https://github.com/tulios/kafkajs/issues/598
-    this.throttle = new ThrottledProducer(this.broker())
+    producerHealth = {
+      healthy: false, status: "disconnected", name: "message-sender"
+    }
+    this.throttle = new ThrottledProducer(this.broker(), {}, producerHealth)
     await this.throttle.connect()
     return this
   }
@@ -90,6 +117,11 @@ class EventclientKafka implements EventClient {
       config.groupId = uuid.v4()
     }
 
+    let healthStatus: HealthCheckStatus ={
+      name: config.groupId, healthy: false, status: "disconnected"
+    }
+    consumerGroupHealth[healthStatus.name] = healthStatus
+
     if (consumerGroups.includes(config.groupId)) {
       logger.error("Consumer Group has subscribed multiple times, error: "+ config.groupId, new Error("Consumer Group has subscribed multiple times, error " + config.groupId))
       throw new Error("Consumer Group has subscribed multiple times, error " + config.groupId)
@@ -103,6 +135,8 @@ class EventclientKafka implements EventClient {
       groupId: newConf.groupId || config.groupId,
       ...newConf
     })
+
+    setupMonitor(healthStatus, cons)
 
     await cons.connect()
 
@@ -141,6 +175,7 @@ class EventclientKafka implements EventClient {
         }
       }
     })
+
 
     return {
       close: async () => {
@@ -236,6 +271,10 @@ class EventclientKafka implements EventClient {
     }
 
     consumerGroups.push(consumerName)
+    let healthStatus: HealthCheckStatus ={
+      name: consumerName, healthy: false, status: "disconnected"
+    }
+    consumerGroupHealth[healthStatus.name] = healthStatus
 
     let newConf = consumerConfigFactory.consumerConfig(stream, consumerName, "HOT")
 
@@ -244,7 +283,10 @@ class EventclientKafka implements EventClient {
       ...newConf
     })
 
+    setupMonitor(healthStatus, cons)
+
     await cons.connect()
+
 
     if (Array.isArray(stream)) {
       for (let str of stream) {
@@ -278,6 +320,29 @@ class EventclientKafka implements EventClient {
       }
     }
   }
+}
+
+function setupMonitor(healthStatus: HealthCheckStatus, cons: Consumer) {
+  cons.on("consumer.stop", args => {
+    healthStatus.healthy = false
+    healthStatus.status = "disconnected"
+  })
+  cons.on("consumer.crash", args => {
+    healthStatus.healthy = false
+    healthStatus.status = "error"
+  })
+  cons.on("consumer.disconnect", args => {
+    healthStatus.healthy = false
+    healthStatus.status = "disconnected"
+  })
+  cons.on("consumer.connect", args => {
+    healthStatus.healthy = true
+    healthStatus.status = "connected"
+  })
+  cons.on("consumer.group_join", args => {
+    healthStatus.healthy = true
+    healthStatus.status = "active"
+  })
 }
 
 export type ConsumerConfigStreamType = "HOT" | "COLD" | "COLD_HOT"

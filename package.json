@@ -1,6 +1,6 @@
 {
   "name": "@eventicle/eventiclejs",
-  "version": "0.0.41",
+  "version": "0.0.42",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@types/serialize-error": "^4.0.1",
-    "kafkajs": "^1.14.0",
+    "kafkajs": "^1.15.0",
     "serialize-error": "^7.0.1",
     "uuid": "^8.3.1"
   },

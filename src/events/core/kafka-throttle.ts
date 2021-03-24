@@ -2,6 +2,7 @@ import {CompressionTypes, Kafka, Message, Partitioners, Producer, ProducerConfig
 import logger, {LogApi} from "../../logger";
 import {pause} from "../../util";
 import * as uuid from "uuid";
+import {HealthCheckStatus} from "./eventclient-kafka";
 
 export interface IKafkaJSProtocolError {
   name: string;
@@ -38,7 +39,8 @@ export class ThrottledProducer {
       > & {maxOutgoingBatchSize?: number; flushIntervalMs?: number} = {
       maxOutgoingBatchSize: 10000,
       flushIntervalMs: 40
-    }
+    },
+    readonly producerHealth: HealthCheckStatus
   ) {
     this.createProducer();
   }
@@ -69,6 +71,14 @@ export class ThrottledProducer {
     if (this.isConnected) {
       return;
     }
+    this.producer.on("producer.connect", args => {
+      this.producerHealth.status = "connected"
+      this.producerHealth.healthy = true
+    })
+    this.producer.on("producer.disconnect", args => {
+      this.producerHealth.status = "disconnected"
+      this.producerHealth.healthy = false
+    })
 
     const flushIntervalMs = this.producerConfig.flushIntervalMs || 100;
     await this.producer.connect();
