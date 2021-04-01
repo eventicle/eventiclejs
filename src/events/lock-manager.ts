@@ -18,9 +18,33 @@ export function lockManager(): LockManager {
   return LOCK_MANAGER;
 }
 
+/**
+ * A lock manager
+ */
 export interface LockManager {
-  withLock: <T>(id: number, onLock: () => Promise<T>, teardown: () => void) => Promise<T>;
-  tryLock: <T>(id: number, onLock: () => Promise<T>, teardown: () => void) => Promise<T>;
+  /**
+   * Obtain a lock over a shared resource.
+   *
+   * Will block until the lock becomes available.
+   *
+   * Will call onLockFailure if the lock is not available within the built in timeout
+   *
+   * @param id
+   * @param onLock
+   * @param onLockFailure
+   */
+  withLock: <T>(id: number, onLock: () => Promise<T>, onLockFailure: () => void) => Promise<T>;
+
+  /**
+   * Obtain a lock over a shared resource.
+   *
+   * If the lock is not immediately available, will call onLockFailure and terminate
+   *
+   * @param id
+   * @param onLock
+   * @param onLockFailure
+   */
+  tryLock: <T>(id: number, onLock: () => Promise<T>, onLockFailure: () => void) => Promise<T>;
 }
 
 export function hashCode(str: string) {

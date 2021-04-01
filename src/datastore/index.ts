@@ -24,7 +24,34 @@ export interface DataSorting {
   [key:string]: 'ASC' | 'DESC'
 }
 
+export interface TransactionOptions {
+  propagation: "requires" | "requires_new"
+}
+
+export interface TransactionListener {
+  onStart: (data: TransactionData) => void
+  onCommit: (data: TransactionData) => void
+}
+
+export interface TransactionData {
+  id: string
+  data: {
+    [key: string]: any
+  }
+}
+
 export interface DataStore {
+
+  on(event: 'transaction.start', listener: (name: string, data: TransactionData) => void): this;
+  on(event: 'transaction.commit', listener: (name: string, data: TransactionData) => void): this;
+
+  /**
+   * Bag of data associated with the current transaction
+   */
+  getTransactionData(): TransactionData
+  hasTransactionData(): boolean
+
+  transaction<T>(exec: () => Promise<T>, options?: TransactionOptions): Promise<T>;
 
   getEntity(workspaceId: string, type: string, id: string): Promise<Record>
 

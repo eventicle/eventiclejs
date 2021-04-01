@@ -104,7 +104,21 @@ export function eventClientOnDatastore(): EventClient {
 
 class EventclientDatastore implements EventClient {
 
-  constructor() {}
+  constructor() {
+    dataStore().on("transaction.start", (name, data) => {
+      logger.debug("Transaction started, prepping event storage")
+      data.data.events = []
+    })
+    dataStore().on("transaction.commit", (name, data) => {
+      logger.debug("Emitting events stored in the transactional context")
+      for (let ev of data.data.events.reverse()) {
+        emitter.emit("event", ev)
+        getStream((ev as EventicleEvent).stream).items.push(ev)
+      }
+      data.data.events.length = 0
+      tickSubs()
+    })
+  }
 
   async coldHotStream(config: {
     rawEvents?: boolean,
@@ -239,9 +253,16 @@ class EventclientDatastore implements EventClient {
         event: encoded, stream, id
       } as InternalEvent
       // TODO, remove when coldHot ports to event log
-      emitter.emit("event", internal)
 
-      getStream(stream).items.push(internal)
+      if (dataStore().hasTransactionData()) {
+        logger.info("Sending event in a transactional context", {
+          event: ev, ctx: dataStore().getTransactionData()
+        })
+        dataStore().getTransactionData().data.events.push(internal)
+      } else {
+        emitter.emit("event", internal)
+        getStream(stream).items.push(internal)
+      }
     }
     await tickSubs()
   }
@@ -255,9 +276,11 @@ class EventclientDatastore implements EventClient {
     let tombstoned = false
     let exec = async (ev: InternalEvent) => {
       if (tombstoned) return
+      logger.trace(`Processing event [${ev.id}] in sub [${consumerName}]`)
       if (Array.isArray(theStream) && theStream.includes(ev.stream)) {
         await handler(await eventClientCodec().decode(ev.event))
       } else if (ev.stream == theStream) {
+        logger.trace(`Processing event [${ev.id}] in sub [${consumerName}]`)
         await handler(await eventClientCodec().decode(ev.event))
       }
     }

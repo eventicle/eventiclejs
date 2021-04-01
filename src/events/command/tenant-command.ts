@@ -3,12 +3,15 @@ import {span} from "../../apm";
 import logger from "../../logger";
 import {serializeError} from "serialize-error";
 import {Command, CommandReturn} from "./index";
+import {hashCode, lockManager} from "../lock-manager";
+import {dataStore} from "../../datastore";
 
 const COMMAND = new Map<string, Command<any>>()
 
 export interface TenantCommandIntent<T> {
   workspaceId: string
   type: string
+  lock?: string
   data: T
 }
 
@@ -23,38 +26,52 @@ export function registerCommand(command: Command<any>): void {
   COMMAND.set(command.type, command)
 }
 
-export async function dispatchCommand(commandIntent: TenantCommandIntent<any>, dataOnly=false): Promise<CommandReturn> {
+export async function dispatchCommand(commandIntent: TenantCommandIntent<any>, dataOnly = false): Promise<CommandReturn> {
 
-  return await span(`Command ${commandIntent.type} - execute`, {}, async (span) => {
-    if (span) span.setType("Command")
+  let exec = async () => {
+    return await span(`Command ${commandIntent.type} - execute`, {}, async (span) => {
+      if (span) span.setType("Command")
 
-    let command = COMMAND.get(commandIntent.type)
+      let command = COMMAND.get(commandIntent.type)
 
-    if (!command) throw new Error(`Command not found ${commandIntent.type}`)
+      if (!command) throw new Error(`Command not found ${commandIntent.type}`)
 
-    let str = commandIntent.workspaceId + "." + command.streamToEmit
+      let str = commandIntent.workspaceId + "." + command.streamToEmit
 
-    if (commandIntent.workspaceId === "single") {
-      str = command.streamToEmit
-    }
-
-    try {
-      let event
-      if (dataOnly) {
-        event = await command.execute(commandIntent.data)
-      } else {
-        event = await command.execute(commandIntent)
-      }
-      if (event.events) {
-        await eventClient().emit(event.events, str)
+      if (commandIntent.workspaceId === "single") {
+        str = command.streamToEmit
       }
 
-      return event
-    } catch (e) {
-      logger.error("An untrapped error occured in a command " + e.message, {
-        commandIntent, error: serializeError(e)
+      try {
+        let event
+        if (dataOnly) {
+          event = await command.execute(commandIntent.data)
+        } else {
+          event = await command.execute(commandIntent)
+        }
+        if (event.events) {
+          await eventClient().emit(event.events, str)
+        }
+
+        return event
+      } catch (e) {
+        logger.error("An untrapped error occured in a command " + e.message, {
+          commandIntent, error: serializeError(e)
+        })
+        throw e
+      }
+    })
+  }
+
+  return await dataStore().transaction(async () => {
+    if (commandIntent.lock) {
+      return await lockManager().withLock(hashCode(commandIntent.lock), async () => {
+        return await exec()
+      }, () => {
+        logger.warn("Failed locking command during execution")
       })
-      throw e
+    } else {
+      return await exec()
     }
   })
 }

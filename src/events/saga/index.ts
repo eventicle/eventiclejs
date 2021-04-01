@@ -196,20 +196,25 @@ export async function registerSaga(saga: Saga): Promise<EventSubscriptionControl
 
   let control = await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
-      logger.debug(`Saga ${saga.name} event`, event)
-      try {
-        logger.debug(`  start`)
-        if (saga.starts.has(event.type) && await saga.startMatcher(event)) {
-          await startSagaInstance(saga, event)
+      logger.debug(`Saga event: ${saga.name}`, event)
+      await dataStore().transaction(async () => {
+        try {
+          logger.debug(`  Saga starting ${saga.name} :: ` + event.type)
+          if (saga.starts.has(event.type) && await saga.startMatcher(event)) {
+            await startSagaInstance(saga, event)
+          }
+          logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
+          if (saga.eventHandler.has(event.type)) {
+            await checkNotifyIntents(saga, event)
+            logger.debug(`      done intents: ${saga.name} :: ` + event.type)
+          }
+          logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
+        } catch (e) {
+          await saga.errorHandler(saga, event, e)
         }
-        logger.debug(`  Done starter`)
-        if (saga.eventHandler.has(event.type)) {
-          await checkNotifyIntents(saga, event)
-        }
-        logger.debug(`  done intents`)
-      } catch (e) {
-        await saga.errorHandler(saga, event, e)
-      }
+      }, {
+        propagation: "requires_new"
+      })
     }, error => {
       logger.error("Error subscribing to streams", {
         error, saga: saga.name

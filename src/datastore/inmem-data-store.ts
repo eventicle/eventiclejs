@@ -1,8 +1,11 @@
 import * as uuid from 'uuid';
-import {DataQuery, DataSorting, DataStore, PagedRecords, Record} from "./index";
+import {DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionListener, TransactionData} from "./index";
 import logger from "../logger";
+import {als} from "asynchronous-local-storage"
+import {EventEmitter} from "events";
+import {pause} from "../util";
 
-let tenants:any = {};
+let tenants: any = {};
 
 function getStoreForWorkspace(id: string) {
   if (!tenants[id]) {
@@ -12,6 +15,48 @@ function getStoreForWorkspace(id: string) {
 }
 
 export default class implements DataStore {
+
+  events = new EventEmitter()
+
+  hasTransactionData(): boolean {
+    return !!als.get("transaction.data");
+  }
+
+  on(event: "transaction.start" | "transaction.commit", listener: (name: string, data: TransactionData) => void): this {
+    this.events.addListener(event, args => {
+      listener(event, args)
+    })
+    return this
+  }
+
+  getTransactionData(): TransactionData {
+    return als.get("transaction.data")
+  }
+
+  async transaction<T>(exec: () => Promise<T>): Promise<T> {
+    const txId = uuid.v4()
+
+    return await new Promise(async res => {
+      als.runWith(async () => {
+        const txData = {
+          data: {}, id: txId
+        } as TransactionData
+        als.set("transaction.data", txData)
+        als.set("transaction.id", txId)
+
+        this.events.emit("transaction.start", txData)
+
+        res(exec().finally(async () => {
+          this.events.emit("transaction.commit", txData)
+          als.set("transaction", null)
+          als.set("transaction.id", null)
+          als.set("transaction.data", null)
+        }))
+      })
+    })
+  }
+
+
   /**
    *
    * @param {*} type Entity type or "table" name

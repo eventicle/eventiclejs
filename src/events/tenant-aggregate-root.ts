@@ -15,8 +15,8 @@ export default {
    * @param type
    * @param id
    */
-  load: async<T extends AggregateRoot>(emptyInstance: T, tenant: string, id: string): Promise<T> => {
-    let ret = await dataStore().findEntity(tenant, eventstreamname(emptyInstance.type), { domainId: id })
+  load: async <T extends AggregateRoot>(emptyInstance: T, tenant: string, id: string): Promise<T> => {
+    let ret = await dataStore().findEntity(tenant, eventstreamname(emptyInstance.type), {domainId: id})
 
     if (ret && ret.length > 0) {
       ret[0].content.history.forEach(value => emptyInstance.handleEvent(value))
@@ -32,8 +32,8 @@ export default {
    * @param type
    * @param id
    */
-  history: async<T extends AggregateRoot>(type: string, tenant: string, id: string): Promise<EventicleEvent[]> => {
-    let ret = await dataStore().findEntity(tenant, eventstreamname(type), { domainId: id })
+  history: async <T extends AggregateRoot>(type: string, tenant: string, id: string): Promise<EventicleEvent[]> => {
+    let ret = await dataStore().findEntity(tenant, eventstreamname(type), {domainId: id})
 
     if (ret && ret.length > 0) {
       return ret[0].content.history
@@ -42,32 +42,34 @@ export default {
     return null
   },
 
-  persist: async<T extends AggregateRoot>(aggregate: T, tenant: string): Promise<EventicleEvent[]> => {
-    return lockManager().withLock(hashCode(tenant + aggregate.id), async () => {
+  persist: async <T extends AggregateRoot>(aggregate: T, tenant: string): Promise<EventicleEvent[]> => {
+    return await dataStore().transaction(async () => {
+      return await lockManager().withLock(hashCode(tenant + aggregate.id), async () => {
 
-      let ret = JSON.parse(JSON.stringify(aggregate.newEvents))
-      aggregate.newEvents.length = 0
+        let ret = JSON.parse(JSON.stringify(aggregate.newEvents))
+        aggregate.newEvents.length = 0
 
-      let entity = await dataStore().findEntity(tenant, eventstreamname(aggregate.type), { domainId: aggregate.id })
+        let entity = await dataStore().findEntity(tenant, eventstreamname(aggregate.type), {domainId: aggregate.id})
 
-      if (!entity || entity.length == 0) {
+        if (!entity || entity.length == 0) {
 
-        let instance = {
-          domainId: aggregate.id,
-          history: ret
+          let instance = {
+            domainId: aggregate.id,
+            history: ret
+          }
+
+          await dataStore().createEntity(tenant, eventstreamname(aggregate.type), instance)
+
+        } else {
+          let instance = entity[0]
+          instance.content.history.push(...ret)
+          await dataStore().saveEntity(tenant, eventstreamname(aggregate.type), instance)
         }
 
-        await dataStore().createEntity(tenant, eventstreamname(aggregate.type), instance)
-
-      } else {
-        let instance = entity[0]
-        instance.content.history.push(...ret)
-        await dataStore().saveEntity(tenant, eventstreamname(aggregate.type), instance)
-      }
-
-      return ret
-    }, () => {
-      logger.warn("Failed to do the thing")
+        return ret
+      }, () => {
+        logger.warn("Failed to do the thing")
+      })
     })
   }
 }
