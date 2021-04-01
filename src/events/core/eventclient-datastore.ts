@@ -11,6 +11,7 @@ import logger from "../../logger";
 import {listenerCount} from "cluster";
 // import logger from "../../logger";
 import * as uuid from "uuid"
+import {eventClientTransactional} from "./eventclient-transactional";
 
 class InternalEv extends EventEmitter {}
 
@@ -99,26 +100,12 @@ async function tickSubs() {
  * Not recommended for production (really!), as you disable any possibility of distribution
  */
 export function eventClientOnDatastore(): EventClient {
-  return new EventclientDatastore()
+  return eventClientTransactional(new EventclientDatastore())
 }
 
 class EventclientDatastore implements EventClient {
 
-  constructor() {
-    dataStore().on("transaction.start", (name, data) => {
-      logger.debug("Transaction started, prepping event storage")
-      data.data.events = []
-    })
-    dataStore().on("transaction.commit", (name, data) => {
-      logger.debug("Emitting events stored in the transactional context")
-      for (let ev of data.data.events.reverse()) {
-        emitter.emit("event", ev)
-        getStream((ev as EventicleEvent).stream).items.push(ev)
-      }
-      data.data.events.length = 0
-      tickSubs()
-    })
-  }
+  constructor() {}
 
   async coldHotStream(config: {
     rawEvents?: boolean,
@@ -253,16 +240,8 @@ class EventclientDatastore implements EventClient {
         event: encoded, stream, id
       } as InternalEvent
       // TODO, remove when coldHot ports to event log
-
-      if (dataStore().hasTransactionData()) {
-        logger.info("Sending event in a transactional context", {
-          event: ev, ctx: dataStore().getTransactionData()
-        })
-        dataStore().getTransactionData().data.events.push(internal)
-      } else {
-        emitter.emit("event", internal)
-        getStream(stream).items.push(internal)
-      }
+      emitter.emit("event", internal)
+      getStream(stream).items.push(internal)
     }
     await tickSubs()
   }

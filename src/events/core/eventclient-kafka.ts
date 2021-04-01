@@ -9,6 +9,7 @@ import {
 import * as uuid from "uuid"
 import logger from "../../logger";
 import {ThrottledProducer} from "./kafka-throttle";
+import {eventClientTransactional} from "./eventclient-transactional";
 
 interface KafkaClientHealth {
   healthy: boolean
@@ -357,5 +358,5 @@ export async function eventClientOnKafka(config: KafkaConfig, consumerConfigFact
 
   }
   await connectBroker(config)
-  return new EventclientKafka().connect()
+  return eventClientTransactional(await new EventclientKafka().connect())
 }
