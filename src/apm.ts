@@ -61,7 +61,11 @@ export async function span<T>(name: string, labels: { [key: string]: string }, e
   let span
   if (APM && APM.getCurrentTransaction()) {
     span = APM.getCurrentTransaction().startSpan(name)
-    span.addLabels(labels)
+    if (span) {
+      span.addLabels(labels)
+    } else {
+      logger.info("APM was requested to start a span, but did not: " + name)
+    }
   }
 
   try {

@@ -72,10 +72,16 @@ export async function aggregateObserver<AR extends AggregateRoot>(
     let listener = async (ev: EventicleEvent) => {
       if (ev.domainId == id) {
         let instance = await aggregates.load(aggregateType, id) as AR
-        if (exec(instance, ev)) {
+        try {
+          if (exec(instance, ev)) {
+            clearTimeout(timeHandler)
+            emitter.removeListener("event", listener)
+            resolve(instance)
+          }
+        } catch (e) {
           clearTimeout(timeHandler)
           emitter.removeListener("event", listener)
-          resolve(instance)
+          reject(e)
         }
       }
     }
