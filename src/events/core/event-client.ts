@@ -30,7 +30,7 @@ export interface EventClientCodec {
   decode: (encoded: EncodedEvent) => Promise<EventicleEvent>
 }
 
-class EventClientJsonCodec implements EventClientCodec {
+export class EventClientJsonCodec implements EventClientCodec {
   decode(encoded: EncodedEvent): Promise<EventicleEvent> {
     const addTrace = (ev: EventicleEvent) => {
       if (encoded.headers.traceparent && encoded.headers.traceparent.toString().length > 0) {
