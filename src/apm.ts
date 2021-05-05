@@ -10,9 +10,7 @@ let APM: ApmApi = {
     addLabels: (val) => null,
     end: () => null
   }),
-  startTransaction: (name, type, subtype, parent) => {
-
-  }
+  startTransaction: (name, type, subtype, parent) => {}
 }
 
 interface Span {
@@ -40,6 +38,7 @@ export function apmJoinEvent(event: EventicleEvent, name: string, type:string, s
     logger.trace("Tried joining a distributed trace on an event that has no tracing", event)
   }
 }
+
 
 export function getApmTraceparent() {
   if (APM && APM.getCurrentSpan()) {
@@ -78,15 +77,18 @@ export async function span<T>(name: string, labels: { [key: string]: string }, e
 }
 
 export function elasticApmEventicle(apm): ApmApi {
+
+  const currentSpanFun = apm.currentSpan ? () => ({
+    setType: type => apm.currentSpan.setType(type),
+    getCurrentTraceID: () => (apm.currentSpan.traceparent),
+    addLabels: (val) => (apm.currentSpan.addLabels(val)),
+    end: () => apm.currentSpan.end()
+  }) : () => null;
+
   return {
     endTransaction: () => apm.endTransaction(),
     getCurrentTransaction: () => apm.currentTransaction,
-    getCurrentSpan: () => ({
-      setType: type => apm.currentSpan.setType(type),
-      getCurrentTraceID: () => (apm.currentSpan.traceparent),
-      addLabels: (val) => (apm.currentSpan.addLabels(val)),
-      end: () => apm.currentSpan.end()
-    }),
+    getCurrentSpan: currentSpanFun,
     startTransaction: (name, type, subtype, parent) => {
       apm.startTransaction(name, type, subtype, {
         childOf: parent
