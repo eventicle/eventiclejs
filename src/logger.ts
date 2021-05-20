@@ -1,5 +1,8 @@
 'use strict';
 
+import { handleNestedContextualError, handleTopLevelContextualError, isError, maybeInsertInlineContext } from "./logger-util";
+import * as winston from "winston";
+
 export interface LogApi {
   error(message: string, arg?: any)
   info(message: string, arg?: any)
@@ -36,7 +39,7 @@ let loggerApi: LogApi = {
 }
 
 // Wrap logger to print reqId in each log
-var formatMessage = function(message) {
+var formatMessage = function (message) {
   // var reqId = httpContext.get('reqId');
   // const sessionId = httpContext.get('sessionId');
   // const logReqId = reqId ? 'rid:' + reqId : '';
@@ -57,44 +60,85 @@ function stringify(obj) {
 
 
 export default {
-  log: function(message, obj?) {
+  log: function (message, obj?) {
     // eslint-disable-next-line no-console
     // eslint-disable-next-line no-console
     loggerApi.info(formatMessage(message), obj)
   },
-  error: function(message, err?) {
+  error: function (message, err?) {
     if (!err) err = '';
     const messageAndObj = err ? message + ': ' + stringify(err) : message;
     loggerApi.error(formatMessage(messageAndObj), err);
   },
-  warn: function(message, obj?) {
+  warn: function (message, obj?) {
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
     loggerApi.warn(formatMessage(messageAndObj));
   },
-  verbose: function(message, obj?) {
+  verbose: function (message, obj?) {
     loggerApi.info(formatMessage(message), obj);
   },
-  info: function(message, obj?) {
+  info: function (message, obj?) {
     if (!obj) obj = '';
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
     loggerApi.info(formatMessage(messageAndObj));
   },
-  debug: function(message, obj?) {
+  debug: function (message, obj?) {
     if (!obj) obj = '';
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
     loggerApi.debug(formatMessage(messageAndObj));
   },
-  trace: function(message, obj?) {
+  trace: function (message, obj?) {
     if (!obj) obj = '';
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
     loggerApi.trace(formatMessage(messageAndObj));
   },
-  rainbow: function(message, obj?) {
+  rainbow: function (message, obj?) {
     if (!obj) obj = '';
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
     loggerApi.rainbow(formatMessage(messageAndObj));
   },
-  close: function(callback) {
+  close: function (callback) {
 
   },
 };
+
+
+export function createLogger(loglevel: string, addFromInfo: string[]) {
+  return winston.createLogger({
+    level: loglevel,
+    format: winston.format.combine(
+      {
+        transform: (info: any) => {
+          if (info[0]) {
+            if (isError(info[0])) {
+              info[0] = handleTopLevelContextualError(info[0]);
+            } else if (info[0].hasOwnProperty("error") && isError(info[0].error)) {
+              info[0] = handleNestedContextualError(info[0]);
+            }
+          }
+          info.filename = info.file
+          let msg = `[${info.filename.substring((info.filename as string).lastIndexOf("/") + 1)}:${info.lineno}] ` + info.message
+          if (!info.contextDataAdded) {
+            msg = maybeInsertInlineContext(msg, info, ...addFromInfo)
+          }
+          delete info["contextDataAdded"]
+          if (info[0]) {
+            delete info[0]["contextDataAdded"]
+          }
+          delete info["file"]
+          return {
+            ...info,
+            message: msg,
+            level: info.level
+          }
+        }
+      },
+      winston.format.colorize({
+        all: true
+      }), winston.format.simple()
+    ),
+    transports: [
+      new winston.transports.Console()
+    ]
+  })
+}
