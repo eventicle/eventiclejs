@@ -6,7 +6,7 @@ export async function consumeFullEventLog(stream: string): Promise<EventicleEven
   await new Promise(resolve => {
     eventClient().coldStream(stream, async event => {
       events.push(event)
-    }, error => console.log(error), resolve)
+    }, error => console.log(error), resolve as any)
   })
 
   return events

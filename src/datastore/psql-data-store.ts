@@ -95,16 +95,16 @@ function tableName(type: string): string {
   return "datastore"
 }
 
-export abstract class KnexPSQLDataStore implements DataStore {
+export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
 
   events = new EventEmitter()
 
   abstract entityMapper: (row: any) => Record;
-  abstract isCustomError<T extends Error>(error: Error): error is T;
+  abstract isCustomError(error: Error): error is E;
 
   constructor(readonly db: Knex) { }
 
-  async transaction<T, E extends Error>(exec: () => Promise<T>, options?: TransactionOptions): Promise<T> {
+  async transaction<T>(exec: () => Promise<T>, options?: TransactionOptions): Promise<T> {
 
 
     let file = getFileNameAndLineNumber(3)
@@ -139,7 +139,7 @@ export abstract class KnexPSQLDataStore implements DataStore {
               try {
                 let ret = await exec().catch(reason => {
                   
-                  if (this.isCustomError<E>(reason)) {
+                  if (this.isCustomError(reason)) {
                     return reason as any;
                   }
                   throw reason

@@ -11,9 +11,9 @@ const LOCAL_LOCK_DEBUG = {} as any
 
 let PSQL_LOCK_DEBUG=process.env["PSQL_LOCK_DEBUG"]
 
-export abstract class KnexLockablePSQLDataStore implements LockManager {
+export class KnexPSQLLockManager<E extends Error> implements LockManager {
 
-  constructor(readonly db: KnexPSQLDataStore) {
+  constructor(readonly db: KnexPSQLDataStore<E>) {
   }
 
   async tryLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void): Promise<T> {
@@ -24,7 +24,7 @@ export abstract class KnexLockablePSQLDataStore implements LockManager {
     return await this.internalLock(id, onLock, teardown, 3);
   }
 
-  private async internalLock<T, E extends Error>(id: number, onLock: () => Promise<T>, teardown: () => void, maxAttempts: number): Promise<T> {
+  private async internalLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void, maxAttempts: number): Promise<T> {
 
     let file = getFileNameAndLineNumber(3)
     let lockId = uuidv4()
@@ -60,7 +60,7 @@ export abstract class KnexLockablePSQLDataStore implements LockManager {
             doUnlock = true
             retData = await onLock()
               .catch(reason => {
-                if (this.db.isCustomError<E>(reason)) {
+                if (this.db.isCustomError(reason)) {
                   return reason as any
                 }
                 throw reason
