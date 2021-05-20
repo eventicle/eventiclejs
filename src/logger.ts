@@ -116,7 +116,7 @@ export function createLogger(loglevel: string, addFromInfo: string[]) {
               info[0] = handleNestedContextualError(info[0]);
             }
           }
-          info.filename = info.file
+          info.filename = info.file ? info.file : 'undefined'
           let msg = `[${info.filename.substring((info.filename as string).lastIndexOf("/") + 1)}:${info.lineno}] ` + info.message
           if (!info.contextDataAdded) {
             msg = maybeInsertInlineContext(msg, info, ...addFromInfo)

@@ -8,9 +8,7 @@ import { EventClientCodec, EncodedEvent, EventicleEvent } from './event-client';
 
 export abstract class AvroCodec implements EventClientCodec {
 
-  private _types = new Map<String, avro.Type>();
-
-  abstract readonly avroFilesDir: string;
+  protected _types = new Map<String, avro.Type>();
 
   /**
    *
@@ -109,37 +107,6 @@ export abstract class AvroCodec implements EventClientCodec {
     }
   }
 
-  private loadAvro() {
-    const registry = {};
-    const idlPath = this.avroFilesDir;
-    logger.info('idlPath, ' + idlPath);
-    if (!existsSync(idlPath)) {
-      logger.error(`AVRO: IDL directory does not exist:`, {path: idlPath});
-      return;
-    } else {
-      logger.debug('AVRO dir found', idlPath);
-    }
-  
-    const files = readdirSync(idlPath);
-    files.forEach((fileName: string) => {
-      if (!fileName.includes('avdl')) {
-        return;
-      }
-      logger.info('Reading AVDL: ' + fileName);
-      const filePath = path.join(idlPath, fileName);
-      const protocol = readFileSync(filePath, 'utf8');
-      const schema = avro.readProtocol(protocol);
-      schema.types.forEach((schemaType: any) => {
-        const type = avro.Type.forSchema(schemaType, {
-          registry
-        });
-        this._types.set(type.name, type);
-        type.aliases.forEach((value) => this._types.set(value, type));
-      });
-    });
-  
-    logger.info(`Read ${Array.from(this._types.keys()).length} Avro types`);
-    logger.info(`Types: ${JSON.stringify(Array.from(this._types.keys()), null, 2)}`);
-  }
+  abstract loadAvro(); 
 
 }
