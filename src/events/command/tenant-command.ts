@@ -6,7 +6,7 @@ import {Command, CommandReturn} from "./index";
 import {hashCode, lockManager} from "../lock-manager";
 import {dataStore} from "../../datastore";
 
-const COMMAND = new Map<string, Command<any>>()
+const COMMAND = new Map<string, Command<any, any>>()
 
 export interface TenantCommandIntent<T> {
   workspaceId: string
@@ -15,18 +15,18 @@ export interface TenantCommandIntent<T> {
   data: T
 }
 
-export interface TenantCommand<T> {
+export interface TenantCommand<I, O> {
   type: string,
   streamToEmit: string,
-  execute: (intent: TenantCommandIntent<T>) => Promise<CommandReturn>
+  execute: (intent: TenantCommandIntent<I>) => Promise<CommandReturn<O>>
 }
 
 
-export function registerCommand(command: Command<any>): void {
+export function registerCommand<I, O>(command: Command<I, O>): void {
   COMMAND.set(command.type, command)
 }
 
-export async function dispatchCommand(commandIntent: TenantCommandIntent<any>, dataOnly = false): Promise<CommandReturn> {
+export async function dispatchCommand<I, O>(commandIntent: TenantCommandIntent<I>, dataOnly = false): Promise<CommandReturn<O>> {
 
   let exec = async () => {
     return await span(`Command ${commandIntent.type} - execute`, {}, async (span) => {
