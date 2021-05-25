@@ -65,7 +65,7 @@ export async function dispatchCommand<I, O>(commandIntent: TenantCommandIntent<I
 
   return await dataStore().transaction(async () => {
     if (commandIntent.lock) {
-      return await lockManager().withLock(hashCode(commandIntent.lock), async () => {
+      return await lockManager().withLock(commandIntent.lock, async () => {
         return await exec()
       }, () => {
         logger.warn("Failed locking command during execution")
