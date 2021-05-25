@@ -109,4 +109,14 @@ export abstract class AvroCodec implements EventClientCodec {
 
   abstract loadAvro(); 
 
+  protected parseProtocol(protocol: string, registry: any) {
+    const schema = avro.readProtocol(protocol);
+      schema.types.forEach((schemaType: any) => {
+        const type = avro.Type.forSchema(schemaType, {
+          registry
+        });
+        this._types.set(type.name, type);
+        type.aliases.forEach((value) => this._types.set(value, type));
+      });
+  }
 }
