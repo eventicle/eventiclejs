@@ -44,7 +44,7 @@ export default {
 
   persist: async <T extends AggregateRoot>(aggregate: T, tenant: string): Promise<EventicleEvent[]> => {
     return await dataStore().transaction(async () => {
-      return await lockManager().withLock(hashCode(tenant + aggregate.id), async () => {
+      return await lockManager().withLock(tenant + aggregate.id, async () => {
 
         let ret = JSON.parse(JSON.stringify(aggregate.newEvents))
         aggregate.newEvents.length = 0

@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import {v4 as uuidv4} from 'uuid';
 import {als} from "asynchronous-local-storage"
-import { LockManager } from '../events/lock-manager';
+import { hashCode, LockManager } from '../events/lock-manager';
 import logger from '../logger';
 import { getFileNameAndLineNumber } from '../logger-util';
 import { pause } from '../util';
@@ -11,17 +11,18 @@ const LOCAL_LOCK_DEBUG = {} as any
 
 let PSQL_LOCK_DEBUG=process.env["PSQL_LOCK_DEBUG"]
 
+
 export class KnexPSQLLockManager<E extends Error> implements LockManager {
 
   constructor(readonly db: KnexPSQLDataStore<E>) {
   }
 
-  async tryLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void): Promise<T> {
-    return await this.internalLock(id, onLock, teardown, 1);
+  async tryLock<T>(id: string, onLock: () => Promise<T>, teardown: () => void): Promise<T> {
+    return await this.internalLock(hashCode(id), onLock, teardown, 1);
   }
 
-  async withLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void): Promise<T> {
-    return await this.internalLock(id, onLock, teardown, 3);
+  async withLock<T>(id: string, onLock: () => Promise<T>, teardown: () => void): Promise<T> {
+    return await this.internalLock(hashCode(id), onLock, teardown, 3);
   }
 
   private async internalLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void, maxAttempts: number): Promise<T> {

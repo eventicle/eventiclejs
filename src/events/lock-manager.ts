@@ -2,10 +2,10 @@
 
 // noddy in mem lock manager
 let LOCK_MANAGER = {
-  async withLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void) {
+  async withLock<T>(id: string, onLock: () => Promise<T>, teardown: () => void) {
     return onLock();
   },
-  async tryLock<T>(id: number, onLock: () => Promise<T>, teardown: () => void) {
+  async tryLock<T>(id: string, onLock: () => Promise<T>, teardown: () => void) {
     return onLock();
   }
 } as LockManager
@@ -33,7 +33,7 @@ export interface LockManager {
    * @param onLock
    * @param onLockFailure
    */
-  withLock: <T>(id: number, onLock: () => Promise<T>, onLockFailure: () => void) => Promise<T>;
+  withLock: <T>(id: string, onLock: () => Promise<T>, onLockFailure: () => void) => Promise<T>;
 
   /**
    * Obtain a lock over a shared resource.
@@ -44,7 +44,7 @@ export interface LockManager {
    * @param onLock
    * @param onLockFailure
    */
-  tryLock: <T>(id: number, onLock: () => Promise<T>, onLockFailure: () => void) => Promise<T>;
+  tryLock: <T>(id: string, onLock: () => Promise<T>, onLockFailure: () => void) => Promise<T>;
 }
 
 export function hashCode(str: string) {
