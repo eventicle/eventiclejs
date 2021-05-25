@@ -1,7 +1,10 @@
 import logger from "./logger";
 import {EventicleEvent} from "./events/core/event-client";
 
+
+
 let APM: ApmApi = {
+  getCurrentTraceIds:  () => {},
   endTransaction: () => null,
   getCurrentTransaction: () => ({ startSpan: name => ({ addLabels: () => null, getCurrentTraceID: () => null, setType: type => null, end: () => {}}), traceparent: null}),
   getCurrentSpan: () => ({
@@ -13,6 +16,8 @@ let APM: ApmApi = {
   startTransaction: (name, type, subtype, parent) => {}
 }
 
+
+
 interface Span {
   addLabels: (labels: any) => void
   setType: (type: string) => void
@@ -21,6 +26,7 @@ interface Span {
 }
 
 export interface ApmApi {
+  getCurrentTraceIds?:  () => any,
   getCurrentTransaction: () => { traceparent: string, startSpan: (name: string) => Span }
   getCurrentSpan: () => Span
   startTransaction: (name: string, type: string, subtype: string, parent: string) => void
@@ -46,6 +52,12 @@ export function getApmTraceparent() {
   }
   if (APM && APM.getCurrentTransaction) {
     return APM.getCurrentTransaction().traceparent
+  }
+}
+
+export function getApmCurrentTraceIds(): any {
+  if (APM && APM.getCurrentTraceIds) {
+    return APM.getCurrentTraceIds()
   }
 }
 
@@ -86,6 +98,7 @@ export function elasticApmEventicle(apm): ApmApi {
   }) : () => null;
 
   return {
+    getCurrentTraceIds:  () => apm.currentTraceIds ? apm.currentTraceIds : {},
     endTransaction: () => apm.endTransaction(),
     getCurrentTransaction: () => apm.currentTransaction,
     getCurrentSpan: currentSpanFun,
