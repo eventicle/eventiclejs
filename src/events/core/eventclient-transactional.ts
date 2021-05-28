@@ -77,4 +77,16 @@ class EventclientTransactional implements EventClient {
                   onError: (error: any) => void) {
     return this.delegate.hotStream(stream, consumerName, handler, onError)
   }
+
+  hotRawStream(stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+    return this.delegate.hotRawStream(stream, consumerName, handler, onError)
+  }
+
+  isConnected(): boolean {
+    return this.delegate.isConnected();
+  }
+
+  shutdown(): Promise<void> {
+    return this.delegate.shutdown();
+  }
 }

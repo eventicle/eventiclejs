@@ -108,7 +108,7 @@ test('cold stream fully replays historical', async function (done) {
       async event => {
         myevents.push(event)
       }, (done) => console.log("ERROR"), () => {
-      resolve()
+      resolve(null)
       }).catch(reason => logger.error("Failed cold stream", reason))
   })
 

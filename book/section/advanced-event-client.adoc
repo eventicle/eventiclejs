@@ -1,0 +1,55 @@
+== Advanced Event Client
+
+=== Clean Starting Event Client Proxy
+
+EventClient setup will generally fail if the underlying transport is not available.
+
+`cleanStartingProxyEventClient` exists to allow your application to start up even if the underlying event client fails.
+
+If replaces the event client with a no-op proxy that will fail all `emit` calls, but otherwise setup Views, Adapters and Sagas correctly.
+
+It will then periodically attempt to recreate the event client until it succeeds. Once that occurs, all the pending subscriptions are attached to it and the system will become live.
+
+.Wrap eventClientOnKafka with cleanStartingProxyEventClient to permit broker connection failure during startup
+[source, typescript]
+----
+import {setEventClient, eventClientOnKafka} from "@eventicle/eventiclejs";
+import {cleanStartingProxyEventClient} from "@eventicle/eventiclejs/dist/events/core/cleanStartingProxyEventClient";
+
+// .. other setups
+
+setEventClient(await cleanStartingProxyEventClient(() => eventClientOnKafka(kafkaConfig)));
+
+----
+
+
+=== Kill Switches/ Disconnect Event Client
+
+In some cases, you may need to forcefully disconnect your application from the event infrastructure, while leaving it running. For example, during Kafka broker recreation.
+
+This is supported by calling `eventClient().shutdown()`
+
+Once the kill switch has been activated, it is not currently possible to reconnect without full recreation of the eventClient.  Shutdown/ recreate is not a behaviour that is well tested, and so it is recommended to restart your application in this case.
+
+[source, typescript]
+----
+import {setEventClient, eventClientOnKafka} from "@eventicle/eventiclejs";
+import {cleanStartingProxyEventClient} from "@eventicle/eventiclejs/dist/events/core/cleanStartingProxyEventClient";
+
+// .. other setups
+
+setEventClient(await cleanStartingProxyEventClient(() => eventClientOnKafka(kafkaConfig)));
+
+// app runs
+
+await eventClient().shutdown()
+
+let health: KafkaClientHealth = getKafkaClientHealth()
+
+health.healthy === false
+health.producer.status === "disconnected"
+
+await eventClient().emit( ... ) // <1>
+
+----
+<1> This will now always throw an error - "Kill Switch Thrown"

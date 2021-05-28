@@ -1,0 +1,95 @@
+== Kafka
+
+Eventicle has an `EventClient` implementation built using https://kafka.js.org/[KafkaJS].
+
+=== Setup
+
+.Create Kafka EventClient
+[source,typescript]
+----
+import {setEventClient, eventClientOnKafka} from "@eventicle/eventiclejs";
+import {KafkaConfig} from "kafkajs";
+
+const kafkaConfig = {
+    clientId: 'your-service',
+    brokers: "localhost:9092",
+    ssl: true
+  } as KafkaConfig
+
+setEventClient(await eventClientOnKafka(kafkaConfig));
+
+----
+
+If you want lower level control of how KafkaJS will set up the consumer connection, you can pass a `ConsumerConfigFactory`
+object that will be used by the Kafka Event Client to configure the consumers as they are created, by views, adapters or other higher level components.
+
+.Create Kafka EventClient with custom ConsumerConfigFactory
+[source,typescript]
+----
+import {setEventClient, eventClientOnKafka} from "@eventicle/eventiclejs";
+import {KafkaConfig} from "kafkajs";
+import {ConsumerConfigStreamType} from "@eventicle/eventiclejs/dist/events/core/eventclient-kafka";
+
+const kafkaConfig = {
+    clientId: 'your-service',
+    brokers: "localhost:9092",
+    ssl: true
+  } as KafkaConfig
+
+setEventClient(await eventClientOnKafka(kafkaConfig, {
+    consumerConfig: (stream: any, consumerName: string, type: ConsumerConfigStreamType) => {
+      return {
+        maxWaitTimeInMs: 100,
+        groupId: consumerName
+      }
+    },
+    consumerRunConfig: (stream: any, consumerName: string, type: ConsumerConfigStreamType) => {
+      if (type === "COLD") {
+        return {
+          autoCommit: true,
+          autoCommitInterval: 500,
+          autoCommitThreshold: 50
+        }
+      }
+      return {
+        autoCommit: true,
+        autoCommitInterval: 500,
+        autoCommitThreshold: 50,
+        partitionsConsumedConcurrently: 50,
+      }
+    }
+  }
+));
+----
+
+=== Connection Health
+
+You can observe the health of the kafka client via the `getKafkaClientHealth()` function.
+
+This health state is maintained from the events coming from the KafkaJS components, and does not cause any runtime traffic when called.
+
+Due to the way Kafka clients operate, it will show an indication of health, but may lag a few seconds after a failure occurs before the failure showing in the healthcheck.
+
+Specific connection statuses can be found in the `producer` and `consumer[]` properties.
+
+[source, typescript]
+----
+import {getKafkaClientHealth, KafkaClientHealth} from "@eventicle/eventiclejs/dist/events/core/eventclient-kafka";
+
+const health: KafkaClientHealth = getKafkaClientHealth()
+
+console.log("Is healthy: " + health.healthy)
+
+----
+
+If the eventClient shutdown has been called, the producer and all consumers will
+have the HealthCheckStatus - `"disconnected"`
+
+=== Integration With Datastore Transactions
+
+The Kafka Event Client is transaction aware.  If a datastore transaction is underway, then calls to `eventClient().emit( ... )` will cause the
+given event to be buffered in the transaction context until the transaction commits.
+
+When the transaction manager emits a `transaction.commit` then pending events will be sent to Kafka as normal.  Promises returned by `eventClient().emit() are resolved when the events are sent to Kafka, whether the event is stored in the transactional context or not.
+
+This ensures that AggregateRoot operations fully complete and are flushed to the datastore before the events that it produces becoming visible to the rest of the system.

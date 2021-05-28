@@ -47,7 +47,7 @@ export class ThrottledProducer {
 
   public send(event: Message, stream: string) {
     if (!this.isConnected) {
-      throw new Error('You must .connect before producing actions');
+      throw new Error('You must connect before producing actions');
     }
 
     return new Promise<void>((resolve, reject) => {
@@ -62,10 +62,8 @@ export class ThrottledProducer {
           }
         }
       ];
-
-      return;
     });
-  };
+  }
 
   public connect = async () => {
     if (this.isConnected) {
@@ -92,7 +90,7 @@ export class ThrottledProducer {
       return;
     }
 
-    logger.debug('Disconnecting');
+    logger.info('Disconnecting kafka producer');
     clearInterval(this.intervalTimeout);
 
     await this.producer.disconnect();
@@ -162,7 +160,7 @@ export class ThrottledProducer {
 
       this.recordsSent += outgoingRecords.length;
       logger.debug('Flushed queue', {batchId});
-      outgoingRecords.map(({resolve}) => resolve());
+      outgoingRecords.forEach(({resolve}) => resolve());
       this.isFlushing = false;
       return;
     } catch (error) {
@@ -182,7 +180,7 @@ export class ThrottledProducer {
         return;
       }
 
-      outgoingRecords.map(({reject}) => reject(error));
+      outgoingRecords.forEach(({reject}) => reject(error));
       this.isFlushing = false;
       return;
     }

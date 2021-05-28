@@ -246,9 +246,18 @@ class EventclientDatastore implements EventClient {
     await tickSubs()
   }
 
-  async hotStream(stream: string | string[],
+  hotStream(stream: string | string[],
                   consumerName: string,
                   handler: (event: EventicleEvent) => Promise<void>,
+                  onError: (error: any) => void) {
+    return this.hotStreamInternal(false, stream, consumerName, handler, onError);
+  }
+
+  async hotStreamInternal(
+    rawEvents: boolean,
+    stream: string | string[],
+             consumerName: string,
+                  handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
                   onError: (error: any) => void) {
     let theStream = stream
     //todo, ACTUALLY REMOVE THE SUB, this is a resource leak
@@ -257,10 +266,18 @@ class EventclientDatastore implements EventClient {
       if (tombstoned) return
       logger.trace(`Processing event [${ev.id}] in sub [${consumerName}]`)
       if (Array.isArray(theStream) && theStream.includes(ev.stream)) {
-        await handler(await eventClientCodec().decode(ev.event))
+        if (rawEvents) {
+          await handler(ev.event)
+        } else {
+          await handler(await eventClientCodec().decode(ev.event))
+        }
       } else if (ev.stream == theStream) {
         logger.trace(`Processing event [${ev.id}] in sub [${consumerName}]`)
-        await handler(await eventClientCodec().decode(ev.event))
+        if (rawEvents) {
+          await handler(ev.event)
+        } else {
+          await handler(await eventClientCodec().decode(ev.event))
+        }
       }
     }
 
@@ -276,5 +293,17 @@ class EventclientDatastore implements EventClient {
         tombstoned = true
       }
     }
+  }
+
+  hotRawStream(stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+    return this.hotStreamInternal(false, stream, consumerName, handler, onError);
+  }
+
+  isConnected(): boolean {
+    return true;
+  }
+
+  async shutdown(): Promise<void> {
+    subscriptions.length=0
   }
 }

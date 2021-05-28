@@ -19,7 +19,7 @@ interface KafkaClientHealth {
 
 export interface HealthCheckStatus {
   name: string
-  status: "connected" | "disconnected" | "error" | "active"
+  status: "connected" | "disconnected" | "error" | "active" | "killed"
   healthy: boolean
 }
 
@@ -27,6 +27,9 @@ let kafka: Kafka
 
 let producerHealth:HealthCheckStatus
 let consumerGroups = []
+
+const consumers: Consumer[] = []
+
 let consumerGroupHealth: {
   [key: string] : HealthCheckStatus
 } = {}
@@ -140,6 +143,8 @@ class EventclientKafka implements EventClient {
     setupMonitor(healthStatus, cons)
 
     await cons.connect()
+
+    consumers.push(cons)
 
     if (Array.isArray(config.stream)) {
       for (let str of config.stream) {
@@ -264,23 +269,29 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
-
-    if (consumerGroups.includes(consumerName)) {
-      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + consumerName))
-      throw new Error("Consumer Group has subscribed multiple times, this is a bug, error " + consumerName)
+  private async hotStreamInternal(
+    config: {
+      rawEvents?: boolean,
+      stream: string | string[],
+      consumerName: string,
+      consumer: (event: EventicleEvent | EncodedEvent) => Promise<void>,
+      onError: (error: any) => void
+    }): Promise<EventSubscriptionControl> {
+    if (consumerGroups.includes(config.consumerName)) {
+      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ config.consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + config.consumerName))
+      throw new Error("Consumer Group has subscribed multiple times, this is a bug, error " + config.consumerName)
     }
 
-    consumerGroups.push(consumerName)
+    consumerGroups.push(config.consumerName)
     let healthStatus: HealthCheckStatus ={
-      name: consumerName, healthy: false, status: "disconnected"
+      name: config.consumerName, healthy: false, status: "disconnected"
     }
     consumerGroupHealth[healthStatus.name] = healthStatus
 
-    let newConf = consumerConfigFactory.consumerConfig(stream, consumerName, "HOT")
+    let newConf = consumerConfigFactory.consumerConfig(config.stream, config.consumerName, "HOT")
 
     let cons = kafka.consumer({
-      groupId: newConf.groupId || consumerName,
+      groupId: newConf.groupId || config.consumerName,
       ...newConf
     })
 
@@ -288,38 +299,67 @@ class EventclientKafka implements EventClient {
 
     await cons.connect()
 
+    consumers.push(cons)
 
-    if (Array.isArray(stream)) {
-      for (let str of stream) {
+    if (Array.isArray(config.stream)) {
+      for (let str of config.stream) {
         await cons.subscribe({topic: str})
       }
     } else {
-      await cons.subscribe({topic: stream})
+      await cons.subscribe({topic: config.stream})
     }
 
-    let newRunConf = consumerConfigFactory.consumerRunConfig(stream, consumerName, "HOT")
+    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT")
 
     await cons.run({
       ...newRunConf,
       eachMessage: async (payload) => {
-        let decoded = await eventClientCodec().decode({
+        let encodedEvent = {
           timestamp: parseInt(payload.message.timestamp),
           key: payload.message.key ? payload.message.key.toString() : null,
           headers: payload.message.headers, buffer: payload.message.value
-        })
+        } as EncodedEvent
 
-        decoded.stream = payload.topic
+        if (config.rawEvents) {
+          await config.consumer(encodedEvent)
+        } else {
+          let decoded = await eventClientCodec().decode(encodedEvent)
 
-        await consumer(decoded)
+          decoded.stream = payload.topic
+
+          await config.consumer(decoded)
+        }
       }
     })
-
 
     return {
       close: async () => {
         await cons.disconnect()
       }
     }
+  }
+
+  async hotRawStream(stream: string | string[], consumerName: string, consumer: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+    return this.hotStreamInternal({
+      rawEvents: true,
+      stream, consumerName, consumer, onError
+    })
+  }
+
+  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+    return this.hotStreamInternal({
+      rawEvents: false,
+      stream, consumerName, consumer, onError
+    })
+  }
+
+  isConnected(): boolean {
+    return getKafkaClientHealth().healthy;
+  }
+
+  async shutdown(): Promise<void> {
+    await this.throttle.disconnect()
+    await Promise.all(consumers.map(value => value.disconnect()))
   }
 }
 
@@ -349,13 +389,16 @@ function setupMonitor(healthStatus: HealthCheckStatus, cons: Consumer) {
 export type ConsumerConfigStreamType = "HOT" | "COLD" | "COLD_HOT"
 
 export interface ConsumerConfigFactory {
-  consumerConfig: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerConfig>;
-  consumerRunConfig: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerRunConfig>;
+  consumerConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerConfig>;
+  consumerRunConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerRunConfig>;
 }
 
-export async function eventClientOnKafka(config: KafkaConfig, consumerConfigFactory?: ConsumerConfigFactory): Promise<EventClient> {
-  if (!consumerConfigFactory) {
-
+export async function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient> {
+  if (consumerConfig && consumerConfig.consumerConfig) {
+    consumerConfigFactory.consumerConfig = consumerConfig.consumerConfig
+  }
+  if (consumerConfig && consumerConfig.consumerRunConfig) {
+    consumerConfigFactory.consumerRunConfig = consumerConfig.consumerRunConfig
   }
   await connectBroker(config)
   return eventClientTransactional(await new EventclientKafka().connect())
