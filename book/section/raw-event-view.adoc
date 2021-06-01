@@ -25,7 +25,7 @@ You may use the Codec system to use another encoding format, for example Avro or
 
 Generally, higher level components, such as Views and Sagas, do not have access to the source `EncodedEvent`, and only see the EventicleEvent output by the current Codec.
 
-It is possible to access them, if you require, via the EventClient interface and also via a higher level `RawEventView` (see below for an example)
+It is possible to access them, if you require, via the EventClient interface and also via a higher level `RawEventView` or `RawEventAdapter` (see below for an example)
 
 This is not a common use case, but may be useful in backup or data sync where the event payload doesn't need to be
 decoded for transmission.
@@ -85,6 +85,25 @@ class BackupAdapter implements RawEventView {
     } catch (e) {
       logger.error("Unable to persist backup event", event.headers)
     }
+  }
+}
+----
+
+The `RawEventAdapter` has the same semantics as an EventAdapter, and so will start playing events from the current head of the event stream, not the start as with a RawEventView
+
+[source, typescript]
+----
+
+class MonitorAdapter implements RawEventAdapter {
+
+  readonly consumerGroup: string
+
+  constructor(readonly streamsToSubscribe: string[]) {
+    this.consumerGroup = 'backup-adapter-' + streamsToSubscribe[0]   <1>
+  }
+
+  async handleEvent(event: EncodedEvent): Promise<void> {     <2>
+    // persist somewhere
   }
 }
 ----

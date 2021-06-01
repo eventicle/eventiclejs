@@ -118,6 +118,19 @@ export interface EventClient {
               onError: (error: any) => void) => Promise<EventSubscriptionControl>
 
   /**
+   * Only play hot data.
+   * @param stream
+   * @param consumerName
+   * @param handler
+   * @param onError
+   */
+  hotRawStream: (stream: string | string[],
+                 consumerName: string,
+                 handler: (event: EncodedEvent) => Promise<void>,
+                 onError: (error: any) => void) => Promise<EventSubscriptionControl>
+
+
+  /**
    * Play from persisted storage the continue from in memory
    * @param stream
    * @param from
@@ -143,6 +156,9 @@ export interface EventClient {
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void
   }) => Promise<EventSubscriptionControl>
+
+  shutdown: () => Promise<void>
+  isConnected: () => boolean
 }
 
 let EVENT_CLIENT: EventClient
