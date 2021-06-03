@@ -1,4 +1,4 @@
-import { Knex } from 'knex';
+import * as Knex from 'knex';
 import {v4 as uuidv4} from 'uuid';
 import {als} from "asynchronous-local-storage"
 import { hashCode, LockManager } from '../events/lock-manager';

@@ -1,4 +1,4 @@
-import {Knex} from 'knex';
+import * as Knex from 'knex';
 import {v4 as uuidv4} from 'uuid';
 import {als} from "asynchronous-local-storage"
 import { DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionData, TransactionOptions } from '.';
@@ -53,7 +53,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
 
               try {
                 let ret = await exec().catch(reason => {
-                  
+
                   if (this.isCustomError(reason)) {
                     return reason as any;
                   }
