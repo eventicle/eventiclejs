@@ -5,7 +5,7 @@ import { DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionDat
 import {EventEmitter} from "events";
 import { getFileNameAndLineNumber } from '../logger-util';
 import logger from '../logger';
-import { baseQuery, buildWhere, tableName } from './sql-helper';
+import { buildWhere } from './sql-helper';
 
 const stackTrace = require('stack-trace');
 
@@ -14,6 +14,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
 
   events = new EventEmitter()
 
+  abstract tableName(type: string): string;
   abstract entityMapper: (row: any) => Record;
   abstract isCustomError(error: Error): error is E;
 
@@ -98,9 +99,14 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
       });
   }
 
+  baseQuery(type: string): string {
+    return `select * from ${this.tableName(type)} where type = ?`;
+  }
+
+
   async getEntity(workspaceId: string, type: string, id: any): Promise<Record> {
     try {
-      const query = baseQuery(type) + ' AND id = ?';
+      const query = this.baseQuery(type) + ' AND id = ?';
       const {rows} = await this.raw(query, [type, id]);
 
       if (rows === null || rows.length === 0) {
@@ -125,7 +131,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
     try {
       const params = [type] as (string | number)[];
       const queryString =
-        baseQuery(type) + ' ' +
+        this.baseQuery(type) + ' ' +
         buildWhere(query, params) + ' ' +
         this.getOrderByClause(sorting);
 
@@ -174,7 +180,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
       const params = [type] as (string | number)[];
 
       const queryString =
-        baseQuery(type) + " " +
+        this.baseQuery(type) + " " +
         buildWhere(query, params);
 
       const queryStringCount = `${queryString}`.replace('select *', 'select count(*)');
@@ -223,7 +229,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
         content: JSON.parse(JSON.stringify(content))
       };
 
-      const res = await this.builder(tableName(type)).insert(data).returning('*');
+      const res = await this.builder(this.tableName(type)).insert(data).returning('*');
 
       if (res !== null && res.length === 1) {
         return this.entityMapper(res[0]);
@@ -238,7 +244,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
   async saveEntity(workspaceId: string, type: string, item: Record): Promise<Record> {
     try {
       const content = {...item.content};
-      const res = await this.builder(tableName(type))
+      const res = await this.builder(this.tableName(type))
         .where({id: item.id, type: type})
         .update({content: content});
 
@@ -251,7 +257,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
 
   async deleteEntity(workspaceId: string, type: string, id: string): Promise<void> {
     try {
-      const query = `delete from ${tableName(type)} where type= ? and id= ?`;
+      const query = `delete from ${this.tableName(type)} where type= ? and id= ?`;
       const {rows} = await this.raw(query, [type, id]);
       return rows;
 

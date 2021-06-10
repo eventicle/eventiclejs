@@ -75,13 +75,3 @@ export function buildWhere(query: { [p: string]: string | number | DataQuery }, 
   return queryString;
 }
 
-export function baseQuery(type: string): string {
-  return `select * from ${tableName(type)} where type = ?`;
-}
-
-export function tableName(type: string): string {
-  if (type === "event-backup" || "event-restoration") {
-    return "backupdatastore"
-  }
-  return "datastore"
-}
