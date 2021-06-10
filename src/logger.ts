@@ -80,7 +80,7 @@ export default {
   info: function (message, obj?) {
     if (!obj) obj = '';
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
-    loggerApi.info(formatMessage(messageAndObj));
+    loggerApi.debug(formatMessage(messageAndObj));
   },
   debug: function (message, obj?) {
     if (!obj) obj = '';
