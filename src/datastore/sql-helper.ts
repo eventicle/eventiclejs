@@ -12,6 +12,10 @@ export function jsonColumnQueryBuilder(key: string, query: DataQuery, params: (s
   let queryString = ""
 
   switch (query.op) {
+    case "IN":
+      queryString += ` AND content->>'${key}' IN ?`;
+      params.push(query.value as any)
+      break;
     case "EQ":
       queryString += ` AND content->>'${key}'= ?`;
       params.push(query.value as any)

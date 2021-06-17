@@ -16,8 +16,8 @@ export interface Record {
 }
 
 export interface DataQuery {
-  value: string | number | [number, number]
-  op: "EQ" | "LT" | "GT" | "LTE" | "GTE" | "BETWEEN"
+  value: string | number | [number, number] | string[]
+  op: "EQ" | "LT" | "GT" | "LTE" | "GTE" | "BETWEEN" | "IN"
 }
 
 export interface DataSorting {

@@ -75,12 +75,12 @@ export default {
     loggerApi.warn(formatMessage(messageAndObj));
   },
   verbose: function (message, obj?) {
-    loggerApi.info(formatMessage(message), obj);
+    loggerApi.debug(formatMessage(message), obj);
   },
   info: function (message, obj?) {
     if (!obj) obj = '';
     const messageAndObj = obj ? message + ': ' + stringify(obj) : message;
-    loggerApi.debug(formatMessage(messageAndObj));
+    loggerApi.info(formatMessage(messageAndObj));
   },
   debug: function (message, obj?) {
     if (!obj) obj = '';

@@ -90,6 +90,15 @@ export default class implements DataStore {
           let val = query[key] as DataQuery
           let data = entry.content[key]
           switch(val.op) {
+            case "IN":
+              if (Array.isArray(val.value)) {
+                if (!(val.value as string[]).includes(data)) {
+                  fieldsAllMatch = false
+                }
+              } else {
+                fieldsAllMatch = false
+              }
+              break;
             case "EQ":
               if (data !== val.value) {
                 fieldsAllMatch = false

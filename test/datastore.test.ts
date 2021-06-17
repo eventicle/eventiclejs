@@ -152,6 +152,29 @@ describe('Data Store', function() {
     ])
   })
 
+  it('IN', async function () {
+    await standardData()
+
+    let ret = await dataStore().findEntity("first", "first", {
+      val: {
+        value: [101, 103],
+        op: "IN"
+      }
+    }, {
+      "val": "ASC"
+    })
+
+    expect(ret.map((value: any) => value.content)).toStrictEqual([
+      {
+        ide: "two",
+        val: 101
+      },{
+        ide: "four",
+        val: 103
+      }
+    ])
+  })
+
   it('DESC', async function () {
     await standardData()
 
