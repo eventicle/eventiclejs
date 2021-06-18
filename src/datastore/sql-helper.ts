@@ -13,7 +13,7 @@ export function jsonColumnQueryBuilder(key: string, query: DataQuery, params: (s
 
   switch (query.op) {
     case "IN":
-      queryString += ` AND content->>'${key}' IN ?`;
+      queryString += ` AND content->>'${key}' = ANY(?)`;
       params.push(query.value as any)
       break;
     case "EQ":

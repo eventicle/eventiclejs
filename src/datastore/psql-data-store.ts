@@ -163,6 +163,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
   raw(sql: string, bindings: readonly Knex.RawBinding[] | Knex.ValueDict): Knex.Raw {
     let trx: Knex.Transaction = als.get("transaction")
     logger.verbose("Access transaction for raw " + als.get("transaction.id"))
+    console.log(sql, bindings)
 
     if (trx) {
       return trx.raw(sql, bindings)
