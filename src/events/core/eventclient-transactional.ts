@@ -35,10 +35,14 @@ class EventclientTransactional implements EventClient {
     })
     dataStore().on("transaction.commit", async (name, data) => {
       logger.debug("Emitting events stored in the transactional context")
-      for (let ev of data.data.events.reverse()) {
-        await this.delegate.emit(ev.event, ev.stream)
+      if (data.data.events) {
+        for (let ev of data.data.events.reverse()) {
+          await this.delegate.emit(ev.event, ev.stream)
+        }
+        data.data.events.length = 0
+      } else {
+        logger.info("Events storage in the transactional context is null, indicating a failure in the datastore")
       }
-      data.data.events.length = 0
     })
   }
 

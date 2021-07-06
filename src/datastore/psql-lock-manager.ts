@@ -121,11 +121,11 @@ export class KnexPSQLLockManager<E extends Error> implements LockManager {
 
     if (!existingId) {
       logger.verbose("Starting new transaction to wrap lock " + id)
-      return this.db.transaction(async () => await exec())
+      return this.db.transaction(async () => exec())
     }
 
     logger.verbose(`LOCK ${id} is joining existing DB transaction ` + existingId)
-    return await exec()
+    return exec()
   }
 
   private maybeOutputLockDebug(id: number, file: { file: string; lineno: number; timestamp: string }) {

@@ -44,7 +44,11 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
         } as TransactionData
 
         try {
-          let ret = await this.db.transaction(async trx => { // transaction is used to ensure we stay on the same connection, not for rollback
+          let ret = await this.db.transaction(async trx => {
+            if (!trx) {
+              logger.warn("Connection/ transaction is null, not able to continue DB transaction. Check your database connection pool")
+              return rej("Connection/ transaction is null, not able to continue DB transaction. Check your database connection pool")
+            }
             try {
               als.set("transaction", trx)
               als.set("transaction.id", txId)
