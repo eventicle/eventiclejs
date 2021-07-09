@@ -145,16 +145,18 @@ describe('Sagas', function () {
 function basicSaga() {
   return saga("User Registered")
     .subscribeStreams(["users"])
-    .startOn("UserCreated", async (instance: SagaInstance, created: EventicleEvent) => {
+    .startOn("UserCreated", {
+
+    },async (instance: SagaInstance, created: EventicleEvent) => {
       instance.set("usercreated", true)
       instance.notifyOn("UserDidStuff", "id", created.data.id)
       instance.notifyOn("EndEvent", "id", created.data.id)
     })
     // event listener triggered by the above notifyOn
-    .on("UserDidStuff", async (instance: SagaInstance, rejection: EventicleEvent) => {
+    .on("UserDidStuff", {},async (instance: SagaInstance, rejection: EventicleEvent) => {
       instance.set("userdidstuff", true)
     })
-    .on("EndEvent", async (instance: SagaInstance, approved: EventicleEvent) => {
+    .on("EndEvent", {},async (instance: SagaInstance, approved: EventicleEvent) => {
       console.log("Ending the saga now")
       instance.endSaga()
     })
