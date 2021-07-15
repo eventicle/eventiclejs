@@ -186,6 +186,7 @@ class EventclientKafka implements EventClient {
     return {
       close: async () => {
         await cons.disconnect()
+        consumerGroups = consumerGroups.filter(value => value !== config.groupId)
       }
     }
   }
@@ -335,6 +336,7 @@ class EventclientKafka implements EventClient {
     return {
       close: async () => {
         await cons.disconnect()
+        consumerGroups = consumerGroups.filter(value => value !== config.consumerName)
       }
     }
   }
