@@ -1,0 +1,79 @@
+
+== PostgreSQL
+
+=== DataStore
+
+==== Required Tables
+
+The PSQL datastore is implemented abstract, and provides 3 extension points.
+
+* Whether a given Error should roll back a transaction when encoutered or not
+* A method to convert the PSQL rows in a query to an Eventicle Record
+* A method to lookup the name of the table to query against, permitting some datastore types to be persisted separately from each other.
+
+This is a recommended starter implementation
+
+[source, typescript]
+----
+export class PSQLDataStore extends KnexPSQLDataStore<Error> {
+
+  isCustomError(error: Error): error is PaymentError {
+      return false // <1>
+  }
+
+  entityMapper: (row: any) => Record = (row) => {
+    return {                   <2>
+      id: row.id,
+      type: row.type,
+      createdAt: row.createdat,
+      content: row.content
+    };
+  }
+
+  constructor() {
+    super(Knex({                     <3>
+        ...
+      }))
+  }
+
+  tableName(type: string): string {
+    return "datastore"               <4>
+  }
+}
+----
+<1> All errors will roll back the transaction if they are thrown
+<2> Simple mapping of a JSONB content column and createdat timestamp to the Record
+<3> Knex init config.
+<4> Only use a single table to store everything.
+
+
+==== Recommended Schema and Indices
+
+These are the recommended starter indices that cover Eventicle internal usage.
+
+[source, postgresql]
+----
+
+CREATE TABLE datastore (
+  id uuid NOT NULL PRIMARY KEY,
+  type VARCHAR(100),
+  createdat timestamp,
+  content jsonb NOT NULL
+);
+
+create index event_external_id on datastore (id);
+create index ds_id_type on datastore (id, type);
+create index ds_type on datastore (type);
+create index domainId on datastore using btree (type, (content ->> 'domainId'));
+create index sagaEvent on datastore using btree (type, (content ->> 'eventType'), (content ->> 'saga'));
+----
+
+If you use the datastore for your own components, you can gain efficient querying using JSONB indices
+
+
+=== Lock Manager
+
+
+=== SQL Logging
+
+You can instruct the

@@ -20,6 +20,7 @@ let emitter = new InternalEv()
 // TODO, this is only a test-ready implementation of an event log.
 
 const streams = new Map()
+let consumerGroups = []
 
 interface InternalEvent {
   id: string
@@ -114,6 +115,12 @@ class EventclientDatastore implements EventClient {
     handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
     onError: (error: any) => void
   }): Promise<EventSubscriptionControl> {
+    if (consumerGroups.includes(config.groupId)) {
+      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ config.groupId, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + config.groupId))
+      throw new Error("Consumer Group has subscribed multiple times, this is a bug, error " + config.groupId)
+    }
+
+    consumerGroups.push(config.groupId)
 
     let id = uuid.v4()
 
@@ -163,6 +170,7 @@ class EventclientDatastore implements EventClient {
     return {
       close: async () => {
         emitter.removeListener("event", listener)
+        consumerGroups = consumerGroups.filter(value => value !== config.groupId)
       }
     }
   };
@@ -259,6 +267,14 @@ class EventclientDatastore implements EventClient {
              consumerName: string,
                   handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
                   onError: (error: any) => void) {
+
+    if (consumerGroups.includes(consumerName)) {
+      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + consumerName))
+      throw new Error("Consumer Group has subscribed multiple times, this is a bug, error " + consumerName)
+    }
+
+    consumerGroups.push(consumerName)
+
     let theStream = stream
     //todo, ACTUALLY REMOVE THE SUB, this is a resource leak
     let tombstoned = false
@@ -291,6 +307,7 @@ class EventclientDatastore implements EventClient {
     return {
       close: async () => {
         tombstoned = true
+        consumerGroups = consumerGroups.filter(value => value !== consumerName)
       }
     }
   }

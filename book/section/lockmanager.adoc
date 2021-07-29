@@ -1,0 +1,12 @@
+= Lock Manager
+
+The LockManager interface is used to create global consistency at the application level by obtaining Mutex over a named resource.
+
+== withLock
+
+== tryLock
+
+== Internal Usage
+
+
+

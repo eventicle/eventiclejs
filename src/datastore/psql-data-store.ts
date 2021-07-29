@@ -18,7 +18,7 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
   abstract entityMapper: (row: any) => Record;
   abstract isCustomError(error: Error): error is E;
 
-  constructor(readonly db: Knex) { }
+  constructor(readonly db: Knex, readonly logSql: boolean = false) { }
 
   async transaction<T>(exec: () => Promise<T>, options?: TransactionOptions): Promise<T> {
 
@@ -166,13 +166,21 @@ export abstract class KnexPSQLDataStore<E extends Error> implements DataStore {
 
   raw(sql: string, bindings: readonly Knex.RawBinding[] | Knex.ValueDict): Knex.Raw {
     let trx: Knex.Transaction = als.get("transaction")
-    logger.verbose("Access transaction for raw " + als.get("transaction.id"))
 
+    let val
     if (trx) {
-      return trx.raw(sql, bindings)
+      val = trx.raw(sql, bindings)
     } else {
-      return this.db.raw(sql, bindings)
+      val = this.db.raw(sql, bindings)
     }
+
+    if (this.logSql) {
+      logger.info(`SQL execution: [${sql}]`, {
+        rowCount: val.rows.length
+      })
+    }
+
+    return val
   }
 
   async findEntityPaginated(workspaceId: string, type: string, query: {
