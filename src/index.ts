@@ -6,7 +6,7 @@ export {default as aggregates, AggregateRoot} from "./events/aggregate-root";
 
 export { dispatchCommand, registerCommand, Command, CommandIntent, CommandReturn } from "./events/command";
 export { registerView, EventView, registerRawView, RawEventView } from "./events/view";
-export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAllNotifyIntents, removeAllSagas } from "./events/saga";
+export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAllSagas } from "./events/saga";
 export { default as InMemoryDatastore } from "./datastore/inmem-data-store"
 export { DataStore, Record, setDataStore, dataStore, DataSorting, DataQuery, PagedRecords } from "./datastore/index"
 export { setLogApi } from "./logger"
