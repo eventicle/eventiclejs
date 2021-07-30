@@ -174,25 +174,27 @@ async function checkSagaEventHandlers(saga: Saga<any>, event: EventicleEvent) {
   logger.debug("Search results for saga-instance", instanceData)
 
   if (instanceData.length > 0) {
-    await dataStore().transaction(async () => {
-      apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
-      await span(event.type, {}, async theSpan => {
+    for (let currentInstance of instanceData) {
+      await dataStore().transaction(async () => {
+        apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
+        await span(event.type, {}, async theSpan => {
 
-        let instance = new SagaInstance(instanceData[0].content, instanceData[0])
+          let instance = new SagaInstance(currentInstance.content, currentInstance)
 
-        if (theSpan) theSpan.setType("SagaStep")
-        await handler.handle(instance, event)
-        instance.internalData.events.push(event)
-        instance.record.content = instance.internalData
-        await dataStore().saveEntity("system", "saga-instance", instance.record)
+          if (theSpan) theSpan.setType("SagaStep")
+          await handler.handle(instance, event)
+          instance.internalData.events.push(event)
+          instance.record.content = instance.internalData
+          await dataStore().saveEntity("system", "saga-instance", instance.record)
 
-        if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
-          await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
-        }
+          if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
+            await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
+          }
+        })
+        updateLatency(saga, event)
+        await withAPM(async apm => apm.endTransaction())
       })
-      updateLatency(saga, event)
-      await withAPM(async apm => apm.endTransaction())
-    })
+    }
   }
 }
 
