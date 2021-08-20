@@ -1,9 +1,8 @@
 import * as uuid from 'uuid';
-import {DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionListener, TransactionData} from "./index";
+import {DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionData} from "./index";
 import logger from "../logger";
 import {als} from "asynchronous-local-storage"
 import {EventEmitter} from "events";
-import {pause} from "../util";
 
 let tenants: any = {};
 
@@ -12,6 +11,63 @@ function getStoreForWorkspace(id: string) {
     tenants[id] = {}
   }
   return tenants[id]
+}
+
+const isPrimitive = (it: any): boolean => ["string", "number"].includes(typeof it)
+
+function partialCompareArray(partial: any[], data: any[]): boolean {
+  if(partial.some((el) => Array.isArray(el) || typeof el === "object")) {
+    return partial.map((part): boolean => {
+      if(isPrimitive(part)) {
+        return data.includes(part)
+      } else {
+        const test = data.find((el) => partialCompareObject(part, el))
+        return test !== undefined
+      }
+    })
+      .filter((part) => !part)
+      .length === 0
+  } else {
+    return partial.every((el) => data.indexOf(el) !== -1)
+  }
+}
+
+function partialCompareObject(partial: any, data: any): boolean {
+  return Object.keys(partial)
+    .map((key): boolean => {
+      if(data.hasOwnProperty(key)) {
+
+        // A mismatch means we don't like this comparison
+        if(typeof data[key] !== typeof partial[key]) {
+          return false
+        }
+
+        // primitives
+        if(typeof data[key] === typeof partial[key] && ["string", "number"].includes(typeof partial[key])) {
+          return data[key] === partial[key]
+        }
+
+        // Compare arrays
+        if(Array.isArray(partial[key])) {
+          if(!Array.isArray(data[key])) {
+            return false
+          } else {
+            return partialCompareArray(partial[key], data[key])
+          }
+        }
+
+        // Compare objects
+        if(typeof data[key] === "object" && typeof partial[key] === "object") {
+          return partialCompareObject(partial[key], data[key])
+        } else {
+          return false
+        }
+      } else {
+        return false
+      }
+    })
+    .filter((key) => !key)
+    .length === 0
 }
 
 export default class implements DataStore {
@@ -128,6 +184,13 @@ export default class implements DataStore {
               if (!(data >= val.value[0] && data <= val.value[1])) {
                 fieldsAllMatch = false
               }
+              break;
+            case "OBJECT":
+              let parsed = val.value
+              if(typeof val.value === "string") {
+                parsed = JSON.parse(val.value as string)
+              }
+              fieldsAllMatch = partialCompareObject(val.value, entry.content)
               break;
           }
         } else if (query[key] !== entry.content[key]) {

@@ -41,6 +41,10 @@ export function jsonColumnQueryBuilder(key: string, query: DataQuery, params: (s
       params.push((query.value as any)[0])
       params.push((query.value as any)[1])
       break;
+    case "OBJECT":
+      queryString = `${queryString} AND content @> ?`;
+      params.push(JSON.stringify(query.value) as any)
+      break;
   }
   return queryString;
 }
