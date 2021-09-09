@@ -53,25 +53,39 @@ export const aggregateObservationAdapter = () => VIEW
  * do not use this shared observer view, and build a dedicated event adapter instead.
  */
 export async function aggregateObserver<AR extends AggregateRoot>(
-  aggregateType: { new (): AR },
+  aggregateType: { new (...params): AR },
   id: string,
   timeout: number,
   exec: (ar: AR, event?: EventicleEvent) => boolean): Promise<AR> {
 
-  let instance = await aggregates.load(aggregateType, id) as AR
+  return aggregateObserverFactory(aggregateType, id, timeout,
+    () => aggregates.load(aggregateType, id),
+    exec)
+}
+
+/**
+ * Permit override of how to load the aggregate if you have an alternate aggregates subsystem
+ */
+export async function aggregateObserverFactory<AR extends AggregateRoot>(
+  aggregateType: { new (...params): AR },
+  id: string,
+  timeout: number,
+  aggregateLoader: () => Promise<AR>,
+  exec: (ar: AR, event?: EventicleEvent) => boolean): Promise<AR> {
+  let instance = await aggregateLoader()
 
   if (exec(instance, null)) {
     return instance
   }
 
-  return await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     let timeHandler = setTimeout(() => {
       reject(new Error("aggregateObserve timeout occurred " + JSON.stringify({ type:(new aggregateType()).type, id })))
     }, timeout)
 
     let listener = async (ev: EventicleEvent) => {
       if (ev.domainId == id) {
-        let instance = await aggregates.load(aggregateType, id) as AR
+        let instance = await aggregateLoader()
         try {
           if (exec(instance, ev)) {
             clearTimeout(timeHandler)

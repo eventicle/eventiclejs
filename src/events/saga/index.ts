@@ -195,11 +195,17 @@ async function checkSagaEventHandlers(saga: Saga<any>, event: EventicleEvent) {
         await withAPM(async apm => apm.endTransaction())
       })
     }
+  } else {
+    logger.debug("No Saga instance handled event, checking to see if we spawn a new one ", event)
+    if (saga.starts.has(event.type)) {
+      await startSagaInstance(saga, event)
+    }
   }
 }
 
 async function startSagaInstance(saga: Saga<any>, startEvent: EventicleEvent) {
 
+  logger.debug(`Checking if should start ${saga.name}: ${startEvent.type}`)
   if (saga.starts.get(startEvent.type).config.matches && !await saga.starts.get(startEvent.type).config.matches(startEvent)) {
     return
   }
@@ -243,13 +249,14 @@ export async function registerSaga<Y>(saga: Saga<Y>): Promise<EventSubscriptionC
       logger.debug(`Saga event: ${saga.name}`, event)
       await dataStore().transaction(async () => {
         try {
-          if (saga.starts.has(event.type)) {
-             await startSagaInstance(saga, event)
-          }
           logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
           if (saga.eventHandler.has(event.type)) {
+            logger.debug(`      saga can handle event: ${saga.name} :: ` + event.type)
             await checkSagaEventHandlers(saga, event)
             logger.debug(`      done intents: ${saga.name} :: ` + event.type)
+          } else if (saga.starts.has(event.type)) {
+            logger.debug(`      saga can start: ${saga.name} :: ` + event.type)
+            await startSagaInstance(saga, event)
           }
           logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
         } catch (e) {

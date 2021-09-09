@@ -152,8 +152,6 @@ function basicSaga() {
 
     },async (instance, created: EventicleEvent) => {
       instance.set("usercreated", true)
-      // instance.notifyOn("UserDidStuff", "id", created.data.id)
-      // instance.notifyOn("EndEvent", "id", created.data.id)
     })
     // event listener triggered by the above notifyOn
     .on("UserDidStuff", {
