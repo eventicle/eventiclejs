@@ -1,7 +1,6 @@
-import {dataStore, setDataStore} from "../src/datastore";
+import {dataStore, setDataStore} from "../src";
 import InMemDatastore from "../src/datastore/inmem-data-store";
 import {testDbPurge} from "../src/fixture";
-import {eventClient, eventClientOnDatastore, setEventClient} from "../src";
 
 describe('Data Store', function() {
 
@@ -22,12 +21,14 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "four",
-        val: 103
-      }
-    ])
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "four",
+          val: 103
+        })
+      ])
+    )
   })
 
   it('GTE', async function () {
@@ -42,16 +43,17 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "four",
-        val: 103
-      },
-      {
-        ide: "five",
-        val: 104
-      }
-    ])
+    expect(ret.map((value: any) => value.content))
+      .toStrictEqual(expect.arrayContaining([
+        expect.objectContaining({
+          ide: "four",
+          val: 103
+        }),
+        expect.objectContaining({
+          ide: "five",
+          val: 104
+        })
+      ]))
   })
 
   it('GT', async function () {
@@ -66,12 +68,13 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "five",
-        val: 104
-      }
-    ])
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "five",
+          val: 104
+        })
+      ]))
   })
 
   it('LT', async function () {
@@ -86,18 +89,21 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "first",
-        val: 100
-      },{
-        ide: "two",
-        val: 101
-      },{
-        ide: "three",
-        val: 102
-      }
-    ])
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "first",
+          val: 100
+        }),
+        expect.objectContaining({
+          ide: "two",
+          val: 101
+        }),
+        expect.objectContaining({
+          ide: "three",
+          val: 102
+        })
+      ]))
   })
 
   it('LTE', async function () {
@@ -112,18 +118,21 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "first",
-        val: 100
-      },{
-        ide: "two",
-        val: 101
-      },{
-        ide: "three",
-        val: 102
-      }
-    ])
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "first",
+          val: 100
+        }),
+        expect.objectContaining({
+          ide: "two",
+          val: 101
+        }),
+        expect.objectContaining({
+          ide: "three",
+          val: 102
+        })
+      ]))
   })
 
   it('BETWEEN', async function () {
@@ -138,18 +147,21 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "two",
-        val: 101
-      },{
-        ide: "three",
-        val: 102
-      },{
-        ide: "four",
-        val: 103
-      }
-    ])
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "two",
+          val: 101
+        }),
+        expect.objectContaining({
+          ide: "three",
+          val: 102
+        }),
+        expect.objectContaining({
+          ide: "four",
+          val: 103
+        })
+      ]))
   })
 
   it('IN', async function () {
@@ -164,15 +176,17 @@ describe('Data Store', function() {
       "val": "ASC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "two",
-        val: 101
-      },{
-        ide: "four",
-        val: 103
-      }
-    ])
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "two",
+          val: 101
+        }),
+        expect.objectContaining({
+          ide: "four",
+          val: 103
+        })
+      ]))
   })
 
   it('DESC', async function () {
@@ -187,18 +201,46 @@ describe('Data Store', function() {
       "val": "DESC"
     })
 
-    expect(ret.map((value: any) => value.content)).toStrictEqual([
-      {
-        ide: "three",
-        val: 102
-      },{
-        ide: "two",
-        val: 101
-      },{
-        ide: "first",
-        val: 100
+    expect(ret.map((value: any) => value.content)).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ide: "three",
+          val: 102
+        }),
+        expect.objectContaining({
+          ide: "two",
+          val: 101
+        }),
+        expect.objectContaining({
+          ide: "first",
+          val: 100
+        })
+      ]))
+  })
+  it('OBJECT', async function () {
+    await standardData()
+    const ret = await dataStore().findEntity("first", "first", {
+      arrayVal: {
+        op: "OBJECT",
+        value: {arrayVal: ["three"]}
       }
-    ])
+    })
+
+    expect(ret.map((value: any) => value.content))
+      .toStrictEqual(expect.arrayContaining([
+        expect.objectContaining({
+          ide: "three",
+          arrayVal: ["two", "three"]
+        }),
+        expect.objectContaining({
+          ide: "four",
+          arrayVal: ["one", "three"]
+        }),
+        expect.objectContaining({
+          ide: "five",
+          arrayVal: ["four", "two", "three"]
+        }),
+      ]))
   })
 })
 
@@ -206,22 +248,27 @@ describe('Data Store', function() {
 async function standardData() {
   await dataStore().createEntity("first", "first", {
     ide: "first",
-    val: 100
+    val: 100,
+    arrayVal: ["one", "two"]
   })
   await dataStore().createEntity("first", "first", {
     ide: "two",
-    val: 101
+    val: 101,
+    arrayVal: ["one", "four"]
   })
   await dataStore().createEntity("first", "first", {
     ide: "three",
-    val: 102
+    val: 102,
+    arrayVal: ["two", "three"]
   })
   await dataStore().createEntity("first", "first", {
     ide: "four",
-    val: 103
+    val: 103,
+    arrayVal: ["one", "three"]
   })
   await dataStore().createEntity("first", "first", {
     ide: "five",
-    val: 104
+    val: 104,
+    arrayVal: ["four", "two", "three"]
   })
 }
