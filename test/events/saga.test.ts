@@ -4,7 +4,6 @@ import {
   allSagaInstances,
   allSagas,
   registerSaga,
-  removeAllNotifyIntents,
   removeAllSagas,
   saga, SagaInstance
 } from "../../src/events/saga";
@@ -34,7 +33,6 @@ describe('Sagas', function () {
   beforeEach(async function() {
     let instances = await allSagaInstances()
     await Promise.all(instances.map(async value => {
-      await removeAllNotifyIntents(value)
       console.log(value)
       await dataStore().deleteEntity("system", "saga-instance", value.internalData.id)
     }))
@@ -142,19 +140,34 @@ describe('Sagas', function () {
   });
 });
 
+interface SagaData {
+  usercreated: boolean
+  userdidstuff: boolean
+}
+
 function basicSaga() {
-  return saga("User Registered")
+  return saga<SagaData>("User Registered")
     .subscribeStreams(["users"])
-    .startOn("UserCreated", async (instance: SagaInstance, created: EventicleEvent) => {
+    .startOn("UserCreated", {
+
+    },async (instance, created: EventicleEvent) => {
       instance.set("usercreated", true)
-      instance.notifyOn("UserDidStuff", "id", created.data.id)
-      instance.notifyOn("EndEvent", "id", created.data.id)
     })
     // event listener triggered by the above notifyOn
-    .on("UserDidStuff", async (instance: SagaInstance, rejection: EventicleEvent) => {
+    .on("UserDidStuff", {
+      matchInstance: ev => ({
+        instanceProperty: "usercreated",
+        value: ev.domainId
+      })
+    },async (instance, rejection: EventicleEvent) => {
       instance.set("userdidstuff", true)
     })
-    .on("EndEvent", async (instance: SagaInstance, approved: EventicleEvent) => {
+    .on("EndEvent", {
+      matchInstance: ev => ({
+        instanceProperty: "userdidstuff",
+        value: ev.domainId
+      })
+    },async (instance, approved: EventicleEvent) => {
       console.log("Ending the saga now")
       instance.endSaga()
     })

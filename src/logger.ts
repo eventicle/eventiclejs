@@ -21,6 +21,7 @@ let loggerApi: LogApi = {
     console.log(`DEBUG: ${message}: ${JSON.stringify(arg)}`)
   },
   error(message: string, arg?: any) {
+    console.log(arg)
     console.log(`ERROR: ${message}: ${JSON.stringify(arg)}`)
     console.log(new Error().stack)
   },
