@@ -1,4 +1,3 @@
-import * as Knex from 'knex';
 import {v4 as uuidv4} from 'uuid';
 import {als} from "asynchronous-local-storage"
 import { DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionData, TransactionOptions } from '.';
@@ -6,6 +5,7 @@ import {EventEmitter} from "events";
 import { getFileNameAndLineNumber } from '../logger-util';
 import logger from '../logger';
 import { buildWhere } from './sql-helper';
+import {Knex} from "knex";
 
 const stackTrace = require('stack-trace');
 

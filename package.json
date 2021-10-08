@@ -13,17 +13,17 @@
     "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
-    "@types/crypto-js": "^4.0.1",
+    "@types/crypto-js": "^4.0.2",
     "@types/knex": "^0.16.1",
     "@types/serialize-error": "^4.0.1",
     "asynchronous-local-storage": "^1.0.2",
-    "avsc": "^5.7.0",
-    "crypto-js": "^4.0.0",
+    "avsc": "^5.7.3",
+    "crypto-js": "^4.1.1",
     "kafkajs": "^1.15.0",
-    "knex": "^0.21.19",
+    "knex": "^0.95.11",
     "lodash": "^4.17.21",
     "serialize-error": "^7.0.1",
-    "uuid": "^8.3.1",
+    "uuid": "^8.3.2",
     "winston": "^3.3.3"
   },
   "devDependencies": {
@@ -38,7 +38,8 @@
     "tslint": "^5.16.0",
     "tslint-eslint-rules": "^5.4.0",
     "typescript": "^4.2.4",
-    "typescript-bundle": "^1.0.14"
+    "typescript-bundle": "^1.0.14",
+    "yarn-audit-fix": "^7.0.8"
   },
   "author": "Team Eventicle",
   "license": "Apache-2.0"
