@@ -4,9 +4,9 @@ import {eventClientOnKafka} from "../../../src/events/core/eventclient-kafka";
 import * as uuid from "uuid"
 import {errorComparator} from "tslint/lib/verify/lintError";
 import {pause} from "../../../src/util";
-import {setDataStore} from "../../../src/datastore";
+import {setDataStore} from "../../../src";
 import InMemDatastore from "../../../src/datastore/inmem-data-store"
-import logger from "../../../src/logger";
+import {logger} from "@eventicle/eventicle-utilities";
 
 jest.setTimeout(10000)
 

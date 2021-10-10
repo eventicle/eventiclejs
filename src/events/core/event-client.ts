@@ -2,7 +2,7 @@
  * Low level event stream client
  */
 import * as uuid from "uuid"
-import {getApmTraceparent} from "../../apm";
+import {getApmTraceparent} from "@eventicle/eventicle-utilities";
 
 let EVENT_SOURCE = "unknown-service"
 

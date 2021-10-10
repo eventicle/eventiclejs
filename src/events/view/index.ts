@@ -1,5 +1,5 @@
 import {EncodedEvent, eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
-import logger from "../../logger";
+import {logger} from "@eventicle/eventicle-utilities";
 
 let viewControls = {} as {
   [key: string]: EventSubscriptionControl

@@ -1,10 +1,9 @@
 import {eventClient, EventicleEvent} from "../core/event-client";
-import {span} from "../../apm";
-import logger from "../../logger";
+import {logger, span} from "@eventicle/eventicle-utilities";
 import {serializeError} from "serialize-error";
 import {Command, CommandReturn} from "./index";
-import {hashCode, lockManager} from "../lock-manager";
-import {dataStore} from "../../datastore";
+import {lockManager} from "../../";
+import {dataStore} from "../../";
 
 const COMMAND = new Map<string, Command<any, any>>()
 

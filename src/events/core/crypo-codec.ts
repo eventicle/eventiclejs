@@ -1,6 +1,6 @@
 import * as uuid from "uuid";
 import * as crypt from "crypto-js";
-import logger from "../../logger";
+import {logger} from "@eventicle/eventicle-utilities";
 import { dataStore } from "../..";
 import { EventicleEvent, EventClientCodec, EncodedEvent } from "./event-client";
 

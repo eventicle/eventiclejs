@@ -1,7 +1,3 @@
-import {setDataStore} from "../../../src/datastore";
-import InMemDatastore from "../../../src/datastore/inmem-data-store";
-import {testDbPurge} from "../../../src/fixture";
-import {eventClient, eventClientOnDatastore, setEventClient, setEventClientCodec} from "../../../src";
 import {eventClientCodec} from "../../../src/events/core/event-client";
 
 describe('Event Codec JSON', function() {

@@ -13,14 +13,13 @@
     "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
+    "@eventicle/eventicle-utilities": "0.0.2",
     "@types/crypto-js": "^4.0.1",
-    "@types/knex": "^0.16.1",
     "@types/serialize-error": "^4.0.1",
     "asynchronous-local-storage": "^1.0.2",
     "avsc": "^5.7.0",
     "crypto-js": "^4.0.0",
     "kafkajs": "^1.15.0",
-    "knex": "^0.21.19",
     "lodash": "^4.17.21",
     "serialize-error": "^7.0.1",
     "uuid": "^8.3.1",
@@ -33,6 +32,7 @@
     "@types/node": "^14.11.10",
     "@types/uuid": "^8.3.0",
     "jest": "^26.5.3",
+    "140-opts": "",
     "ts-jest": "^26.4.1",
     "ts-node": "^9.0.0",
     "tsc": "^1.20150623.0",

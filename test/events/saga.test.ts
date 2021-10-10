@@ -7,13 +7,12 @@ import {
   removeAllSagas,
   saga, SagaInstance
 } from "../../src/events/saga";
-import {dataStore, setDataStore} from "../../src/datastore";
 import {testDbPurge} from "../../src/fixture";
 import {eventClient, EventicleEvent, setEventClient} from "../../src/events/core/event-client";
 import {pause} from "../../src/util";
 import InMemDatastore from "../../src/datastore/inmem-data-store";
 import {eventClientOnDatastore} from "../../src/events/core/eventclient-datastore";
-import {eventClientOnKafka} from "../../src/events/core/eventclient-kafka";
+import {setDataStore, dataStore} from "../../src";
 
 describe('Sagas', function () {
 

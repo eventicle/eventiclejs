@@ -1,6 +1,5 @@
 import {eventClient, EventClient, EventSubscriptionControl} from "./event-client";
-import logger from "../../logger";
-import {getKafkaClient} from "./eventclient-kafka";
+import {logger} from "@eventicle/eventicle-utilities";
 
 export async function cleanStartingProxyEventClient(createClient: () => Promise<EventClient>): Promise<EventClient> {
 

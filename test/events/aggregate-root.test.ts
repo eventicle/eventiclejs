@@ -2,7 +2,7 @@ import uuid = require("uuid");
 import {AggregateRoot, default as aggregates} from "../../src/events/aggregate-root";
 import {EventicleEvent, setEventClient} from "../../src/events/core/event-client";
 import {testDbPurge} from "../../src/fixture";
-import {setDataStore} from "../../src/datastore";
+import {setDataStore, dataStore} from "../../src";
 import InMemDatastore from "../../src/datastore/inmem-data-store";
 import {eventClientOnDatastore} from "../../src/events/core/eventclient-datastore";
 

@@ -8,14 +8,13 @@ export { dispatchCommand, registerCommand, Command, CommandIntent, CommandReturn
 export { registerView, EventView, registerRawView, RawEventView } from "./events/view";
 export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAllSagas } from "./events/saga";
 export { default as InMemoryDatastore } from "./datastore/inmem-data-store"
-export { DataStore, Record, setDataStore, dataStore, DataSorting, DataQuery, PagedRecords } from "./datastore/index"
-export { setLogApi } from "./logger"
+export { DataStore, Record, setDataStore, dataStore, DataSorting, DataQuery, PagedRecords, TransactionListener, TransactionData, TransactionOptions } from "@eventicle/eventicle-utilities/dist/datastore"
 export { aggregateObservationAdapter, createAggregateObservationAdapter, aggregateObserver} from "./events/adapter/AggregateObservationAdapter"
 export { EventAdapter, registerAdapter } from "./events/adapter"
-export { LogApi } from "./logger"
+export { LogApi, setLogApi } from "@eventicle/eventicle-utilities"
 export { consumeFullEventLog } from "./testing"
 export { metrics } from "./metrics"
-export { lockManager, setLockManager, LockManager} from "./events/lock-manager"
+export { lockManager, setLockManager, LockManager} from "@eventicle/eventicle-utilities"
 
 import * as apm from "./apm";
 

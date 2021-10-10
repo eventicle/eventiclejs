@@ -1,10 +1,6 @@
-import {existsSync, readdirSync, readFileSync} from 'fs';
 import * as avro from 'avsc';
-import * as path from 'path';
-import logger from '../../logger';
-import { getApmTraceparent } from '../../apm';
+import {logger, getApmTraceparent} from "@eventicle/eventicle-utilities";
 import { EventClientCodec, EncodedEvent, EventicleEvent } from './event-client';
-
 
 export abstract class AvroCodec implements EventClientCodec {
 
@@ -107,7 +103,7 @@ export abstract class AvroCodec implements EventClientCodec {
     }
   }
 
-  abstract loadAvro(); 
+  abstract loadAvro();
 
   protected parseProtocol(protocol: string, registry: any) {
     const schema = avro.readProtocol(protocol);

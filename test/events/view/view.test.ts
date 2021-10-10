@@ -1,6 +1,6 @@
 import {EventView, registerView} from "../../../src/events/view";
 import {eventClient, EventicleEvent, setEventClient} from "../../../src/events/core/event-client";
-import {setDataStore} from "../../../src/datastore";
+import {setDataStore, dataStore} from "../../../src";
 import InMemDatastore from "../../../src/datastore/inmem-data-store";
 import {eventClientOnDatastore} from "../../../src/events/core/eventclient-datastore";
 

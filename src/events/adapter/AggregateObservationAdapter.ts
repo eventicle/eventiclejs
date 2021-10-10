@@ -2,7 +2,7 @@
 import * as uuid from "uuid"
 import {EventAdapter} from "./index";
 import {AggregateRoot, aggregates, EventicleEvent} from "../..";
-import logger from "../../logger";
+import {logger} from "@eventicle/eventicle-utilities";
 import {EventEmitter} from "events";
 class InternalEv extends EventEmitter {}
 

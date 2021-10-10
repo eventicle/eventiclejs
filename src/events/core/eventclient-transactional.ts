@@ -9,11 +9,8 @@ import {
   EventicleEvent,
   EventSubscriptionControl, isRawEvent
 } from "./event-client";
-import {EventEmitter} from "events"
-import {dataStore} from "../../datastore";
-import logger from "../../logger";
-import {listenerCount} from "cluster";
-
+import {dataStore} from "../../";
+import {logger} from "@eventicle/eventicle-utilities";
 
 /**
  * Evernt client that wraps a delegate and integrate with the transaction manager.

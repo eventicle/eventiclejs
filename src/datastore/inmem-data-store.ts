@@ -1,6 +1,6 @@
 import * as uuid from 'uuid';
-import {DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionData} from "./index";
-import logger from "../logger";
+import {DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionData} from "../";
+import {logger} from "@eventicle/eventicle-utilities";
 import {als} from "asynchronous-local-storage"
 import {EventEmitter} from "events";
 

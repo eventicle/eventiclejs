@@ -1,13 +1,13 @@
 import {EventView, registerView} from "../../../src/events/view";
 import {eventClient, EventicleEvent, setEventClient} from "../../../src/events/core/event-client";
-import {setDataStore} from "../../../src/datastore";
+import {setDataStore, dataStore} from "../../../src";
 import InMemDatastore from "../../../src/datastore/inmem-data-store";
 import {eventClientOnDatastore} from "../../../src/events/core/eventclient-datastore";
 import {testDbPurge} from "../../../src/fixture";
 import {aggregateObserver, AggregateRoot, aggregates, createAggregateObservationAdapter} from "../../../src";
 import * as uuid from "uuid"
 import {pause} from "../../../src/util";
-import logger from "../../../src/logger";
+import {logger} from "@eventicle/eventicle-utilities";
 
 describe('Aggregate Observer', function() {
 

@@ -1,8 +1,8 @@
 import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
-import {dataStore, Record} from "../../datastore";
-import logger from "../../logger";
-import {apmJoinEvent, span, withAPM} from "../../apm";
-import {lockManager} from "../lock-manager";
+import {dataStore, Record} from "../../";
+import {logger, span, withAPM} from "@eventicle/eventicle-utilities";
+import {apmJoinEvent} from "../../apm";
+import {lockManager} from "../../";
 import uuid = require("uuid");
 
 let metrics = {} as any

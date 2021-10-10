@@ -1,8 +1,7 @@
-import {EventicleEvent, eventSourceName} from "./core/event-client";
-import uuid = require("uuid");
-import {dataStore} from "../datastore";
-import logger from "../logger";
-import {hashCode, lockManager} from "./lock-manager";
+import {EventicleEvent} from "./core/event-client";
+import {dataStore} from "../";
+import {logger} from "@eventicle/eventicle-utilities";
+import {lockManager} from "./../";
 import {AggregateRoot} from "./aggregate-root";
 
 function eventstreamname<T extends AggregateRoot>(type: string) {

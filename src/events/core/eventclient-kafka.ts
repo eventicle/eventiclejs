@@ -7,7 +7,7 @@ import {
   EventSubscriptionControl, isRawEvent
 } from "./event-client";
 import * as uuid from "uuid"
-import logger from "../../logger";
+import {logger} from "@eventicle/eventicle-utilities";
 import {ThrottledProducer} from "./kafka-throttle";
 import {eventClientTransactional} from "./eventclient-transactional";
 

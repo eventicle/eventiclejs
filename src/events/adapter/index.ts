@@ -1,6 +1,6 @@
 import {EncodedEvent, eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
-import logger from "../../logger";
-import {dataStore} from "../../datastore";
+import {logger} from "@eventicle/eventicle-utilities";
+import {dataStore} from "../../";
 import {RawEventView} from "../view";
 
 let viewControls = {} as {

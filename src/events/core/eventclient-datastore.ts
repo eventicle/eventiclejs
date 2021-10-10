@@ -6,10 +6,8 @@ import {
   EventSubscriptionControl, isRawEvent
 } from "./event-client";
 import {EventEmitter} from "events"
-import {dataStore} from "../../datastore";
-import logger from "../../logger";
-import {listenerCount} from "cluster";
-// import logger from "../../logger";
+import {dataStore} from "../../";
+import {logger} from "@eventicle/eventicle-utilities";
 import * as uuid from "uuid"
 import {eventClientTransactional} from "./eventclient-transactional";
 

@@ -1,5 +1,5 @@
 import {CompressionTypes, Kafka, Message, Partitioners, Producer, ProducerConfig, ProducerRecord} from "kafkajs";
-import logger, {LogApi} from "../../logger";
+import {logger} from "@eventicle/eventicle-utilities";
 import {pause} from "../../util";
 import * as uuid from "uuid";
 import {HealthCheckStatus} from "./eventclient-kafka";

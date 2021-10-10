@@ -1,8 +1,6 @@
 import {EventicleEvent, eventSourceName} from "./core/event-client";
 import uuid = require("uuid");
-import {dataStore} from "../datastore";
-import logger from "../logger";
-import {hashCode, lockManager} from "./lock-manager";
+import {logger} from "@eventicle/eventicle-utilities";
 import aggregatesTenant from "./tenant-aggregate-root";
 
 export abstract class AggregateRoot {
