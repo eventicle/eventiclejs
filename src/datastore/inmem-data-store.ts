@@ -241,7 +241,12 @@ export default class implements DataStore {
     [key: string]: string | number | DataQuery
   }, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords> {
     const results = await this.findEntity(workspaceId, type, query, sorting);
-    const startIndex = pageSize * page;
+    let startIndex = (pageSize * page) - pageSize;
+
+    if(startIndex <0) {
+      startIndex = 0
+    }
+
     const endIndex = startIndex + pageSize;
 
     return {
