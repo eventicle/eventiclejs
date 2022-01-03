@@ -34,6 +34,13 @@ export abstract class AggregateRoot {
   }
 }
 
+export interface AggregateRepository {
+  load<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<T>
+  history<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<EventicleEvent[]>
+  persist<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]>
+}
+
+
 export default {
   /**
    * Replay and build an aggregate root into its current state.
@@ -58,4 +65,4 @@ export default {
   persist: async<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]> => {
     return aggregatesTenant.persist(aggregate, "system")
   }
-}
+} as AggregateRepository
