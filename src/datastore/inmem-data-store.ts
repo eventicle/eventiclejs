@@ -43,7 +43,7 @@ function partialCompareObject(partial: any, data: any): boolean {
         }
 
         // primitives
-        if(typeof data[key] === typeof partial[key] && ["string", "number"].includes(typeof partial[key])) {
+        if(typeof data[key] === typeof partial[key] && isPrimitive(partial[key])) {
           return data[key] === partial[key]
         }
 
@@ -68,6 +68,39 @@ function partialCompareObject(partial: any, data: any): boolean {
     })
     .filter((key) => !key)
     .length === 0
+}
+
+function likeCompare(query, data): boolean {
+
+  const path = [...query.path]
+  const current = path.shift()
+  if(data.hasOwnProperty(current)) {
+    if(path.length === 0) {
+
+      if(Array.isArray(data[current])) {
+        let check = false
+        data[current].forEach((item) => {
+          if(isPrimitive(item)) {
+            if(item.includes(query.like)) {
+              check = true
+            }
+          }
+        })
+        return check
+      }
+
+      if(isPrimitive(data[current])) {
+        return `${data[current]}`.includes(query.like)
+      }
+
+      return false
+    }
+    return likeCompare({...query, path}, data[current])
+  } else {
+    return false
+  }
+
+
 }
 
 export default class implements DataStore {
@@ -192,7 +225,17 @@ export default class implements DataStore {
               }
               fieldsAllMatch = partialCompareObject(val.value, entry.content)
               break;
+            case "LIKE": {
+              if(isPrimitive(val.value) || !val.value.hasOwnProperty("path") || !val.value.hasOwnProperty("like")) {
+                logger.warn("Like query must contain a path as an array of strings", query)
+                fieldsAllMatch = false
+              } else {
+                fieldsAllMatch = likeCompare(val.value, entry.content)
+              }
+              break;
+            }
           }
+
         } else if (query[key] !== entry.content[key]) {
           fieldsAllMatch = false;
         }
@@ -243,7 +286,7 @@ export default class implements DataStore {
     const results = await this.findEntity(workspaceId, type, query, sorting);
     let startIndex = (pageSize * page) - pageSize;
 
-    if(startIndex <0) {
+    if(startIndex < 0) {
       startIndex = 0
     }
 

@@ -242,6 +242,54 @@ describe('Data Store', function() {
         }),
       ]))
   })
+
+  it("LIKE", async () => {
+    await standardData()
+
+    const ret = await dataStore().findEntity("first", "first", {
+      first: {
+        op: "LIKE",
+        value: {
+          path: ["nestedVal", "secondArray"],
+          like: "our"
+        }
+      }
+    })
+
+    const ret2 = await dataStore().findEntity("first", "first", {
+      first: {
+        op: "LIKE",
+        value: {
+          path: ["nestedVal", "secondLayer"],
+          like: "value"
+        }
+      }
+    })
+
+    expect(ret.map((value: any) => value.content))
+      .toStrictEqual(expect.arrayContaining([
+        expect.objectContaining({
+          ide: "first",
+          arrayVal: ["one", "two"],
+        }),
+        expect.objectContaining({
+          ide: "five",
+          arrayVal: ["four", "two", "three"]
+        }),
+      ]))
+
+    expect(ret2.map((value: any) => value.content))
+      .toStrictEqual(expect.arrayContaining([
+        expect.objectContaining({
+          ide: "two",
+          arrayVal: ["one", "four"],
+        }),
+        expect.objectContaining({
+          ide: "five",
+          arrayVal: ["four", "two", "three"]
+        }),
+      ]))
+  })
 })
 
 
@@ -249,12 +297,20 @@ async function standardData() {
   await dataStore().createEntity("first", "first", {
     ide: "first",
     val: 100,
-    arrayVal: ["one", "two"]
+    arrayVal: ["one", "two"],
+    nestedVal: {
+      secondLayer: "some layer",
+      secondArray: ["sour", "anger", "data"]
+    }
   })
   await dataStore().createEntity("first", "first", {
     ide: "two",
     val: 101,
-    arrayVal: ["one", "four"]
+    arrayVal: ["one", "four"],
+    nestedVal: {
+      secondLayer: "lazy value",
+      secondArray: ["eight", "sixteen"]
+    }
   })
   await dataStore().createEntity("first", "first", {
     ide: "three",
@@ -269,6 +325,10 @@ async function standardData() {
   await dataStore().createEntity("first", "first", {
     ide: "five",
     val: 104,
-    arrayVal: ["four", "two", "three"]
+    arrayVal: ["four", "two", "three"],
+    nestedVal: {
+      secondLayer: "one value",
+      secondArray: ["four", "five", "dour"]
+    }
   })
 }

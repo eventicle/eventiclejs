@@ -5,3 +5,4 @@ dist/
 yarn.lock
 .yalc
 yalc.lock
+/*.log
