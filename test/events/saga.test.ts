@@ -146,6 +146,65 @@ describe('Sagas', function () {
     expect(instances[0].get("ended")).toBe(true)
   });
 
+  it('timers will fire appropriately and can be removed', async function () {
+    let instances1 = await allSagaInstances()
+    console.log(instances1)
+
+    await registerSaga(timerSaga())
+
+    let id = uuid.v4()
+
+    console.log("STARTING WITH EXEC " + id)
+
+    /*
+    on start of saga, will start a simple timer and a cron
+
+    the cron will execute a few times, then the simple timer will execute.
+
+    the simple timer handler will remove the cron, then we wait a couple of seconds and see that the counter is not going up.
+
+     */
+
+
+    await eventClient().emit([{
+      data: { id },
+      type: "UserCreated",
+      id: uuid.v4(),
+      domainId: "epic"
+    }], "users")
+
+    await pause(100)
+    let instances = await allSagaInstances()
+    let firstActiveTimers = instances[0].get("activeTimers")
+
+    await pause(3200)
+    instances = await allSagaInstances()
+    let activeTimersAfterFirstTimerFired = instances[0].get("activeTimers")
+    let firstCount = instances[0].get("user_reminder_count")
+
+
+    await pause(3000)
+    instances = await allSagaInstances()
+
+    console.log(instances)
+
+    let timerFired = instances[0].get("user_registration_timeout_fired")
+    let secondCount = instances[0].get("user_reminder_count")
+    let secondActiveTimers = instances[0].get("activeTimers")
+
+    expect(timerFired).toBeTruthy()
+    expect(secondCount).toEqual(firstCount)
+
+    expect(firstActiveTimers).toStrictEqual({
+      "registration_timeout": "timeout",
+      "reminder_notifications": "cron"
+    })
+
+    // registration_timeout is auto removed, reminder_notifications is manually removed
+    expect(activeTimersAfterFirstTimerFired).toEqual({})
+    expect(secondActiveTimers).toEqual({})
+  });
+
   /*
   TODO, this is in flight
 
@@ -166,9 +225,12 @@ interface SagaData {
   usercreated: boolean
   userdidstuff: boolean
   domainId: string
+
+  user_registration_timeout_fired: boolean
+  user_reminder_count: number
 }
 
-type timeouts = "registration_timewin"
+type timeouts = "registration_timeout" | "reminder_notifications"
 
 function basicSaga() {
   return saga<timeouts, SagaData>("User Registered")
@@ -199,8 +261,37 @@ function basicSaga() {
 
       instance.endSaga(true)
     })
-    .onTimer("registration_timewin", async instance => {
+}
 
+
+function timerSaga() {
+  return saga<timeouts, SagaData>("User Register Saga With Timers")
+    .subscribeStreams(["users"])
+    .startOn("UserCreated", {},async (instance, created: EventicleEvent) => {
+      logger.info("CREATING FROM EVENT!", created)
+      instance.set("usercreated", true)
+      instance.set("domainId", created.domainId)
+
+      instance.upsertTimer("reminder_notifications", {
+        isCron: true, crontab: "* * * * * *" // every second
+      })
+
+      instance.upsertTimer("registration_timeout", {
+        isCron: false, timeout: 3000
+      })
+    })
+    .onTimer("registration_timeout", async instance => {
+      logger.info("Removing timers")
+      instance.set("user_registration_timeout_fired", true)
+      instance.removeTimer("reminder_notifications")
+    })
+    .onTimer("reminder_notifications", async instance => {
+      logger.info("Doing a reminder")
+      if (!instance.get("user_reminder_count")) {
+        instance.set("user_reminder_count", 1)
+      } else {
+        instance.set("user_reminder_count", instance.get("user_reminder_count") + 1)
+      }
     })
 
 }

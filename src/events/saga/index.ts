@@ -1,9 +1,10 @@
 import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
-import {dataStore, Record} from "../../";
+import {dataStore, Record, scheduler} from "../../";
 import {logger, span, withAPM} from "@eventicle/eventicle-utilities";
 import {apmJoinEvent} from "../../apm";
 import {lockManager} from "../../";
 import uuid = require("uuid");
+import {values} from "lodash";
 
 let metrics = {} as any
 
@@ -64,8 +65,18 @@ interface NotifySub {
 
 export class SagaInstance<TimeoutNames, T> {
 
-  constructor(readonly internalData: any, readonly record?: Record) {
-  }
+  readonly timersToRemove: TimeoutNames[] = []
+  readonly timersToAdd: {
+    name: TimeoutNames, config: {
+      isCron: true
+      crontab: string
+    } | {
+      isCron: false
+      timeout: number
+    }
+  }[] = []
+
+  constructor(readonly internalData: any, readonly record?: Record) {}
 
   get(name: keyof T): any {
     return this.internalData[name]
@@ -87,11 +98,11 @@ export class SagaInstance<TimeoutNames, T> {
     isCron: false
     timeout: number
   }) {
-
+    this.timersToAdd.push({ name, config })
   }
 
   removeTimer(name: TimeoutNames) {
-
+    this.timersToRemove.push(name)
   }
 
   endSaga(preserveInstanceData: boolean = false) {
@@ -114,6 +125,8 @@ export class Saga<TimeoutNames, InstanceData> {
     logger.error("Saga error", error)
   }
 
+  timerHandler: Map<TimeoutNames, { handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void> }> = new Map
+
   constructor(readonly name: string) {
   }
 
@@ -122,8 +135,8 @@ export class Saga<TimeoutNames, InstanceData> {
     return this
   }
 
-  onTimer(name: TimeoutNames, handler: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData> {
-
+  onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData> {
+    this.timerHandler.set(name, { handle })
     return this
   }
 
@@ -161,9 +174,32 @@ export async function removeAllSagas(): Promise<void> {
   SAGAS.length = 0
 }
 
+async function processSagaInstanceWithExecutor(currentInstance: Record, executor: (instance: SagaInstance<any, any>) => Promise<void>, saga: Saga<any, any>) {
+  let instance = new SagaInstance(currentInstance.content, currentInstance)
+
+  await executor(instance)
+
+  if (!instance.internalData.activeTimers) instance.internalData.activeTimers = {}
+
+  instance.record.content = instance.internalData
+  await processTimersInSagaInstance(saga, instance)
+  await dataStore().saveEntity("system", "saga-instance", instance.record)
+
+  if (instance.internalData.ended) {
+    await removeAllTimersForInstance(saga, instance)
+  }
+  if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
+    await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
+  }
+}
+
 async function checkSagaEventHandlers(saga: Saga<any, any>, event: EventicleEvent) {
 
   let handler = saga.eventHandler.get(event.type)
+  let executor = async (instance: SagaInstance<any, any>) => {
+    await handler.handle(instance, event)
+    instance.internalData.events.push(event)
+  }
 
   let matcher = handler.config.matchInstance(event)
 
@@ -184,18 +220,8 @@ async function checkSagaEventHandlers(saga: Saga<any, any>, event: EventicleEven
       await dataStore().transaction(async () => {
         apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
         await span(event.type, {}, async theSpan => {
-
-          let instance = new SagaInstance(currentInstance.content, currentInstance)
-
           if (theSpan) theSpan.setType("SagaStep")
-          await handler.handle(instance, event)
-          instance.internalData.events.push(event)
-          instance.record.content = instance.internalData
-          await dataStore().saveEntity("system", "saga-instance", instance.record)
-
-          if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
-            await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
-          }
+          await processSagaInstanceWithExecutor(currentInstance, executor, saga);
         })
         updateLatency(saga, event)
         await withAPM(async apm => apm.endTransaction())
@@ -218,7 +244,7 @@ async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEven
 
   logger.debug(`  Saga starting ${saga.name} :: ` + startEvent.type)
 
-  let instance = new SagaInstance<any, any>({saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
+  let instance = new SagaInstance<any, any>({activeTimers: {}, saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
 
   apmJoinEvent(startEvent, saga.name + ":" + startEvent.type, "saga-step-" + saga.name, startEvent.type)
   await span(startEvent.type, {}, async theSpan => {
@@ -228,6 +254,7 @@ async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEven
 
     let exec = async () => {
       await sagaStep.handle(instance, startEvent)
+      await processTimersInSagaInstance(saga, instance)
       await dataStore().createEntity("system", "saga-instance", instance.internalData)
     }
 
@@ -245,10 +272,64 @@ async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEven
   await withAPM(async apm => apm.endTransaction())
 }
 
+async function handleTimerEvent(saga, name, data) {
+  let instanceData = (await dataStore().findEntity("system", "saga-instance", { instanceId: data.instanceId }))
+
+  logger.debug("Search results for saga-instance", instanceData)
+
+  if (instanceData.length > 0) {
+    for (let currentInstance of instanceData) {
+      await dataStore().transaction(async () => {
+        await span(`${saga.name}: ${name}`, {}, async theSpan => {
+          if (theSpan) theSpan.setType("SagaStepTimer")
+          await processSagaInstanceWithExecutor(currentInstance, async instance => {
+            if (saga.timerHandler.has(name)) {
+              await saga.timerHandler.get(name).handle(instance)
+            } else {
+              logger.warn(`Saga does not have a matching onTimer ${saga.name}/ ${name}.  This is a bug. The timer has been missed and will not be retried`)
+            }
+            console.log("WILL NCHECK IF REMOVE SCHEDULE", instance.internalData.activeTimers[name])
+            if (instance.internalData.activeTimers[name] && instance.internalData.activeTimers[name] === "timeout") {
+              delete instance.internalData.activeTimers[name]
+              await scheduler().removeSchedule(saga.name, name)
+            }
+          }, saga)
+        })
+      })
+    }
+  }
+}
+
+async function processTimersInSagaInstance(saga: Saga<any, any>, instance: SagaInstance<any, any>) {
+  for (let timer of instance.timersToAdd) {
+    if (!Object.keys(instance.internalData.activeTimers).includes(timer.name)) {
+      instance.internalData.activeTimers[timer.name] = timer.config.isCron ? "cron": "timeout"
+    }
+    await scheduler().addScheduledTask(saga.name, timer.name, timer.config, {
+      instanceId: instance.internalData.instanceId
+    })
+  }
+  for (let timer of instance.timersToRemove) {
+    delete instance.internalData.activeTimers[timer]
+    await scheduler().removeSchedule(saga.name, timer)
+  }
+}
+
+async function removeAllTimersForInstance(saga: Saga<any, any>, instance: SagaInstance<any, any>) {
+  let instanceData = (await dataStore().findEntity("system", "saga-instance", { instanceId: instance.internalData.instanceId }))
+
+  if (instanceData.length > 0) {
+    for (let currentInstance of instanceData) {
+      await scheduler().removeSchedule(saga.name, instance.internalData.activeTimers)
+    }
+  }
+}
 
 export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>): Promise<EventSubscriptionControl> {
 
   SAGAS.push(saga)
+
+  await scheduler().addScheduleTaskListener(saga.name, async (name, data) => handleTimerEvent(saga, name, data))
 
   let control = await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {

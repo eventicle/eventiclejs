@@ -1,6 +1,5 @@
-import {LocalScheduleJobRunner} from "../src/local-schedule-job-runner";
 import {testDbPurge} from "../src/fixture";
-import {InMemoryDatastore, setDataStore} from "../src";
+import {InMemoryDatastore, setDataStore, LocalScheduleJobRunner} from "../src";
 import {pause} from "../src/util";
 import {dataStore} from "../src";
 

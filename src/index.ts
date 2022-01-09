@@ -3,6 +3,8 @@ export { eventClientCodec, EventicleEvent, setEventClient, eventClient, setEvent
 export { eventClientOnDatastore } from "./events/core/eventclient-datastore";
 export { eventClientOnKafka, connectBroker } from "./events/core/eventclient-kafka";
 export {default as aggregates, AggregateRoot} from "./events/aggregate-root";
+export {scheduler, setScheduler} from "./scheduler";
+export {LocalScheduleJobRunner} from "./local-schedule-job-runner";
 
 export { dispatchCommand, registerCommand, Command, CommandIntent, CommandReturn } from "./events/command";
 export { registerView, EventView, registerRawView, RawEventView } from "./events/view";

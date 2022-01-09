@@ -5,7 +5,8 @@ import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util"
 import {dataStore} from "./";
 import * as nodeCron from "node-cron"
 import * as CronParser from "cron-parser"
-import {isNumber} from "util";
+
+
 /**
  * A Scheduled Job Runner that uses node-cron, setTimeout and runs as a single node.
  *
@@ -17,10 +18,16 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
   crons: Map<string, nodeCron.ScheduledTask> = new Map
   events = new EventEmitter()
 
+  constructor() {
+  }
+
   async addScheduleTaskListener(component: string, exec: (name: string, data: any) => Promise<void>): Promise<void> {
     // store in a listener
     this.events.addListener(component, args => {
-      exec(args.name, args.data).catch(reason => logger.warn(`Uncaught error in timer handler: ${component}/ ${args.name}`, { error: maybeRenderError(reason), data: args.data}))
+      exec(args.name, args.data).catch(reason => logger.warn(`Uncaught error in timer handler: ${component}/ ${args.name}`, {
+        error: maybeRenderError(reason),
+        data: args.data
+      }))
     })
   }
 
@@ -33,7 +40,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     }
   }
 
-  private manageCronTimerSchedule(component: string, name: string, config: {  isCron: true; crontab: string }, data: any, createRecord: boolean) {
+  private manageCronTimerSchedule(component: string, name: string, config: { isCron: true; crontab: string }, data: any, createRecord: boolean) {
     if (createRecord) {
       dataStore().createEntity("system", "lock-manager-cron", {
         component,
@@ -51,7 +58,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     this.crons.set(component + name, sched)
   }
 
-  private manageSimpleTimerSchedule(component: string, name: string, config: {  isCron: false; timeout: number }, data: any, createRecord: boolean) {
+  private manageSimpleTimerSchedule(component: string, name: string, config: { isCron: false; timeout: number }, data: any, createRecord: boolean) {
 
     if (createRecord) {
       dataStore().createEntity("system", "lock-manager-timer", {
@@ -82,7 +89,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
   }
 
   async removeSchedule(component: string, name: string): Promise<void> {
-    let timers = await dataStore().findEntity("system", "lock-manager-timer", { component, name })
+    let timers = await dataStore().findEntity("system", "lock-manager-timer", {component, name})
 
     if (timers.length > 0) {
       timers.forEach(value => {
@@ -98,7 +105,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
       })
     }
 
-    let crons = await dataStore().findEntity("system", "lock-manager-cron", { component, name })
+    let crons = await dataStore().findEntity("system", "lock-manager-cron", {component, name})
 
     if (crons.length > 0) {
       crons.forEach(value => {
@@ -139,13 +146,13 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
   }
 
   clearAllTimers() {
-    for(let t of this.timers.values()) {
+    for (let t of this.timers.values()) {
       clearTimeout(t)
     }
 
     this.timers.clear()
 
-    for(let t of this.crons.values()) {
+    for (let t of this.crons.values()) {
       t.stop()
     }
 
