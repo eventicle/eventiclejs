@@ -13,14 +13,17 @@
     "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
-    "@eventicle/eventicle-utilities": "^0.0.3",
+    "@eventicle/eventicle-utilities": "0.0.5",
     "@types/crypto-js": "^4.0.1",
+    "@types/node-cron": "^3.0.1",
     "@types/serialize-error": "^4.0.1",
     "asynchronous-local-storage": "^1.0.2",
     "avsc": "^5.7.0",
+    "cron-parser": "^4.2.1",
     "crypto-js": "^4.0.0",
     "kafkajs": "^1.15.0",
     "lodash": "^4.17.21",
+    "node-cron": "^3.0.0",
     "serialize-error": "^7.0.1",
     "uuid": "^8.3.1",
     "winston": "^3.3.3"
