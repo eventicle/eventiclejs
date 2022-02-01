@@ -1,13 +1,14 @@
 import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
-import {dataStore, Record} from "../../";
+import {dataStore, Record, scheduler} from "../../";
 import {logger, span, withAPM} from "@eventicle/eventicle-utilities";
 import {apmJoinEvent} from "../../apm";
 import {lockManager} from "../../";
 import uuid = require("uuid");
+import {values} from "lodash";
 
 let metrics = {} as any
 
-function updateLatency(view: Saga<any>, event: EventicleEvent) {
+function updateLatency(view: Saga<any, any>, event: EventicleEvent) {
   if (!metrics.hasOwnProperty(view.name)) {
     metrics[view.name] = {latest: 0}
   }
@@ -22,7 +23,7 @@ export function getSagaMetrics() {
   return metrics
 }
 
-interface StartHandlerConfig<T extends EventicleEvent, Y> {
+interface StartHandlerConfig<T extends EventicleEvent, Y, TimeoutNames> {
   /**
    * Only start a saga instance if this function returns true
    *
@@ -34,15 +35,15 @@ interface StartHandlerConfig<T extends EventicleEvent, Y> {
    * Obtain a lock during the processing of this event.
    * Defaults to no lock
    */
-  withLock?: (instance: SagaInstance<Y>, event: T) => string
+  withLock?: (instance: SagaInstance<TimeoutNames, Y>, event: T) => string
 }
 
-interface HandlerConfig<T extends EventicleEvent, Y> {
+interface HandlerConfig<T extends EventicleEvent, Y, TimeoutNames> {
   /**
    * Obtain a lock during the processing of this event.
    * Defaults to no lock
    */
-  withLock?: (instance: SagaInstance<Y>, event: T) => string
+  withLock?: (instance: SagaInstance<TimeoutNames, Y>, event: T) => string
 
   /**
    * Given an event, describe how to find a saga instance that can handle it.
@@ -62,10 +63,20 @@ interface NotifySub {
   filterVal: string
 }
 
-export class SagaInstance<T> {
+export class SagaInstance<TimeoutNames, T> {
 
-  constructor(readonly internalData: any, readonly record?: Record) {
-  }
+  readonly timersToRemove: TimeoutNames[] = []
+  readonly timersToAdd: {
+    name: TimeoutNames, config: {
+      isCron: true
+      crontab: string
+    } | {
+      isCron: false
+      timeout: number
+    }
+  }[] = []
+
+  constructor(readonly internalData: any, readonly record?: Record) {}
 
   get(name: keyof T): any {
     return this.internalData[name]
@@ -80,13 +91,19 @@ export class SagaInstance<T> {
     return null
   }
 
-  // addTimeout(name: string, millis: number) {
-  //
-  // }
-  //
-  // clearTimeout(name: string) {
-  //
-  // }
+  upsertTimer(name: TimeoutNames, config: {
+    isCron: true
+    crontab: string
+  } | {
+    isCron: false
+    timeout: number
+  }) {
+    this.timersToAdd.push({ name, config })
+  }
+
+  removeTimer(name: TimeoutNames) {
+    this.timersToRemove.push(name)
+  }
 
   endSaga(preserveInstanceData: boolean = false) {
     this.internalData.ended = true
@@ -94,13 +111,13 @@ export class SagaInstance<T> {
   }
 }
 
-export class Saga<InstanceData> {
+export class Saga<TimeoutNames, InstanceData> {
 
   streams: string[]
   streamSubs: EventSubscriptionControl[] = []
 
-  starts: Map<string, { config: StartHandlerConfig<any, InstanceData>, handle: (saga: SagaInstance<InstanceData>, event: EventicleEvent) => Promise<void> }> = new Map()
-  eventHandler: Map<string, { config: HandlerConfig< any, InstanceData>, handle: (saga: SagaInstance<InstanceData>, event: EventicleEvent) => Promise<void> }> = new Map()
+  starts: Map<string, { config: StartHandlerConfig<any, InstanceData, TimeoutNames>, handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void> }> = new Map()
+  eventHandler: Map<string, { config: HandlerConfig< any, InstanceData, TimeoutNames>, handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void> }> = new Map()
   errorHandler: (saga, event: EventicleEvent, error: Error) => Promise<void> = async (saga, event, error) => {
     logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
       saga, event
@@ -108,25 +125,22 @@ export class Saga<InstanceData> {
     logger.error("Saga error", error)
   }
 
+  timerHandler: Map<TimeoutNames, { handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void> }> = new Map
+
   constructor(readonly name: string) {
   }
 
-  subscribeStreams(streams: string[]): Saga<InstanceData> {
+  subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData> {
     this.streams = streams
     return this
   }
 
-  // startOnMatch(eventMatcher: (event: EventicleEvent) => Promise<boolean>): Saga {
-  //   this.startMatcher = eventMatcher
-  //   return this
-  // }
-  //
-  // onTimeout(handler: (saga: SagaInstance<InstanceData>) => Promise<void>): Saga<InstanceData> {
-  //
-  //   return this
-  // }
+  onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData> {
+    this.timerHandler.set(name, { handle })
+    return this
+  }
 
-  startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData>, handler: (saga: SagaInstance<InstanceData>, event: T) => Promise<void>): Saga<InstanceData> {
+  startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     if (this.starts.has(eventName)) {
       throw new Error(`Event has been double registered in Saga startsOn ${this.name}: ${eventName}`)
     }
@@ -134,7 +148,7 @@ export class Saga<InstanceData> {
     return this
   }
 
-  on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData>, handler: (saga: SagaInstance<InstanceData>, event: T) => Promise<void>): Saga<InstanceData> {
+  on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     if (this.eventHandler.has(eventName)) {
       throw new Error(`Event has been double registered in Saga.on ${this.name}: ${eventName}`)
     }
@@ -142,22 +156,50 @@ export class Saga<InstanceData> {
     return this
   }
 
-  onError(handler: (saga, event: EventicleEvent, error: Error) => Promise<void>): Saga<InstanceData> {
+  onError(handler: (saga, event: EventicleEvent, error: Error) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     this.errorHandler = handler
     return this
   }
 }
 
-const SAGAS: Saga<any>[] = []
+const SAGAS: Saga<any, any>[] = []
 
 export async function removeAllSagas(): Promise<void> {
-  SAGAS.forEach(value => value.streamSubs.forEach(sub => sub.close()))
+
+  SAGAS.forEach(value => {
+    logger.info("REMOVING ALL SAGAS NOW: " + value.name, value.streamSubs.length)
+    value.streamSubs.forEach(sub => sub.close())
+
+  })
   SAGAS.length = 0
 }
 
-async function checkSagaEventHandlers(saga: Saga<any>, event: EventicleEvent) {
+async function processSagaInstanceWithExecutor(currentInstance: Record, executor: (instance: SagaInstance<any, any>) => Promise<void>, saga: Saga<any, any>) {
+  let instance = new SagaInstance(currentInstance.content, currentInstance)
+
+  await executor(instance)
+
+  if (!instance.internalData.activeTimers) instance.internalData.activeTimers = {}
+
+  instance.record.content = instance.internalData
+  await processTimersInSagaInstance(saga, instance)
+  await dataStore().saveEntity("system", "saga-instance", instance.record)
+
+  if (instance.internalData.ended) {
+    await removeAllTimersForInstance(saga, instance)
+  }
+  if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
+    await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
+  }
+}
+
+async function checkSagaEventHandlers(saga: Saga<any, any>, event: EventicleEvent) {
 
   let handler = saga.eventHandler.get(event.type)
+  let executor = async (instance: SagaInstance<any, any>) => {
+    await handler.handle(instance, event)
+    instance.internalData.events.push(event)
+  }
 
   let matcher = handler.config.matchInstance(event)
 
@@ -178,18 +220,8 @@ async function checkSagaEventHandlers(saga: Saga<any>, event: EventicleEvent) {
       await dataStore().transaction(async () => {
         apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
         await span(event.type, {}, async theSpan => {
-
-          let instance = new SagaInstance(currentInstance.content, currentInstance)
-
           if (theSpan) theSpan.setType("SagaStep")
-          await handler.handle(instance, event)
-          instance.internalData.events.push(event)
-          instance.record.content = instance.internalData
-          await dataStore().saveEntity("system", "saga-instance", instance.record)
-
-          if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
-            await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
-          }
+          await processSagaInstanceWithExecutor(currentInstance, executor, saga);
         })
         updateLatency(saga, event)
         await withAPM(async apm => apm.endTransaction())
@@ -203,7 +235,7 @@ async function checkSagaEventHandlers(saga: Saga<any>, event: EventicleEvent) {
   }
 }
 
-async function startSagaInstance(saga: Saga<any>, startEvent: EventicleEvent) {
+async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEvent) {
 
   logger.debug(`Checking if should start ${saga.name}: ${startEvent.type}`)
   if (saga.starts.get(startEvent.type).config.matches && !await saga.starts.get(startEvent.type).config.matches(startEvent)) {
@@ -212,7 +244,7 @@ async function startSagaInstance(saga: Saga<any>, startEvent: EventicleEvent) {
 
   logger.debug(`  Saga starting ${saga.name} :: ` + startEvent.type)
 
-  let instance = new SagaInstance<any>({saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
+  let instance = new SagaInstance<any, any>({activeTimers: {}, saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
 
   apmJoinEvent(startEvent, saga.name + ":" + startEvent.type, "saga-step-" + saga.name, startEvent.type)
   await span(startEvent.type, {}, async theSpan => {
@@ -222,6 +254,7 @@ async function startSagaInstance(saga: Saga<any>, startEvent: EventicleEvent) {
 
     let exec = async () => {
       await sagaStep.handle(instance, startEvent)
+      await processTimersInSagaInstance(saga, instance)
       await dataStore().createEntity("system", "saga-instance", instance.internalData)
     }
 
@@ -239,10 +272,64 @@ async function startSagaInstance(saga: Saga<any>, startEvent: EventicleEvent) {
   await withAPM(async apm => apm.endTransaction())
 }
 
+async function handleTimerEvent(saga, name, data) {
+  let instanceData = (await dataStore().findEntity("system", "saga-instance", { instanceId: data.instanceId }))
 
-export async function registerSaga<Y>(saga: Saga<Y>): Promise<EventSubscriptionControl> {
+  logger.debug("Search results for saga-instance", instanceData)
+
+  if (instanceData.length > 0) {
+    for (let currentInstance of instanceData) {
+      await dataStore().transaction(async () => {
+        await span(`${saga.name}: ${name}`, {}, async theSpan => {
+          if (theSpan) theSpan.setType("SagaStepTimer")
+          await processSagaInstanceWithExecutor(currentInstance, async instance => {
+            if (saga.timerHandler.has(name)) {
+              await saga.timerHandler.get(name).handle(instance)
+            } else {
+              logger.warn(`Saga does not have a matching onTimer ${saga.name}/ ${name}.  This is a bug. The timer has been missed and will not be retried`)
+            }
+            console.log("WILL NCHECK IF REMOVE SCHEDULE", instance.internalData.activeTimers[name])
+            if (instance.internalData.activeTimers[name] && instance.internalData.activeTimers[name] === "timeout") {
+              delete instance.internalData.activeTimers[name]
+              await scheduler().removeSchedule(saga.name, name)
+            }
+          }, saga)
+        })
+      })
+    }
+  }
+}
+
+async function processTimersInSagaInstance(saga: Saga<any, any>, instance: SagaInstance<any, any>) {
+  for (let timer of instance.timersToAdd) {
+    if (!Object.keys(instance.internalData.activeTimers).includes(timer.name)) {
+      instance.internalData.activeTimers[timer.name] = timer.config.isCron ? "cron": "timeout"
+    }
+    await scheduler().addScheduledTask(saga.name, timer.name, timer.config, {
+      instanceId: instance.internalData.instanceId
+    })
+  }
+  for (let timer of instance.timersToRemove) {
+    delete instance.internalData.activeTimers[timer]
+    await scheduler().removeSchedule(saga.name, timer)
+  }
+}
+
+async function removeAllTimersForInstance(saga: Saga<any, any>, instance: SagaInstance<any, any>) {
+  let instanceData = (await dataStore().findEntity("system", "saga-instance", { instanceId: instance.internalData.instanceId }))
+
+  if (instanceData.length > 0) {
+    for (let currentInstance of instanceData) {
+      await scheduler().removeSchedule(saga.name, instance.internalData.activeTimers)
+    }
+  }
+}
+
+export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>): Promise<EventSubscriptionControl> {
 
   SAGAS.push(saga)
+
+  await scheduler().addScheduleTaskListener(saga.name, async (name, data) => handleTimerEvent(saga, name, data))
 
   let control = await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
@@ -276,7 +363,7 @@ export async function registerSaga<Y>(saga: Saga<Y>): Promise<EventSubscriptionC
   return control;
 }
 
-export async function allSagaInstances(workspaceId?: string): Promise<SagaInstance<any>[]> {
+export async function allSagaInstances(workspaceId?: string): Promise<SagaInstance<any, any>[]> {
   if (!workspaceId) workspaceId = "system"
   let ret = (await dataStore().findEntity(workspaceId, "saga-instance", {}, {}))
 
@@ -284,10 +371,11 @@ export async function allSagaInstances(workspaceId?: string): Promise<SagaInstan
   return ret.map(value => new SagaInstance(value.content))
 }
 
-export async function allSagas(): Promise<Saga<any>[]> {
+export async function allSagas(): Promise<Saga<any, any>[]> {
   return SAGAS
 }
 
-export function saga<SagaInstanceData>(name: string): Saga<SagaInstanceData> {
-  return new Saga<SagaInstanceData>(name)
+
+export function saga<TimeoutNames, SagaInstanceData>(name: string): Saga<TimeoutNames, SagaInstanceData> {
+  return new Saga<TimeoutNames, SagaInstanceData>(name)
 }

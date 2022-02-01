@@ -7,3 +7,10 @@ jest.config.json
 .editorconfig
 .idea/
 book/
+.yalc
+yalc.*
+yarn.lock
+*.iml
+.gitlab-ci.yml
+yarn-error.log
+.nvmrc
