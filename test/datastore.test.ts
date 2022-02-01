@@ -290,6 +290,13 @@ describe('Data Store', function() {
         }),
       ]))
   })
+
+  it("DELETE many", async () => {
+    await standardData()
+    await dataStore().deleteMany("first", "first", {})
+    const ret = await dataStore().findEntity("first", "first", {})
+    expect(ret.length).toBe(0)
+  })
 })
 
 

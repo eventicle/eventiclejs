@@ -3,6 +3,7 @@ import {DataQuery, DataSorting, DataStore, PagedRecords, Record, TransactionData
 import {logger} from "@eventicle/eventicle-utilities";
 import {als} from "asynchronous-local-storage"
 import {EventEmitter} from "events";
+import { Query } from '@eventicle/eventicle-utilities/dist/datastore';
 
 let tenants: any = {};
 
@@ -165,9 +166,7 @@ export default class implements DataStore {
    * @param {*} query  Json object to match fields
    * @param sorting
    */
-  public async findEntity(workspaceId: string, type: any, query: {
-    [key: string]: string | number | DataQuery
-  }, sorting: DataSorting = {}): Promise<Record[]> {
+  public async findEntity(workspaceId: string, type: any, query: Query, sorting: DataSorting = {}): Promise<Record[]> {
     const table = getStoreForWorkspace(workspaceId)[type];
     if (!table) return [];
     const results: any = [];
@@ -280,9 +279,7 @@ export default class implements DataStore {
    * @param {*} page page count
    * @param {*} pageSize page size
    */
-  async findEntityPaginated(workspaceId: string, type: string, query: {
-    [key: string]: string | number | DataQuery
-  }, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords> {
+  async findEntityPaginated(workspaceId: string, type: string, query: Query, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords> {
     const results = await this.findEntity(workspaceId, type, query, sorting);
     let startIndex = (pageSize * page) - pageSize;
 
@@ -334,6 +331,13 @@ export default class implements DataStore {
     if (!getStoreForWorkspace(workspaceId)[type]) return Promise.resolve();
     delete getStoreForWorkspace(workspaceId)[type][id];
     return Promise.resolve();
+  }
+
+  async deleteMany(workspaceId: string, type: string, query: Query): Promise<void> {
+    const results = await this.findEntity(workspaceId, type, query);
+    results.map((result) => {
+      delete getStoreForWorkspace(workspaceId)[type][result.id]
+    })
   }
 
   async purge() {
