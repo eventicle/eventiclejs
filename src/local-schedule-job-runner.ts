@@ -58,10 +58,10 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     this.crons.set(component + name, sched)
   }
 
-  private manageSimpleTimerSchedule(component: string, name: string, config: { isCron: false; timeout: number }, data: any, createRecord: boolean) {
+  private async manageSimpleTimerSchedule(component: string, name: string, config: { isCron: false; timeout: number }, data: any, createRecord: boolean) {
 
     if (createRecord) {
-      dataStore().createEntity("system", "lock-manager-timer", {
+      await dataStore().createEntity("system", "lock-manager-timer", {
         component,
         name,
         config,
