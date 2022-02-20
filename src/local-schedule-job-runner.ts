@@ -34,15 +34,21 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
   async addScheduledTask(component: string, name: string, config: { isCron: true; crontab: string } | { isCron: false; timeout: number }, data: any): Promise<void> {
 
     if (!config.isCron) {
-      this.manageSimpleTimerSchedule(component, name, config as any, data, true);
+      await this.manageSimpleTimerSchedule(component, name, config as any, data, true);
     } else {
-      this.manageCronTimerSchedule(component, name, config as any, data, true);
+      await this.manageCronTimerSchedule(component, name, config as any, data, true);
     }
   }
 
-  private manageCronTimerSchedule(component: string, name: string, config: { isCron: true; crontab: string }, data: any, createRecord: boolean) {
+  private async manageCronTimerSchedule(component: string, name: string, config: { isCron: true; crontab: string }, data: any, createRecord: boolean) {
+
+    if (await this.hasSchedule(component, name)) {
+      logger.debug("Attempted to add cron timer again, ignoring", {component, name})
+      return
+    }
+
     if (createRecord) {
-      dataStore().createEntity("system", "lock-manager-cron", {
+      await dataStore().createEntity("system", "lock-manager-cron", {
         component,
         name,
         config,
@@ -86,6 +92,12 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     } else {
       this.timers.set(component + name, timer)
     }
+  }
+
+  async hasSchedule(component: string, name: string): Promise<boolean> {
+    let timers = await dataStore().findEntity("system", "lock-manager-cron", {component, name})
+
+    return timers.length > 0
   }
 
   async removeSchedule(component: string, name: string): Promise<void> {

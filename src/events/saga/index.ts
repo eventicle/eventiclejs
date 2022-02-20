@@ -5,6 +5,7 @@ import {apmJoinEvent} from "../../apm";
 import {lockManager} from "../../";
 import uuid = require("uuid");
 import {values} from "lodash";
+import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util";
 
 let metrics = {} as any
 
@@ -122,7 +123,7 @@ export class Saga<TimeoutNames, InstanceData> {
     logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
       saga, event
     })
-    logger.error("Saga error", error)
+    logger.error("Saga error", maybeRenderError(error))
   }
 
   timerHandler: Map<TimeoutNames, { handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void> }> = new Map
@@ -288,7 +289,6 @@ async function handleTimerEvent(saga, name, data) {
             } else {
               logger.warn(`Saga does not have a matching onTimer ${saga.name}/ ${name}.  This is a bug. The timer has been missed and will not be retried`)
             }
-            console.log("WILL NCHECK IF REMOVE SCHEDULE", instance.internalData.activeTimers[name])
             if (instance.internalData.activeTimers[name] && instance.internalData.activeTimers[name] === "timeout") {
               delete instance.internalData.activeTimers[name]
               await scheduler().removeSchedule(saga.name, name)

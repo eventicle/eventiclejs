@@ -3,6 +3,9 @@ import {logger, loggerUtil} from "@eventicle/eventicle-utilities";
 
 function logEventInternal(level: string, text: string, event: EventicleEvent, extraData?: any, addToContext?: string[], addToMessage?: string[]) {
 
+  if (!addToContext) addToContext = []
+  if (!addToMessage) addToMessage = []
+
   let logData = loggerUtil.maybeRenderError(extraData)
 
   loggerUtil.maybeInsertContext(logData, event, ...addToContext)
