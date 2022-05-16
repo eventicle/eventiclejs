@@ -1,6 +1,6 @@
 import {eventClient, EventicleEvent, EventSubscriptionControl} from "../core/event-client";
 import {dataStore, Record, scheduler} from "../../";
-import {logger, span, withAPM} from "@eventicle/eventicle-utilities";
+import {getAPM, logger, span, withAPM} from "@eventicle/eventicle-utilities";
 import {apmJoinEvent} from "../../apm";
 import {lockManager} from "../../";
 import uuid = require("uuid");
@@ -222,7 +222,7 @@ async function checkSagaEventHandlers(saga: Saga<any, any>, event: EventicleEven
         apmJoinEvent(event, saga.name + ":" + event.type, "saga-step-" + saga.name, event.type)
         await span(event.type, {}, async theSpan => {
           if (theSpan) theSpan.setType("SagaStep")
-          await processSagaInstanceWithExecutor(currentInstance, executor, saga);
+          await processSagaInstanceWithExecutor(currentInstance, executor, saga)
         })
         updateLatency(saga, event)
         await withAPM(async apm => apm.endTransaction())
@@ -280,38 +280,44 @@ async function handleTimerEvent(saga, name, data) {
 
   if (instanceData.length > 0) {
     for (let currentInstance of instanceData) {
-      await dataStore().transaction(async () => {
-        await span(`${saga.name}: ${name}`, {}, async theSpan => {
-          if (theSpan) theSpan.setType("SagaStepTimer")
-          await processSagaInstanceWithExecutor(currentInstance, async instance => {
-            if (saga.timerHandler.has(name)) {
-              await saga.timerHandler.get(name).handle(instance)
-            } else {
-              logger.warn(`Saga does not have a matching onTimer ${saga.name}/ ${name}.  This is a bug. The timer has been missed and will not be retried`)
-            }
-            if (instance.internalData.activeTimers[name] && instance.internalData.activeTimers[name] === "timeout") {
-              delete instance.internalData.activeTimers[name]
-              await scheduler().removeSchedule(saga.name, name)
-            }
-          }, saga)
+      try {
+        getAPM().startTransaction(saga.name + ":" + name, "saga-timerstep-" + saga.name, name, null)
+        await dataStore().transaction(async () => {
+          await span(`${saga.name}: ${name}`, {}, async theSpan => {
+            if (theSpan) theSpan.setType("SagaStepTimer")
+            await processSagaInstanceWithExecutor(currentInstance, async instance => {
+              if (saga.timerHandler.has(name)) {
+                await saga.timerHandler.get(name).handle(instance)
+              } else {
+                logger.warn(`Saga does not have a matching onTimer ${saga.name}/ ${name}.  This is a bug. The timer has been missed and will not be retried`)
+              }
+              if (instance.internalData.activeTimers[name] && instance.internalData.activeTimers[name] === "timeout") {
+                delete instance.internalData.activeTimers[name]
+                await scheduler().removeSchedule(saga.name, name, instance.internalData.instanceId)
+              }
+            }, saga)
+          })
         })
-      })
+      } finally {
+        await withAPM(async apm => apm.endTransaction())
+      }
     }
   }
 }
 
 async function processTimersInSagaInstance(saga: Saga<any, any>, instance: SagaInstance<any, any>) {
   for (let timer of instance.timersToAdd) {
+    if (!instance.internalData.activeTimers) instance.internalData.activeTimers = {}
     if (!Object.keys(instance.internalData.activeTimers).includes(timer.name)) {
       instance.internalData.activeTimers[timer.name] = timer.config.isCron ? "cron": "timeout"
     }
-    await scheduler().addScheduledTask(saga.name, timer.name, timer.config, {
+    await scheduler().addScheduledTask(saga.name, timer.name, instance.internalData.instanceId, timer.config, {
       instanceId: instance.internalData.instanceId
     })
   }
   for (let timer of instance.timersToRemove) {
     delete instance.internalData.activeTimers[timer]
-    await scheduler().removeSchedule(saga.name, timer)
+    await scheduler().removeSchedule(saga.name, timer, instance.internalData.instanceId)
   }
 }
 
@@ -320,7 +326,11 @@ async function removeAllTimersForInstance(saga: Saga<any, any>, instance: SagaIn
 
   if (instanceData.length > 0) {
     for (let currentInstance of instanceData) {
-      await scheduler().removeSchedule(saga.name, instance.internalData.activeTimers)
+      if (instance.internalData.activeTimers) {
+        for (const timer of Object.keys(instance.internalData.activeTimers)) {
+          await scheduler().removeSchedule(saga.name, timer, instance.internalData.instanceId)
+        }
+      }
     }
   }
 }
@@ -329,12 +339,17 @@ export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>)
 
   SAGAS.push(saga)
 
-  await scheduler().addScheduleTaskListener(saga.name, async (name, data) => handleTimerEvent(saga, name, data))
+  await scheduler().addScheduleTaskListener(saga.name, async (name, id, data) => handleTimerEvent(saga, name, data))
 
   let control = await eventClient().hotStream(saga.streams,
     `saga-${saga.name}`, async (event: EventicleEvent) => {
       logger.debug(`Saga event: ${saga.name}`, event)
-      await dataStore().transaction(async () => {
+
+      const timeoutTimer = setTimeout(() => {
+        logger.warn("Saga processing step is taking an excessive amount of time, check for promise errors ", { saga: saga.name, event })
+      }, 60000)
+
+      // await dataStore().transaction(async () => {
         try {
           logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
           if (saga.eventHandler.has(event.type)) {
@@ -348,10 +363,12 @@ export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>)
           logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
         } catch (e) {
           await saga.errorHandler(saga, event, e)
+        } finally {
+          clearTimeout(timeoutTimer)
         }
-      }, {
-        propagation: "requires_new"
-      })
+      // }, {
+      //   propagation: "requires"
+      // })
     }, error => {
       logger.error("Error subscribing to streams", {
         error, saga: saga.name

@@ -1,6 +1,6 @@
 {
   "name": "@eventicle/eventiclejs",
-  "version": "0.0.78",
+  "version": "0.0.81",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,7 +13,7 @@
     "lint": "eslint . --ext .ts --fix"
   },
   "peerDependencies": {
-    "@eventicle/eventicle-utilities": "^0.0.7"
+    "@eventicle/eventicle-utilities": "^0.0.8"
   },
   "dependencies": {
     "@types/crypto-js": "^4.0.1",
@@ -31,8 +31,8 @@
     "winston": "^3.3.3"
   },
   "devDependencies": {
-    "@eventicle/eventicle-utilities": "^0.0.7",
     "140-opts": "",
+    "@eventicle/eventicle-utilities": "^0.0.10",
     "@types/jest": "^26.0.14",
     "@types/lodash": "^4.14.172",
     "@types/loglevel": "^1.5.4",

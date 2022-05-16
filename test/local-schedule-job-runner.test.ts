@@ -41,7 +41,7 @@ describe('Schedule Job Runner on LockManager', function () {
 
   it('if schedule a simple timer, will trigger and pass the data to the listener with meta', async function () {
 
-    scheduler.addScheduledTask("listener1", "do-something", {
+    scheduler.addScheduledTask("listener1", "do-something", "id", {
       isCron: false, timeout: 100
     }, { hello: "there" })
 
@@ -61,7 +61,7 @@ describe('Schedule Job Runner on LockManager', function () {
   })
 
   it('if schedule cron timer, will trigger and pass the data to the listener with meta', async function () {
-    scheduler.addScheduledTask("listener1", "do-something", {
+    scheduler.addScheduledTask("listener1", "do-something", "id",{
       isCron: true, crontab: "* * * * * *"
     }, { hello: "there" })
 
@@ -83,7 +83,7 @@ describe('Schedule Job Runner on LockManager', function () {
   })
 
   it('if schedule simple timer, then removeSchedule, will not fire.', async function () {
-    scheduler.addScheduledTask("listener1", "do-something", {
+    scheduler.addScheduledTask("listener1", "do-something","id", {
       isCron: false, timeout: 100
     }, { hello: "there" })
 
@@ -91,7 +91,7 @@ describe('Schedule Job Runner on LockManager', function () {
 
     await pause(50)
 
-    await scheduler.removeSchedule("listener1", "do-something")
+    await scheduler.removeSchedule("listener1", "do-something", "id")
 
     await pause(200)
 
@@ -105,7 +105,7 @@ describe('Schedule Job Runner on LockManager', function () {
   })
 
   it('if schedule cron timer, then removeSchedule, will not fire.', async function () {
-    scheduler.addScheduledTask("listener1", "do-something", {
+    scheduler.addScheduledTask("listener1", "do-something", "id",{
       isCron: true, crontab: "* * * * * *"
     }, { hello: "there" })
 
@@ -113,7 +113,7 @@ describe('Schedule Job Runner on LockManager', function () {
 
     await pause(50)
 
-    await scheduler.removeSchedule("listener1", "do-something")
+    await scheduler.removeSchedule("listener1", "do-something", "id")
 
     await pause(1100)
 
