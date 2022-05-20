@@ -2,13 +2,21 @@ import {EventicleEvent} from "./core/event-client";
 import {dataStore} from "../";
 import {logger} from "@eventicle/eventicle-utilities";
 import {lockManager} from "./../";
-import {AggregateRoot} from "./aggregate-root";
+import {AggregateRepository, AggregateRoot} from "./aggregate-root";
+import {DataQuery, Query} from "@eventicle/eventicle-utilities/dist/datastore";
 
 function eventstreamname<T extends AggregateRoot>(type: string) {
   return "aggregate-events-" + type
 }
 
+async function hydrateAggregate(datastoreContent: any, aggregate: any) {
+  datastoreContent.content.history.forEach(value => aggregate.handleEvent(value))
+  aggregate.history = datastoreContent.content.history
+  return datastoreContent
+}
+
 export default {
+
   /**
    * Replay and build an aggregate root into its current state.
    * @param type
@@ -16,14 +24,26 @@ export default {
    */
   load: async <T extends AggregateRoot>(emptyInstance: T, tenant: string, id: string): Promise<T> => {
     let ret = await dataStore().findEntity(tenant, eventstreamname(emptyInstance.type), {domainId: id})
-
     if (ret && ret.length > 0) {
-      ret[0].content.history.forEach(value => emptyInstance.handleEvent(value))
-      emptyInstance.history = ret[0].content.history
-      return emptyInstance
+      return hydrateAggregate(ret[0], emptyInstance)
+    }
+    return null
+  },
+
+  loadBulk: async <T extends AggregateRoot>(type: { new (): T }, tenant: string, filter: Query): Promise<T[]> => {
+    let t = new type()
+
+    let instances = await dataStore().findEntity(tenant, eventstreamname(t.type), filter)
+
+    const aggregates = []
+
+    for (const instance of instances) {
+      const aggregate = new type()
+      await hydrateAggregate(instance, aggregate)
+      aggregates.push(aggregate)
     }
 
-    return null
+    return aggregates
   },
 
   /**

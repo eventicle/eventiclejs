@@ -2,6 +2,7 @@ import {EventicleEvent, eventSourceName} from "./core/event-client";
 import uuid = require("uuid");
 import {logger} from "@eventicle/eventicle-utilities";
 import aggregatesTenant from "./tenant-aggregate-root";
+import {DataQuery, Query} from "@eventicle/eventicle-utilities/dist/datastore";
 
 export abstract class AggregateRoot {
 
@@ -30,18 +31,27 @@ export abstract class AggregateRoot {
   handleEvent(event: EventicleEvent) {
     let func = this.reducers[event.type]
     if (func) func.call(this, event)
-    logger.trace(`${this.type} after applying ${event.type}`, this)
   }
 }
 
 export interface AggregateRepository {
   load<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<T>
+
+  /**
+   * Load bulk aggregate instances, according to the given query.
+   *
+   * The query is only marginally useful, as the current aggregate state is not persisted.
+   */
+  loadBulk<T extends AggregateRoot>(type: { new (): T }, filter: Query): Promise<T[]>
   history<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<EventicleEvent[]>
   persist<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]>
 }
 
-
 export default {
+  loadBulk<T extends AggregateRoot>(type: { new (): T }, filter: Query): Promise<T[]> {
+    return aggregatesTenant.loadBulk(type, "system", filter);
+  },
+
   /**
    * Replay and build an aggregate root into its current state.
    * @param type
