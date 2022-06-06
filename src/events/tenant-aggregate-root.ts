@@ -12,7 +12,7 @@ function eventstreamname<T extends AggregateRoot>(type: string) {
 async function hydrateAggregate(datastoreContent: any, aggregate: any) {
   datastoreContent.content.history.forEach(value => aggregate.handleEvent(value))
   aggregate.history = datastoreContent.content.history
-  return datastoreContent
+  return aggregate
 }
 
 export default {
