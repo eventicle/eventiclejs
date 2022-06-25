@@ -26,6 +26,7 @@ export abstract class AggregateRoot {
     }
     this.handleEvent(event)
     this.newEvents.push(event)
+    return event
   }
 
   handleEvent(event: EventicleEvent) {
