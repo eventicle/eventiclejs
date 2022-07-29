@@ -25,25 +25,41 @@ export default {
   load: async <T extends AggregateRoot>(emptyInstance: T, tenant: string, id: string): Promise<T> => {
     let ret = await dataStore().findEntity(tenant, eventstreamname(emptyInstance.type), {domainId: id})
     if (ret && ret.length > 0) {
-      return hydrateAggregate(ret[0], emptyInstance)
+      emptyInstance.replaying = true
+      const agg = await hydrateAggregate(ret[0], emptyInstance)
+      agg.replaying = false
+      return agg
     }
     return null
   },
 
-  loadBulk: async <T extends AggregateRoot>(type: { new (): T }, tenant: string, filter: Query): Promise<T[]> => {
+  loadBulk: async <T extends AggregateRoot>(type: { new (): T }, tenant: string, filter: Query, page: number, pageSize: number): Promise<{
+    totalCount: number;
+    pageInfo: {
+      currentPage: number;
+      pageSize: number;
+    };
+    entries: T[];
+  }> => {
     let t = new type()
 
-    let instances = await dataStore().findEntity(tenant, eventstreamname(t.type), filter)
+    let instances = await dataStore().findEntityPaginated(tenant, eventstreamname(t.type), filter, {}, page, pageSize)
 
     const aggregates = []
 
-    for (const instance of instances) {
+    for (const instance of instances.entries) {
       const aggregate = new type()
+      aggregate.replaying = true
       await hydrateAggregate(instance, aggregate)
+      aggregate.replaying = false
       aggregates.push(aggregate)
     }
 
-    return aggregates
+    return {
+      entries: aggregates,
+      totalCount: instances.totalCount,
+      pageInfo: instances.pageInfo
+    }
   },
 
   /**

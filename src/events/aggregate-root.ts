@@ -2,7 +2,7 @@ import {EventicleEvent, eventSourceName} from "./core/event-client";
 import uuid = require("uuid");
 import {logger} from "@eventicle/eventicle-utilities";
 import aggregatesTenant from "./tenant-aggregate-root";
-import {DataQuery, Query} from "@eventicle/eventicle-utilities/dist/datastore";
+import {DataQuery, PagedRecords, Query, Record} from "@eventicle/eventicle-utilities/dist/datastore";
 
 export abstract class AggregateRoot {
 
@@ -10,8 +10,11 @@ export abstract class AggregateRoot {
   readonly newEvents: EventicleEvent[] = []
   id: string;
   reducers: any
+  replaying: boolean
 
-  constructor(readonly type: string) {}
+  constructor(readonly type: string) {
+    this.replaying = false
+  }
 
   raiseEvent(event: EventicleEvent) {
     event.id = uuid.v4()
@@ -43,14 +46,28 @@ export interface AggregateRepository {
    *
    * The query is only marginally useful, as the current aggregate state is not persisted.
    */
-  loadBulk<T extends AggregateRoot>(type: { new (): T }, filter: Query): Promise<T[]>
+  loadBulk<T extends AggregateRoot>(type: { new (): T }, filter: Query, page: number, pageSize: number): Promise<{
+    totalCount: number;
+    pageInfo: {
+      currentPage: number;
+      pageSize: number;
+    };
+    entries: T[];
+  }>
   history<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<EventicleEvent[]>
   persist<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]>
 }
 
 export default {
-  loadBulk<T extends AggregateRoot>(type: { new (): T }, filter: Query): Promise<T[]> {
-    return aggregatesTenant.loadBulk(type, "system", filter);
+  loadBulk<T extends AggregateRoot>(type: { new (): T }, filter: Query, page: number, pageSize: number): Promise<{
+    totalCount: number;
+    pageInfo: {
+      currentPage: number;
+      pageSize: number;
+    };
+    entries: T[];
+  }> {
+    return aggregatesTenant.loadBulk(type, "system", filter, page, pageSize);
   },
 
   /**
