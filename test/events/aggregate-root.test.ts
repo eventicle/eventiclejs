@@ -1,87 +1,98 @@
 import uuid = require("uuid");
-import {AggregateRoot, default as aggregates} from "../../src/events/aggregate-root";
-import {EventicleEvent, setEventClient} from "../../src/events/core/event-client";
-import {testDbPurge} from "../../src/fixture";
-import {setDataStore, dataStore} from "../../src";
+import {
+  AggregateRoot,
+  default as aggregates,
+} from "../../src/events/aggregate-root";
+import {
+  EventicleEvent,
+  setEventClient,
+} from "../../src/events/core/event-client";
+import { testDbPurge } from "../../src/fixture";
+import { setDataStore, dataStore } from "../../src";
 import InMemDatastore from "../../src/datastore/inmem-data-store";
-import {eventClientOnDatastore} from "../../src/events/core/eventclient-datastore";
+import { eventClientOnDatastore } from "../../src/events/core/eventclient-datastore";
 
 class User extends AggregateRoot {
-
-  private _name: string
+  private _name: string;
+  happy: string;
 
   constructor() {
-    super("user");
+    super({ type: "user", storeCheckpoint: true });
     this.reducers = {
-      UserNameSet: (ev: EventicleEvent) => this._name = ev.data.name,
-      UserCreated: (ev: EventicleEvent) => this.id = ev.data.id,
-    }
+      UserNameSet: (ev: EventicleEvent) => {
+        this._name = ev.data.name;
+        this.happy = "yes";
+      },
+      UserCreated: (ev: EventicleEvent) => (this.id = ev.data.id),
+    };
   }
 
-  static create(name:string): User {
+  currentCheckpoint() {
+    return {
+      name: this.name,
+    };
+  }
 
-    const user = new User()
-    user.id = uuid.v4()
+  static create(name: string): User {
+    const user = new User();
+    user.id = uuid.v4();
 
     user.raiseEvent({
       data: { id: uuid.v4() },
-      type: "UserCreated"
-    })
+      type: "UserCreated",
+    });
 
     user.name = name;
 
-    return user
+    return user;
   }
 
   get name(): string {
-    return this._name
+    return this._name;
   }
 
   set name(name: string) {
     this.raiseEvent({
       data: { name },
       type: "UserNameSet",
-      id: "faked"
-    })
+      id: "faked",
+    });
   }
 }
 
-describe('Aggregate Root', function() {
-
-  beforeAll(async() => {
-    setDataStore(new InMemDatastore())
-    setEventClient(eventClientOnDatastore())
-  })
+describe("Aggregate Root", function () {
+  beforeAll(async () => {
+    setDataStore(new InMemDatastore());
+    setEventClient(eventClientOnDatastore());
+  });
 
   beforeEach(async () => {
-    await testDbPurge()
-  })
+    await testDbPurge();
+  });
 
-  it('AG applies events to internal reducer', async function() {
+  it("AG applies events to internal reducer", async function () {
+    let user = new User();
+    user.name = "David Dawson";
 
-    let user = new User()
-    user.name = "David Dawson"
-
-    let events = user.newEvents
+    let events = user.newEvents;
 
     expect(user.name).toBe("David Dawson");
     expect(events.length).toBe(1);
     expect(events[0].type).toBe("UserNameSet");
   });
 
-  it('can save, load a AG using repo functions and view history', async function() {
+  it("can save, load a AG using repo functions and view history", async function () {
+    let user = User.create("Happy Camper");
+    user.name = "New Name";
 
-    let user = User.create("Happy Camper")
-    user.name = "New Name"
+    await aggregates.persist(user);
 
-    await aggregates.persist(user)
+    user = await aggregates.load(User, user.id);
 
-    user = await aggregates.load(User, user.id)
+    user.name = "Simple Person";
 
-    user.name = "Simple Person"
-
-    let events = user.newEvents
-    let replay = await aggregates.history(User, user.id)
+    let events = user.newEvents;
+    let replay = await aggregates.history(User, user.id);
 
     expect(user.name).toBe("Simple Person");
     expect(events.length).toBe(1);
@@ -90,5 +101,33 @@ describe('Aggregate Root', function() {
     expect(replay[1].type).toBe("UserNameSet");
     expect(replay[2].type).toBe("UserNameSet");
     expect(replay[2].data.name).toBe("New Name");
+  });
+
+  it("if storeCheckpoint set, will persist the current state in the datastore", async function () {
+    let user = User.create("Happy Camper");
+    user.name = "New Name";
+
+    await aggregates.persist(user);
+
+    user = await aggregates.load(User, user.id);
+    const userRecord = await dataStore().findEntity(
+      "system",
+      "aggregate-events-user",
+      {},
+      {}
+    );
+
+    const aggByQuery = await aggregates.loadBulk(
+      User,
+      { name: "New Name" },
+      1,
+      10
+    );
+
+    expect(user.name).toBe("New Name");
+    expect(userRecord.length).toBe(1);
+    expect(userRecord[0].content.name).toBe("New Name");
+    expect(aggByQuery.totalCount).toBe(1);
+    expect(aggByQuery.entries[0].name).toBe("New Name");
   });
 });
