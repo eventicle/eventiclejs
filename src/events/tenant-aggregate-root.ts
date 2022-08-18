@@ -148,10 +148,11 @@ export default {
           } else {
             let instance = entity[0];
             instance.content.history.push(...ret);
+            instance.content = maybeAddCheckpointState(aggregate, instance.content)
             await dataStore().saveEntity(
               tenant,
               eventstreamname(aggregate.type),
-              maybeAddCheckpointState(aggregate, instance)
+              instance
             );
           }
 
