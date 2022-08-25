@@ -2,11 +2,8 @@ import { EventicleEvent } from "./core/event-client";
 import { dataStore } from "../";
 import { logger } from "@eventicle/eventicle-utilities";
 import { lockManager } from "./../";
-import { AggregateRepository, AggregateRoot } from "./aggregate-root";
-import {
-  DataQuery,
-  Query,
-} from "@eventicle/eventicle-utilities/dist/datastore";
+import { AggregateConfig, AggregateRoot } from "./aggregate-root";
+import { DataSorting, Query } from "@eventicle/eventicle-utilities/dist/datastore";
 
 function eventstreamname<T extends AggregateRoot>(type: string) {
   return "aggregate-events-" + type;
@@ -29,13 +26,62 @@ function maybeAddCheckpointState(aggregate: AggregateRoot, content: any): any {
   return content;
 }
 
-export default {
+export type BulkQuery<T> = {
+  type: { new (type?: string | AggregateConfig): T },
+  init?: string | AggregateConfig,
+  tenant?: string
+  filter?: Query
+  sort?: DataSorting,
+  page?: number
+  pageSize?: number
+}
+
+export type BulkResponse<T> = {
+  totalCount: number;
+  pageInfo: {
+    currentPage: number;
+    pageSize: number;
+  };
+  entries: T[];
+}
+
+type LoadBulk = {
+  <T extends AggregateRoot>(config: BulkQuery<T>): Promise<BulkResponse<T>>
+  <T extends AggregateRoot>(type: { new (type?: string | AggregateConfig): T },
+   tenant: string,
+   filter?: Query,
+   page?: number,
+   pageSize?: number): Promise<BulkResponse<T>>
+}
+
+export interface TenantAggregateRepository {
   /**
    * Replay and build an aggregate root into its current state.
+   * @param emptyInstance
+   * @param tenant the tenantId
+   * @param id
+   */
+  load: <T extends AggregateRoot>(emptyInstance: T, tenant: string, id: string) => Promise<T>
+  /**
+   * Load bulk aggregate instances, according to the given query. Overloaded for backwards-compatibility.
+   */
+  loadBulk: LoadBulk
+  /**
+   * Obtain the full stream of events that make up the history of an aggregate root.
    * @param type
    * @param id
    */
-  load: async <T extends AggregateRoot>(
+  history: <T extends AggregateRoot>(type: string, tenant: string, id: string) => Promise<EventicleEvent[]>
+  /**
+   * Persist an aggregate to the datastore.
+   * @param aggregate
+   * @param tenant
+   */
+  persist: <T extends AggregateRoot>(aggregate: T, tenant: string) => Promise<EventicleEvent[]>
+}
+
+export default {
+  load:  async <T extends AggregateRoot>(
     emptyInstance: T,
     tenant: string,
     id: string
@@ -54,27 +100,38 @@ export default {
     return null;
   },
 
-  loadBulk: async <T extends AggregateRoot>(
-    type: { new (): T },
-    tenant: string,
-    filter: Query,
-    page: number,
-    pageSize: number
-  ): Promise<{
-    totalCount: number;
-    pageInfo: {
-      currentPage: number;
-      pageSize: number;
-    };
-    entries: T[];
-  }> => {
-    let t = new type();
+  loadBulk: async <T extends AggregateRoot>(...args) => {
+    let type
+    let init = null
+    let filter: Query = {}
+    let sort: DataSorting
+    let page, pageSize
+    let tenant
+
+    if(args.length > 1) {
+      type = args[0]
+      tenant = args[1]
+      filter = args[2]
+      page = args[3]
+      pageSize = args[4]
+      sort = {}
+    } else {
+      const conf = args[0]
+      type = conf.type
+      tenant = conf.tenant
+      filter = conf.filter ?? {}
+      page = conf.page ?? undefined
+      pageSize = conf.pageSize ?? undefined
+      init = conf.init ?? undefined
+    }
+
+    let t = new type(init);
 
     let instances = await dataStore().findEntityPaginated(
       tenant,
       eventstreamname(t.type),
       filter,
-      {},
+      sort,
       page,
       pageSize
     );
@@ -96,11 +153,6 @@ export default {
     };
   },
 
-  /**
-   * Obtain the full stream of events that make up the history of an aggregate root.
-   * @param type
-   * @param id
-   */
   history: async <T extends AggregateRoot>(
     type: string,
     tenant: string,
@@ -164,4 +216,4 @@ export default {
       );
     });
   },
-};
+} as TenantAggregateRepository;

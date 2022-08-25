@@ -1,14 +1,7 @@
 import { EventicleEvent, eventSourceName } from "./core/event-client";
+import aggregatesTenant, {BulkQuery, BulkResponse} from "./tenant-aggregate-root";
+import { Query } from "@eventicle/eventicle-utilities/dist/datastore";
 import uuid = require("uuid");
-import { logger } from "@eventicle/eventicle-utilities";
-import aggregatesTenant from "./tenant-aggregate-root";
-import {
-  DataQuery,
-  PagedRecords,
-  Query,
-  Record,
-} from "@eventicle/eventicle-utilities/dist/datastore";
-import { isString } from "util";
 
 export interface AggregateConfig {
   type: string;
@@ -68,31 +61,42 @@ export abstract class AggregateRoot {
   }
 }
 
-export interface AggregateRepository {
-  load<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<T>;
+type LoadBulk = {
+  <T extends AggregateRoot>(config: BulkQuery<T>): Promise<BulkResponse<T>>
+  <T extends AggregateRoot>(type: { new (type?: string | AggregateConfig): T },
+                            filter?: Query,
+                            page?: number,
+                            pageSize?: number): Promise<BulkResponse<T>>
+}
 
+export interface AggregateRepository {
+  /**
+   * Replay and build an aggregate root into its current state.
+   * @param type
+   * @param id
+   */
+  load<T extends AggregateRoot>(type: { new (): T }, id: string): Promise<T>;
   /**
    * Load bulk aggregate instances, according to the given query.
    *
    * The query is only marginally useful, as the current aggregate state is not persisted.
+   *
+   * Overloaded for backwards compatibility
    */
-  loadBulk<T extends AggregateRoot>(
-    type: { new (): T },
-    filter: Query,
-    page: number,
-    pageSize: number
-  ): Promise<{
-    totalCount: number;
-    pageInfo: {
-      currentPage: number;
-      pageSize: number;
-    };
-    entries: T[];
-  }>;
+  loadBulk: LoadBulk
+  /**
+   * Obtain the full stream of events that make up the history of an aggregate root.
+   * @param type
+   * @param id
+   */
   history<T extends AggregateRoot>(
     type: { new (): T },
     id: string
   ): Promise<EventicleEvent[]>;
+  /**
+   * Persist an aggregate to the datastore.
+   * @param aggregate
+   */
   persist<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]>;
 }
 
@@ -102,22 +106,10 @@ export default {
     filter: Query,
     page: number,
     pageSize: number
-  ): Promise<{
-    totalCount: number;
-    pageInfo: {
-      currentPage: number;
-      pageSize: number;
-    };
-    entries: T[];
-  }> {
+  ): Promise<BulkResponse<T>> {
     return aggregatesTenant.loadBulk(type, "system", filter, page, pageSize);
   },
 
-  /**
-   * Replay and build an aggregate root into its current state.
-   * @param type
-   * @param id
-   */
   load: async <T extends AggregateRoot>(
     type: { new (): T },
     id: string
@@ -126,11 +118,6 @@ export default {
     return aggregatesTenant.load(t, "system", id);
   },
 
-  /**
-   * Obtain the full stream of events that make up the history of an aggregate root.
-   * @param type
-   * @param id
-   */
   history: async <T extends AggregateRoot>(
     type: { new (): T },
     id: string
