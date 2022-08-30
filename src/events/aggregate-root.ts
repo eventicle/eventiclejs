@@ -1,6 +1,6 @@
-import { EventicleEvent, eventSourceName } from "./core/event-client";
-import aggregatesTenant, {BulkQuery, BulkResponse} from "./tenant-aggregate-root";
-import { Query } from "@eventicle/eventicle-utilities/dist/datastore";
+import {EventicleEvent, eventSourceName} from "./core/event-client";
+import aggregatesTenant, {BulkResponse} from "./tenant-aggregate-root";
+import {DataSorting, Query} from "@eventicle/eventicle-utilities/dist/datastore";
 import uuid = require("uuid");
 
 export interface AggregateConfig {
@@ -61,6 +61,14 @@ export abstract class AggregateRoot {
   }
 }
 
+type BulkQuery<T> = {
+  type: { new (): T },
+  filter?: Query
+  sort?: DataSorting,
+  page?: number
+  pageSize?: number
+}
+
 type LoadBulk = {
   <T extends AggregateRoot>(config: BulkQuery<T>): Promise<BulkResponse<T>>
   <T extends AggregateRoot>(type: { new (type?: string | AggregateConfig): T },
@@ -101,13 +109,27 @@ export interface AggregateRepository {
 }
 
 export default {
-  loadBulk<T extends AggregateRoot>(
-    type: { new (): T },
-    filter: Query,
-    page: number,
-    pageSize: number
-  ): Promise<BulkResponse<T>> {
-    return aggregatesTenant.loadBulk(type, "system", filter, page, pageSize);
+  loadBulk: async (...args) => {
+    let type
+    let filter: Query = {}
+    let sort: DataSorting
+    let page, pageSize
+    if(args.length > 1) {
+      type = args[0]
+      filter = args[1]
+      page = args[2]
+      pageSize = args[3]
+      sort = {}
+    } else {
+      const conf = args[0]
+      type = conf.type
+      filter = conf.filter ?? {}
+      page = conf.page ?? 0
+      pageSize = conf.pageSize ?? undefined
+      sort = conf.sort ?? {}
+    }
+
+    return aggregatesTenant.loadBulk({type, tenant: "system", filter, page, pageSize, sort});
   },
 
   load: async <T extends AggregateRoot>(
