@@ -1,0 +1,5 @@
+
+== Changing Global State: Commands
+
+An Eventicle command is responsible for mutating state and notifying the rest of the system about the state change via
+one or more events on the shared event streams.

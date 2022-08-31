@@ -1,0 +1,5 @@
+== Intro
+
+Eventicle is an opinionated library for building event based back end NodeJS applications.
+
+It uses Domain Driven Design principles, and lets you build systems that use technologies like Kafka natively.
