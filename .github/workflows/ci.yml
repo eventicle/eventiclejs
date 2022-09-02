@@ -1,0 +1,25 @@
+name: CI
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+      - name: Install dependencies
+        run: yarn
+#      - name: Run tests
+#        run: yarn test
+      - name: Update API Docs
+        run: yarn api
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update generated files as of ${{ github.sha }}
+          file_pattern: api docs
+          commit_user_name: daviddawson
+          commit_user_email: daviddawson@users.noreply.github.com
+          commit_author: Eventicle Bot <daviddawson@users.noreply.github.com>

@@ -8,6 +8,7 @@
     "target": "ES2019",
     "incremental": true,
     "removeComments": false,
+    "declarationMap": true,
     "allowJs": true,
     "esModuleInterop": true,
     "allowUnreachableCode": false,
