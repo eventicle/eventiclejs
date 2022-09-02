@@ -1,0 +1,78 @@
+= interface EncodedEvent
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_EncodedEvent_buffer_member"]
+=== buffer
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+buffer: Buffer;
+----
+
+========
+[id="eventicle_eventiclejs_EncodedEvent_headers_member"]
+=== headers
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+headers: {
+        [key: string]: any;
+    };
+----
+
+========
+[id="eventicle_eventiclejs_EncodedEvent_key_member"]
+=== key
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+key: string;
+----
+
+========
+[id="eventicle_eventiclejs_EncodedEvent_timestamp_member"]
+=== timestamp
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+timestamp: number;
+----
+
+========

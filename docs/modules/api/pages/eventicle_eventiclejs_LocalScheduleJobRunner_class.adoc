@@ -1,0 +1,286 @@
+= class LocalScheduleJobRunner
+
+A Scheduled Job Runner that uses node-cron, setTimeout and runs as a single node.
+
+Persists and loads schedules on process stop/ start in the datastore with the types `lock-manager-timer` and `lock-manager-cron`
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_crons_member"]
+=== crons
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+crons: Map<string, nodeCron.ScheduledTask>;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_events_member"]
+=== events
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+events: EventEmitter;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_timers_member"]
+=== timers
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+timers: Map<string, NodeJS.Timeout>;
+----
+
+========
+
+== Constructors
+
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_constructor_1"]
+=== (constructor)()
+
+========
+
+Constructs a new instance of the `LocalScheduleJobRunner` class
+
+
+
+
+.Signature
+[source,typescript]
+----
+constructor();
+----
+
+========
+
+== Methods
+
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_addScheduledTask_member_1"]
+=== addScheduledTask(component, name, id, config, data)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|component
+m|string
+|
+
+m|name
+m|string
+|
+
+m|id
+m|string
+|
+
+m|config
+m|{
+        isCron: true;
+        crontab: string;
+    } \| {
+        isCron: false;
+        timeout: number;
+    }
+|
+
+m|data
+m|any
+|
+
+s|Returns
+m|Promise&lt;void&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+addScheduledTask(component: string, name: string, id: string, config: {
+        isCron: true;
+        crontab: string;
+    } | {
+        isCron: false;
+        timeout: number;
+    }, data: any): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_addScheduleTaskListener_member_1"]
+=== addScheduleTaskListener(component, exec)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|component
+m|string
+|
+
+m|exec
+m|(name: string, id: string, data: any) =&gt; Promise&lt;void&gt;
+|
+
+s|Returns
+m|Promise&lt;void&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+addScheduleTaskListener(component: string, exec: (name: string, id: string, data: any) => Promise<void>): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_clearAllTimers_member_1"]
+=== clearAllTimers()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+clearAllTimers(): void;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_hasSchedule_member_1"]
+=== hasSchedule(component, name, id)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|component
+m|string
+|
+
+m|name
+m|string
+|
+
+m|id
+m|string
+|
+
+s|Returns
+m|Promise&lt;boolean&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+hasSchedule(component: string, name: string, id: string): Promise<boolean>;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_removeSchedule_member_1"]
+=== removeSchedule(component, name, id)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|component
+m|string
+|
+
+m|name
+m|string
+|
+
+m|id
+m|string
+|
+
+s|Returns
+m|Promise&lt;void&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+removeSchedule(component: string, name: string, id: string): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_LocalScheduleJobRunner_startup_member_1"]
+=== startup()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+startup(): Promise<void>;
+----
+
+========

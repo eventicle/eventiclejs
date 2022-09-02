@@ -1,0 +1,65 @@
+= interface CommandReturn
+
+The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in .
+
+This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture any events that need to be emitted.
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_CommandReturn_events_member"]
+=== events
+
+========
+
+Any events that have been generated during command execution that should be emitted externally onto the configured topic. By the time the calling code receives the return, the events have already been passed to , and cannot be altered.
+
+
+
+
+.Signature
+[source,typescript]
+----
+events: EventicleEvent[];
+----
+
+========
+[id="eventicle_eventiclejs_CommandReturn_response_member"]
+=== response
+
+========
+
+An optional response object. This will be ignored by the command dispatcher, and passed through to the calling code. Most commonly used to pass IDs that have been generated during command execution.
+
+
+
+
+.Signature
+[source,typescript]
+----
+response?: T;
+----
+
+========
+[id="eventicle_eventiclejs_CommandReturn_webError_member"]
+=== webError
+
+========
+
+Optional error property.
+
+Used by some implementations to indicate that the Command finished in an Error, which should now be thrown.
+
+This is performed so that the command can emit events (describing the error), and also instruct the calling code (which is normally a synchronous API) to subsequently throw the given Error back to the user.
+
+
+
+
+.Signature
+[source,typescript]
+----
+webError?: Error;
+----
+
+========

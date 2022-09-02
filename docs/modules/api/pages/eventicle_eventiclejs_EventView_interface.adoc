@@ -1,0 +1,59 @@
+= interface EventView
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_EventView_consumerGroup_member"]
+=== consumerGroup
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+consumerGroup: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventView_handleEvent_member"]
+=== handleEvent
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+handleEvent: (event: EventicleEvent) => Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_EventView_streamsToSubscribe_member"]
+=== streamsToSubscribe
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+streamsToSubscribe: string[];
+----
+
+========

@@ -1,0 +1,161 @@
+= interface EventicleEvent
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_EventicleEvent_causedById_member"]
+=== causedById
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+causedById?: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_causedByType_member"]
+=== causedByType
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+causedByType?: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_createdAt_member"]
+=== createdAt
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+createdAt?: number;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_data_member"]
+=== data
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+data: any;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_domainId_member"]
+=== domainId
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+domainId?: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_id_member"]
+=== id
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+id?: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_source_member"]
+=== source
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+source?: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_stream_member"]
+=== stream
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+stream?: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventicleEvent_type_member"]
+=== type
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+type: string;
+----
+
+========

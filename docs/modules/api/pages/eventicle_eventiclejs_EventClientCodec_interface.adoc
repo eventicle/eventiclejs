@@ -1,0 +1,42 @@
+= interface EventClientCodec
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_EventClientCodec_decode_member"]
+=== decode
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;
+----
+
+========
+[id="eventicle_eventiclejs_EventClientCodec_encode_member"]
+=== encode
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+encode: (event: EventicleEvent) => Promise<EncodedEvent>;
+----
+
+========

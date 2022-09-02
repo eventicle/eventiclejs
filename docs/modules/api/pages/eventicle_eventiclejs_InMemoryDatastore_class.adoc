@@ -1,0 +1,427 @@
+= class InMemoryDatastore
+
+In memory Datastore implementation.
+
+This is suitable for testing and single instance demonstration purposes.
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_InMemoryDatastore_events_member"]
+=== events
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+events: EventEmitter;
+----
+
+========
+
+== Methods
+
+[id="eventicle_eventiclejs_InMemoryDatastore_createEntity_member_1"]
+=== createEntity(workspaceId, type, item)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|string
+|Entity type or "table" name
+
+m|item
+m|any
+|
+
+s|Returns
+m|Promise&lt;any&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+createEntity(workspaceId: string, type: string, item: any): Promise<any>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_deleteEntity_member_1"]
+=== deleteEntity(workspaceId, type, id)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|string
+|
+
+m|id
+m|string
+|
+
+s|Returns
+m|Promise&lt;void&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+deleteEntity(workspaceId: string, type: string, id: string): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_deleteMany_member_1"]
+=== deleteMany(workspaceId, type, query)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|string
+|
+
+m|query
+m|Query
+|
+
+s|Returns
+m|Promise&lt;void&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+deleteMany(workspaceId: string, type: string, query: Query): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_findEntity_member_1"]
+=== findEntity(workspaceId, type, query, sorting)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|any
+|Entity type or "table" name
+
+m|query
+m|Query
+|Json object to match fields
+
+m|sorting
+m|\~DataSorting
+|
+
+s|Returns
+m|Promise&lt;\~Record[]&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+findEntity(workspaceId: string, type: any, query: Query, sorting?: DataSorting): Promise<Record[]>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_findEntityPaginated_member_1"]
+=== findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|string
+|Entity type or "table" name
+
+m|query
+m|Query
+|Json object to match fields
+
+m|sorting
+m|\~DataSorting
+|
+
+m|page
+m|number
+|page count
+
+m|pageSize
+m|number
+|page size
+
+s|Returns
+m|Promise&lt;\~PagedRecords&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+findEntityPaginated(workspaceId: string, type: string, query: Query, sorting: DataSorting, page: number, pageSize: number): Promise<PagedRecords>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_getEntity_member_1"]
+=== getEntity(workspaceId, type, id)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|any
+|Entity type or "table" name
+
+m|id
+m|string
+|
+
+s|Returns
+m|Promise&lt;\~Record&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+getEntity(workspaceId: string, type: any, id: string): Promise<Record>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_getTransactionData_member_1"]
+=== getTransactionData()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+getTransactionData(): TransactionData;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_hasTransactionData_member_1"]
+=== hasTransactionData()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+hasTransactionData(): boolean;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_on_member_1"]
+=== on(event, listener)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|event
+m|"transaction.start" \| "transaction.commit"
+|
+
+m|listener
+m|(name: string, data: \~TransactionData) =&gt; void
+|
+
+s|Returns
+m|this
+|
+|===
+
+.Signature
+[source,typescript]
+----
+on(event: "transaction.start" | "transaction.commit", listener: (name: string, data: TransactionData) => void): this;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_purge_member_1"]
+=== purge()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+purge(): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_saveEntity_member_1"]
+=== saveEntity(workspaceId, type, item)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+m|type
+m|string
+|
+
+m|item
+m|\~Record
+|
+
+s|Returns
+m|Promise&lt;\~Record&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+saveEntity(workspaceId: string, type: string, item: Record): Promise<Record>;
+----
+
+========
+[id="eventicle_eventiclejs_InMemoryDatastore_transaction_member_1"]
+=== transaction(exec)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|exec
+m|() =&gt; Promise&lt;T&gt;
+|
+
+s|Returns
+m|Promise&lt;T&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+transaction<T>(exec: () => Promise<T>): Promise<T>;
+----
+
+========

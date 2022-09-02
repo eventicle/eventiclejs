@@ -1,0 +1,42 @@
+= interface CommandIntent
+
+A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_CommandIntent_data_member"]
+=== data
+
+========
+
+The data that will be used when calling the Command instance.
+
+
+
+
+.Signature
+[source,typescript]
+----
+data: T;
+----
+
+========
+[id="eventicle_eventiclejs_CommandIntent_type_member"]
+=== type
+
+========
+
+The command type
+
+
+
+
+.Signature
+[source,typescript]
+----
+type: string;
+----
+
+========

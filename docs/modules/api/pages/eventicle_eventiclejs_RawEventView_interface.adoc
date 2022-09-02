@@ -1,0 +1,59 @@
+= interface RawEventView
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_RawEventView_consumerGroup_member"]
+=== consumerGroup
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+consumerGroup: string;
+----
+
+========
+[id="eventicle_eventiclejs_RawEventView_handleEvent_member"]
+=== handleEvent
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+handleEvent: (event: EncodedEvent) => Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_RawEventView_streamsToSubscribe_member"]
+=== streamsToSubscribe
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+streamsToSubscribe: string[];
+----
+
+========

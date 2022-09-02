@@ -1,0 +1,95 @@
+= interface EventAdapter
+
+An adapter is an observer on an event stream.
+
+It only operates on hot event data, and will never attempt to replay everything
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_EventAdapter_consumerGroup_member"]
+=== consumerGroup
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+consumerGroup: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventAdapter_errorHandler_member"]
+=== errorHandler
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+errorHandler?: (adapter: EventAdapter, event: EventicleEvent, error: Error) => Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_EventAdapter_handleEvent_member"]
+=== handleEvent
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+handleEvent: (event: EventicleEvent) => Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_EventAdapter_name_member"]
+=== name
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+name: string;
+----
+
+========
+[id="eventicle_eventiclejs_EventAdapter_streamsToSubscribe_member"]
+=== streamsToSubscribe
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+streamsToSubscribe: string[];
+----
+
+========
