@@ -1,5 +1,5 @@
 
-== Managing Local State: Domain Entities/ Aggregate Roots
+== Aggregate Roots: Event Driven Domain Entities
 
 [mermaid]
 ....
