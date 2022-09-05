@@ -1,0 +1,5 @@
+name: eventiclejs
+title: EventicleJS
+version: index
+nav:
+  - modules/api/nav.adoc

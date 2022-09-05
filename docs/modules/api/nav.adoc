@@ -1,4 +1,3 @@
-.API documentation
 * xref:eventicle_eventiclejs.adoc[@eventicle/eventiclejs]
 ** xref:eventicle_eventiclejs_AggregateRoot_class.adoc[AggregateRoot]
 ** xref:eventicle_eventiclejs_Command_interface.adoc[Command]

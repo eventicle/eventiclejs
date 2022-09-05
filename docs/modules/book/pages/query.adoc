@@ -8,7 +8,7 @@ that is suitable for querying.
 Create a list of users from `user.created` events and provider operations for users.
 [source,typescript]
 ----
-include::../app/src/view-1.ts[]
+include::example$app/src/view-1.ts[]
 ----
 <1> The consumer group is the same as for Redis Streams/ Kafka. Multiple view instances across processes will share processing.
 <2> 1..n streams to subscribe to.
@@ -27,7 +27,7 @@ be purely in memory. This means that they will rebuild each time the application
 Count the user registrations.
 [source,typescript]
 ----
-include::../app/src/view-memory.ts[]
+include::example$app/src/view-memory.ts[]
 ----
 <1> Set the consumer group to be random. This means this instance will fully replay every time it connects to the event stream, and will receive all events, not share with other instances.
 <2> The view state, in this case as simple integer count.
