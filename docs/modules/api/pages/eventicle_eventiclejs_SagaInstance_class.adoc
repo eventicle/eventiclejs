@@ -105,7 +105,7 @@ m|any
 |
 
 m|record
-m|\~Record
+m|Record
 |
 |===
 
