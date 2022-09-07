@@ -117,11 +117,12 @@ describe("Aggregate Root", function () {
       {}
     );
 
-    const aggByQuery = await aggregates.loadBulk(
-      User,
-      { name: "New Name" },
-      1,
-      10
+    const aggByQuery = await aggregates.loadBulk({
+        type: User,
+        filter: {name: "New Name"},
+        page: 1,
+        pageSize: 10,
+      }
     );
 
     expect(user.name).toBe("New Name");

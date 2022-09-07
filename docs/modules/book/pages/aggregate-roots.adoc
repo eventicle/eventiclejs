@@ -1,0 +1,18 @@
+
+== Aggregate Roots: Event Driven Domain Entities
+
+[mermaid]
+....
+graph TD
+  A[Christmas] -->|Get money| B(Go shopping)
+  B --> C{Let me think}
+  C -->|One| D[Laptop]
+  C -->|Two| E[iPhonesss]
+  C -->|Three| F[fa:fa-car Car]
+
+....
+
+
+event sourcing
+
+observing and waiting for async state changes in an AR with observationAdapter

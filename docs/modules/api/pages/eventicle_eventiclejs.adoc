@@ -1,0 +1,871 @@
+= package @eventicle/eventiclejs
+
+
+
+
+
+== Classes
+
+[%header,cols="1,2",caption=""]
+|===
+|Name |Summary
+
+s|xref:eventicle_eventiclejs_AggregateRoot_class.adoc[AggregateRoot]
+|
+
+s|xref:eventicle_eventiclejs_InMemoryDatastore_class.adoc[InMemoryDatastore]
+|In memory Datastore implementation.
+
+This is suitable for testing and single instance demonstration purposes.
+
+s|xref:eventicle_eventiclejs_LocalScheduleJobRunner_class.adoc[LocalScheduleJobRunner]
+|A Scheduled Job Runner that uses node-cron, setTimeout and runs as a single node.
+
+Persists and loads schedules on process stop/ start in the datastore with the types `lock-manager-timer` and `lock-manager-cron`
+
+s|xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]
+|
+|===
+
+== Interfaces
+
+[%header,cols="1,2",caption=""]
+|===
+|Name |Summary
+
+s|xref:eventicle_eventiclejs_Command_interface.adoc[Command]
+|A Command.
+
+It is generally preferred  where the command definition is implicit, and more fully type checked.
+
+This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
+
+s|xref:eventicle_eventiclejs_CommandIntent_interface.adoc[CommandIntent]
+|A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the
+
+s|xref:eventicle_eventiclejs_CommandReturn_interface.adoc[CommandReturn]
+|The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in .
+
+This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture any events that need to be emitted.
+
+s|xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent]
+|
+
+s|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
+|An adapter is an observer on an event stream.
+
+It only operates on hot event data, and will never attempt to replay everything
+
+s|xref:eventicle_eventiclejs_EventClientCodec_interface.adoc[EventClientCodec]
+|
+
+s|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+
+s|xref:eventicle_eventiclejs_EventView_interface.adoc[EventView]
+|
+
+s|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
+|
+|===
+
+== Functions
+
+[id="eventicle_eventiclejs_aggregateObserver_function_1"]
+=== aggregateObserver(aggregateType, id, timeout, exec)
+
+========
+
+Block for an asynchronous, event based, workflow to occur.
+
+Reads streams and allows short lived observers to be notified if a particular AggregateRoot instance has been modified. This is picked out based on the `domainId` of the event.
+
+This allows a synchronous API to block and wait for asynchronous changes to finish occurring before continuing processing
+
+For example, given a `User` xref:eventicle_eventiclejs_AggregateRoot_class.adoc[AggregateRoot], you can wait for a Saga (or other operational component) to approve a user account, by blocking until the given `User` has raised the `user.approved` event.
+
+```
+export class UserAggregate extends AggregateRoot {
+  approved: boolean = false
+
+  constructor() {
+     super("User")
+
+     this.reducers = []
+     // persist the approval in the current aggregate state.
+     // This avoids any potential race conditions between performing the action that requires
+     // approval and the observer starting to monitor. See below.
+     this.reducers["user.approved"] = (ev) => {
+       this.approved = true
+     }
+  }
+
+  approve() {
+    this.raiseEvent({
+      type: "user.approved",
+      data: {}
+      // other event fields
+    })
+  }
+}
+```
+First register the observer. This will open a new event subscription, with a dynamically generated consumer group. All events on the topic will be received by this instances, so be mindful of doing this on topics with large volumes of data.
+
+```
+  await registerAdapter(createAggregateObservationAdapter([AnAggregate]));
+```
+In your synchronous API (eg, HTTP/ REST, GQL).
+
+```
+// The userId is the domainId of the UserAggregate instance we want to observe
+export doActionThatRequiresApproval(userId: string) {
+
+  // perform some action that triggers async workflows
+
+  // now wait for the User to be approved
+  const user = await aggregateObserver(
+                            UserAggregate,
+                            userId,  // the UserAggregate domainId
+                            10000,   // max time to wait for the User instance to come into the required state
+                            (ar, ev) => {
+          // this is called once straight away with just the current state of the User aggregate (ev is null)
+          // then, every time an event is observed for the UserAggregate with the domainId == userId
+          // check the current state of the aggregate is what you want to see, or the event being received
+          // is the one you are waiting for.  Or, ideally, both of those things
+          // doing both will avoid any race conditions.
+     return ev && ev.type == "user.approved" || ar.approved
+  });
+
+  // user is now approved, or an Error has been thrown
+  // perform any ops on the user as required.
+
+}
+```
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|aggregateType
+m|{
+    new (...params: any[]): AR;
+}
+|
+
+m|id
+m|string
+|
+
+m|timeout
+m|number
+|
+
+m|exec
+m|(ar: AR, event?: xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]) =&gt; boolean
+|
+
+s|Returns
+m|Promise&lt;AR&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function aggregateObserver<AR extends AggregateRoot>(aggregateType: {
+    new (...params: any[]): AR;
+}, id: string, timeout: number, exec: (ar: AR, event?: EventicleEvent) => boolean): Promise<AR>;
+----
+
+========
+[id="eventicle_eventiclejs_allSagaInstances_function_1"]
+=== allSagaInstances(workspaceId)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|workspaceId
+m|string
+|
+
+s|Returns
+m|Promise&lt;xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]&lt;any, any&gt;[]&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function allSagaInstances(workspaceId?: string): Promise<SagaInstance<any, any>[]>;
+----
+
+========
+[id="eventicle_eventiclejs_allSagas_function_1"]
+=== allSagas()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function allSagas(): Promise<Saga<any, any>[]>;
+----
+
+========
+[id="eventicle_eventiclejs_apm_apmJoinEvent_function_1"]
+=== apm.apmJoinEvent(event, name, type, subtype)
+
+========
+
+Will join the APM transaction that is stamped in the event header - `apmTrace`
+
+This will generate a new span within the APM transaction.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|event
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|the event to join the APM trace on
+
+m|name
+m|string
+|The name of the APM transaction
+
+m|type
+m|string
+|the APM type
+
+m|subtype
+m|string
+|the APM subtype
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function apmJoinEvent(event: EventicleEvent, name: string, type: string, subtype: string): void;
+----
+
+========
+[id="eventicle_eventiclejs_connectBroker_function_1"]
+=== connectBroker(config)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|config
+m|KafkaConfig
+|
+
+s|Returns
+m|Promise&lt;void&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function connectBroker(config: KafkaConfig): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_consumeFullEventLog_function_1"]
+=== consumeFullEventLog(stream)
+
+========
+
+Will cold replay the entire event stream into a list.
+
+Mostly useful for testing, use against long running event streams/ Kafka will blow your local memory!
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|stream
+m|string
+|The event stream to cold replay
+
+s|Returns
+m|Promise&lt;xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent][]&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function consumeFullEventLog(stream: string): Promise<EventicleEvent[]>;
+----
+
+========
+[id="eventicle_eventiclejs_createAggregateObservationAdapter_function_1"]
+=== createAggregateObservationAdapter(aggregates)
+
+========
+
+Create a new EventAdapter with a dynamic Consumer group id that will subscribe to the topics for the given AggregateRoots
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|aggregates
+m|{
+    new (): AR;
+}[]
+|the list of aggregate roots to observe. Their topic names will be extracted.
+
+s|Returns
+m|\~AggregateObservationAdapter
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function createAggregateObservationAdapter<AR extends AggregateRoot>(aggregates: {
+    new (): AR;
+}[]): AggregateObservationAdapter;
+----
+
+========
+[id="eventicle_eventiclejs_dispatchCommand_function_1"]
+=== dispatchCommand(commandIntent)
+
+========
+
+This will lookup a pre-registered xref:eventicle_eventiclejs_Command_interface.adoc[Command] from the , then execute the command with the given payload.
+
+It is generally preferred  where the command definition is implicit, and more fully type checked.
+
+This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|commandIntent
+m|xref:eventicle_eventiclejs_CommandIntent_interface.adoc[CommandIntent]&lt;T&gt;
+|
+
+s|Returns
+m|Promise&lt;xref:eventicle_eventiclejs_CommandReturn_interface.adoc[CommandReturn]&lt;T&gt;&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Promise<CommandReturn<T>>;
+----
+
+========
+[id="eventicle_eventiclejs_eventClient_function_1"]
+=== eventClient()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function eventClient(): EventClient;
+----
+
+========
+[id="eventicle_eventiclejs_eventClientCodec_function_1"]
+=== eventClientCodec()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function eventClientCodec(): EventClientCodec;
+----
+
+========
+[id="eventicle_eventiclejs_eventClientOnDatastore_function_1"]
+=== eventClientOnDatastore()
+
+========
+
+This is a test capable event client.
+
+It fully implements the event client semantics, and persists its events into the given data store.
+
+Good to pair with the InMemDataStore for testing and local dev usage.
+
+Not recommended for production (really!), as you disable any possibility of distribution
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function eventClientOnDatastore(): EventClient;
+----
+
+========
+[id="eventicle_eventiclejs_eventClientOnKafka_function_1"]
+=== eventClientOnKafka(config, consumerConfig)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|config
+m|KafkaConfig
+|
+
+m|consumerConfig
+m|\~ConsumerConfigFactory
+|
+
+s|Returns
+m|Promise&lt;\~EventClient&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient>;
+----
+
+========
+[id="eventicle_eventiclejs_eventSourceName_function_1"]
+=== eventSourceName()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function eventSourceName(): string;
+----
+
+========
+[id="eventicle_eventiclejs_metrics_function_1"]
+=== metrics()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function metrics(): {
+    "view-latency": any;
+    "adapter-latency": any;
+    "saga-latency": any;
+};
+----
+
+========
+[id="eventicle_eventiclejs_registerAdapter_function_1"]
+=== registerAdapter(adapter)
+
+========
+
+This will connect the given EventAdapter to event streams.
+
+An EventAdapter is a `hot` subscription, and will receive events emitted after it first connects.
+
+If it is offline for a period, the backing event store (eg, Kafka) will allow the adapter to reconnect and pick up from where it had previous processed up to.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|adapter
+m|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
+|
+
+s|Returns
+m|Promise&lt;\~EventSubscriptionControl&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function registerAdapter(adapter: EventAdapter): Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_registerCommand_function_1"]
+=== registerCommand(command)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|command
+m|xref:eventicle_eventiclejs_Command_interface.adoc[Command]&lt;I, O&gt;
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function registerCommand<I, O>(command: Command<I, O>): void;
+----
+
+========
+[id="eventicle_eventiclejs_registerRawView_function_1"]
+=== registerRawView(view)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|view
+m|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
+|
+
+s|Returns
+m|Promise&lt;\~EventSubscriptionControl&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function registerRawView(view: RawEventView): Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_registerSaga_function_1"]
+=== registerSaga(saga)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|saga
+m|\~Saga&lt;TimeoutNames, Y&gt;
+|
+
+s|Returns
+m|Promise&lt;\~EventSubscriptionControl&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>): Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_registerView_function_1"]
+=== registerView(view)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|view
+m|xref:eventicle_eventiclejs_EventView_interface.adoc[EventView]
+|
+
+s|Returns
+m|Promise&lt;\~EventSubscriptionControl&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function registerView(view: EventView): Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_removeAllSagas_function_1"]
+=== removeAllSagas()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function removeAllSagas(): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_saga_function_1"]
+=== saga(name)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|string
+|
+
+s|Returns
+m|\~Saga&lt;TimeoutNames, SagaInstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function saga<TimeoutNames, SagaInstanceData>(name: string): Saga<TimeoutNames, SagaInstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_scheduler_function_1"]
+=== scheduler()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function scheduler(): ScheduleJobRunner;
+----
+
+========
+[id="eventicle_eventiclejs_setEventClient_function_1"]
+=== setEventClient(cl)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|cl
+m|\~EventClient
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function setEventClient(cl: EventClient): void;
+----
+
+========
+[id="eventicle_eventiclejs_setEventClientCodec_function_1"]
+=== setEventClientCodec(cl)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|cl
+m|xref:eventicle_eventiclejs_EventClientCodec_interface.adoc[EventClientCodec]
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function setEventClientCodec(cl: EventClientCodec): void;
+----
+
+========
+[id="eventicle_eventiclejs_setEventSourceName_function_1"]
+=== setEventSourceName(name)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|string
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function setEventSourceName(name: string): void;
+----
+
+========
+[id="eventicle_eventiclejs_setScheduler_function_1"]
+=== setScheduler(scheduler)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|scheduler
+m|ScheduleJobRunner
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function setScheduler(scheduler: ScheduleJobRunner): void;
+----
+
+========

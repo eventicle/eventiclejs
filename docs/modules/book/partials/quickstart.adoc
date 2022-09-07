@@ -1,3 +1,4 @@
+
 == Quick Start
 
 .Install
@@ -10,7 +11,7 @@ yarn add @eventicle/eventiclejs
 
 [source,typescript]
 ----
-include::../app/src/config.ts[tags=deps;config]
+include::example$app/src/config.ts[tags=deps;config]
 ----
 
 .Observe an event
@@ -18,7 +19,7 @@ _Treat an event stream as a simple Topic, do not request any historical data._
 
 [source,typescript]
 ----
-include::../app/src/config.ts[tags=observe]
+include::example$app/src/config.ts[tags=observe]
 ----
 
 .Emit an event
@@ -26,7 +27,7 @@ _Emit an event to a stream, all following Eventicle event machinery is built on 
 
 [source,typescript]
 ----
-include::../app/src/config.ts[tags=emit]
+include::example$app/src/config.ts[tags=emit]
 ----
 <1> The event payload
 
@@ -36,7 +37,7 @@ _Mostly used for offline, batch or automation actions, such as a view upgrade or
 
 [source,typescript]
 ----
-include::../app/src/config.ts[tags=replay]
+include::example$app/src/config.ts[tags=replay]
 ----
 
 .Fully replay an event stream and continue to observe
@@ -46,5 +47,5 @@ _Used for most runtime stream consumption_
 
 [source,typescript]
 ----
-include::../app/src/config.ts[tags=replay]
+include::example$app/src/config.ts[tags=replay]
 ----

@@ -1,0 +1,308 @@
+= class SagaInstance
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_SagaInstance_internalData_member"]
+=== internalData
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly internalData: any;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_record_member"]
+=== record
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly record?: Record;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_timersToAdd_member"]
+=== timersToAdd
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly timersToAdd: {
+        name: TimeoutNames;
+        config: {
+            isCron: true;
+            crontab: string;
+        } | {
+            isCron: false;
+            timeout: number;
+        };
+    }[];
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_timersToRemove_member"]
+=== timersToRemove
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly timersToRemove: TimeoutNames[];
+----
+
+========
+
+== Constructors
+
+[id="eventicle_eventiclejs_SagaInstance_constructor_1"]
+=== (constructor)(internalData, record)
+
+========
+
+Constructs a new instance of the `SagaInstance` class
+
+
+
+.Parameters
+[%header,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|internalData
+m|any
+|
+
+m|record
+m|Record
+|
+|===
+
+.Signature
+[source,typescript]
+----
+constructor(internalData: any, record?: Record);
+----
+
+========
+
+== Methods
+
+[id="eventicle_eventiclejs_SagaInstance_endSaga_member_1"]
+=== endSaga(preserveInstanceData)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|preserveInstanceData
+m|boolean
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+endSaga(preserveInstanceData?: boolean): void;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_get_member_1"]
+=== get(name)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|keyof T
+|
+
+s|Returns
+m|any
+|
+|===
+
+.Signature
+[source,typescript]
+----
+get(name: keyof T): any;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_lastEvent_member_1"]
+=== lastEvent()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+lastEvent(): EventicleEvent;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_removeTimer_member_1"]
+=== removeTimer(name)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|TimeoutNames
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+removeTimer(name: TimeoutNames): void;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_set_member_1"]
+=== set(name, value)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|keyof T
+|
+
+m|value
+m|any
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+set(name: keyof T, value: any): void;
+----
+
+========
+[id="eventicle_eventiclejs_SagaInstance_upsertTimer_member_1"]
+=== upsertTimer(name, config)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|TimeoutNames
+|
+
+m|config
+m|{
+        isCron: true;
+        crontab: string;
+    } \| {
+        isCron: false;
+        timeout: number;
+    }
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+upsertTimer(name: TimeoutNames, config: {
+        isCron: true;
+        crontab: string;
+    } | {
+        isCron: false;
+        timeout: number;
+    }): void;
+----
+
+========

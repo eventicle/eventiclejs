@@ -1,0 +1,67 @@
+= interface Command
+
+A Command.
+
+It is generally preferred  where the command definition is implicit, and more fully type checked.
+
+This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_Command_execute_member"]
+=== execute
+
+========
+
+The command handler function. The data will be received from the CommandIntent
+
+This may be called concurrently.
+
+This should attempt to modify the system and then emit events to represent the change.
+
+
+
+
+.Signature
+[source,typescript]
+----
+execute: (data: I) => Promise<CommandReturn<O>>;
+----
+
+========
+[id="eventicle_eventiclejs_Command_streamToEmit_member"]
+=== streamToEmit
+
+========
+
+The event stream that any events in the CommandReturn should be emitted on
+
+
+
+
+.Signature
+[source,typescript]
+----
+streamToEmit: string;
+----
+
+========
+[id="eventicle_eventiclejs_Command_type_member"]
+=== type
+
+========
+
+The name of the Command. This is used to look it up when the user calls xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand]
+
+
+
+
+.Signature
+[source,typescript]
+----
+type: string;
+----
+
+========

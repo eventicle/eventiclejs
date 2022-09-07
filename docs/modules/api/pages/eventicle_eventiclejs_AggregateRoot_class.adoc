@@ -1,0 +1,236 @@
+= class AggregateRoot
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_AggregateRoot_config_member"]
+=== config
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly config: AggregateConfig;
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_history_member"]
+=== history
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+history: EventicleEvent[];
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_id_member"]
+=== id
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+id: string;
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_newEvents_member"]
+=== newEvents
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+newEvents: EventicleEvent[];
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_reducers_member"]
+=== reducers
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+reducers: any;
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_replaying_member"]
+=== replaying
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+replaying: boolean;
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_type_member"]
+=== type
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+get type(): string;
+----
+
+========
+
+== Constructors
+
+[id="eventicle_eventiclejs_AggregateRoot_constructor_1"]
+=== (constructor)(type)
+
+========
+
+Constructs a new instance of the `AggregateRoot` class
+
+
+
+.Parameters
+[%header,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|type
+m|string \| ~AggregateConfig
+|
+|===
+
+.Signature
+[source,typescript]
+----
+constructor(type: string | AggregateConfig);
+----
+
+========
+
+== Methods
+
+[id="eventicle_eventiclejs_AggregateRoot_currentCheckpoint_member_1"]
+=== currentCheckpoint()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+currentCheckpoint(): object;
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_handleEvent_member_1"]
+=== handleEvent(event)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|event
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+handleEvent(event: EventicleEvent): void;
+----
+
+========
+[id="eventicle_eventiclejs_AggregateRoot_raiseEvent_member_1"]
+=== raiseEvent(event)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|event
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+|===
+
+.Signature
+[source,typescript]
+----
+raiseEvent(event: EventicleEvent): EventicleEvent;
+----
+
+========
