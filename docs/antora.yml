@@ -1,0 +1,6 @@
+name: eventiclejs
+title: EventicleJS
+nav:
+  - modules/ROOT/nav.adoc
+  - modules/book/nav.adoc
+  - modules/api/nav.adoc

@@ -1,10 +1,8 @@
-:source-highlighter: highlight.js
-
 = Book Of Eventicle
 
-include::section/intro.adoc[]
+include::partial$intro.adoc[]
 
-include::section/quickstart.adoc[]
+include::partial$quickstart.adoc[]
 
 === Next ...
 
@@ -16,12 +14,3 @@ add in more conceptual pieces.
 * _Commands_, components that record changes to the system by taking events and emitting them to streams.
 * _Sagas_, event driven workflows. Implementing asynchronous business logic and integration with external systems in a way that safely isolates
 them from your core application logic.
-
-include::section/aggregate-roots.adoc[]
-include::section/commands.adoc[]
-include::section/sagas.adoc[]
-include::section/query.adoc[]
-include::section/datastore.adoc[]
-
-include::section/observability.adoc[]
-

@@ -1,0 +1,9 @@
+* xref:index.adoc[Quick Start]
+* The Book of Eventicle
+** xref:aggregate-roots.adoc[Aggregate Roots]
+** xref:commands.adoc[Commands]
+** xref:sagas.adoc[Sagas]
+** xref:query.adoc[Querying Data]
+** xref:datastore.adoc[The Datastore]
+** xref:observability.adoc[Observability]
+** xref:testing.adoc[Testing]

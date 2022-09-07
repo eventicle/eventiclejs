@@ -478,11 +478,11 @@ m|KafkaConfig
 |
 
 m|consumerConfig
-m|ConsumerConfigFactory
+m|\~ConsumerConfigFactory
 |
 
 s|Returns
-m|Promise&lt;EventClient&gt;
+m|Promise&lt;\~EventClient&gt;
 |
 |===
 
@@ -554,7 +554,7 @@ m|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -614,7 +614,7 @@ m|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -640,11 +640,11 @@ export declare function registerRawView(view: RawEventView): Promise<EventSubscr
 |Name |Type |Description
 
 m|saga
-m|Saga&lt;TimeoutNames, Y&gt;
+m|\~Saga&lt;TimeoutNames, Y&gt;
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -674,7 +674,7 @@ m|xref:eventicle_eventiclejs_EventView_interface.adoc[EventView]
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -721,7 +721,7 @@ m|string
 |
 
 s|Returns
-m|Saga&lt;TimeoutNames, SagaInstanceData&gt;
+m|\~Saga&lt;TimeoutNames, SagaInstanceData&gt;
 |
 |===
 
@@ -764,7 +764,7 @@ export declare function scheduler(): ScheduleJobRunner;
 |Name |Type |Description
 
 m|cl
-m|EventClient
+m|\~EventClient
 |
 
 s|Returns

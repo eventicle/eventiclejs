@@ -23,3 +23,6 @@ jobs:
           commit_user_name: daviddawson
           commit_user_email: daviddawson@users.noreply.github.com
           commit_author: Eventicle Bot <daviddawson@users.noreply.github.com>
+      - name: "Trigger Docs Update"
+        run: |
+          curl -XPOST -u "build_docs:${{ secrets.DOCS_SECRET }}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/$GITHUB_REPOSITORY_OWNER/eventicle-docs/actions/workflows/publish.yml/dispatches --data '{"ref": "master"}'
