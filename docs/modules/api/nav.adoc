@@ -13,3 +13,4 @@
 ** xref:eventicle_eventiclejs_LocalScheduleJobRunner_class.adoc[LocalScheduleJobRunner]
 ** xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
 ** xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]
+** xref:eventicle_eventiclejs_XStateAggregate_class.adoc[XStateAggregate]

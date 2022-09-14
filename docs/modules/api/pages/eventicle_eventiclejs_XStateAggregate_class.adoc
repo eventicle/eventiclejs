@@ -1,0 +1,218 @@
+= class XStateAggregate
+
+An Eventicle Aggregate that uses the XState statechart to manage its internal state.
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_XStateAggregate_machineFactory_member"]
+=== machineFactory
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly machineFactory: (_this: any) => any;
+----
+
+========
+[id="eventicle_eventiclejs_XStateAggregate_service_member"]
+=== service
+
+========
+
+XState State chart service for this aggregate instance
+
+
+
+
+.Signature
+[source,typescript]
+----
+service: Interpreter<DefaultContext, any, EventObject, {
+        value: any;
+        context: DefaultContext;
+    }, TypegenDisabled>;
+----
+
+========
+
+== Constructors
+
+[id="eventicle_eventiclejs_XStateAggregate_constructor_1"]
+=== (constructor)(type, machineFactory)
+
+========
+
+Constructor
+
+
+
+.Parameters
+[%header,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|type
+m|string
+|the name of the aggregate (e.g. "complaints")
+
+m|machineFactory
+m|(_this: any) =&gt; any
+|a function that returns a XState StateMachine (from a XState createMachine() function call)
+|===
+
+.Signature
+[source,typescript]
+----
+constructor(type: string, machineFactory: (_this: any) => any);
+----
+
+========
+
+== Methods
+
+[id="eventicle_eventiclejs_XStateAggregate_handleEvent_member_1"]
+=== handleEvent(event)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|event
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+handleEvent(event: EventicleEvent): void;
+----
+
+========
+[id="eventicle_eventiclejs_XStateAggregate_initStateMachineService_member_1"]
+=== initStateMachineService(initialState)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|initialState
+m|any
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+protected initStateMachineService(initialState?: any): void;
+----
+
+========
+[id="eventicle_eventiclejs_XStateAggregate_raiseEvent_member_1"]
+=== raiseEvent(event)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|event
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+|
+|===
+
+.Signature
+[source,typescript]
+----
+raiseEvent(event: EventicleEvent): EventicleEvent;
+----
+
+========
+[id="eventicle_eventiclejs_XStateAggregate_shutdown_member_1"]
+=== shutdown()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+shutdown(): void;
+----
+
+========
+[id="eventicle_eventiclejs_XStateAggregate_xsend_member_1"]
+=== xsend(msg)
+
+========
+
+Sends a XState Event into the interpreted XState machine
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|msg
+m|any
+|
+
+s|Returns
+m|void
+|
+|===
+
+.Signature
+[source,typescript]
+----
+protected xsend(msg: any): void;
+----
+
+========

@@ -25,6 +25,9 @@ Persists and loads schedules on process stop/ start in the datastore with the ty
 
 s|xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]
 |
+
+s|xref:eventicle_eventiclejs_XStateAggregate_class.adoc[XStateAggregate]
+|An Eventicle Aggregate that uses the XState statechart to manage its internal state.
 |===
 
 == Interfaces
@@ -699,6 +702,36 @@ export declare function registerView(view: EventView): Promise<EventSubscription
 [source,typescript]
 ----
 export declare function removeAllSagas(): Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_removeXstateEvents_function_1"]
+=== removeXstateEvents(events)
+
+========
+
+This function removes any internal xstate-status events from the given list. Use inside a xref:eventicle_eventiclejs_Command_interface.adoc[Command] in conjunction with an xref:eventicle_eventiclejs_XStateAggregate_class.adoc[XStateAggregate] to filter out any XState internal status events and not emit them to the event bus.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|events
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent][]
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent][]
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];
 ----
 
 ========

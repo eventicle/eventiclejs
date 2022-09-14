@@ -6,7 +6,10 @@ import { DataQuery } from '@eventicle/eventicle-utilities/dist/datastore';
 import { DataSorting } from '@eventicle/eventicle-utilities/dist/datastore';
 import { DataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { dataStore } from '@eventicle/eventicle-utilities/dist/datastore';
+import { DefaultContext } from 'xstate';
 import { EventEmitter } from 'events';
+import { EventObject } from 'xstate';
+import { Interpreter } from 'xstate';
 import { KafkaConfig } from 'kafkajs';
 import { lockManager } from '@eventicle/eventicle-utilities';
 import { LockManager as LockManager_2 } from '@eventicle/eventicle-utilities';
@@ -22,6 +25,7 @@ import { setLogApi } from '@eventicle/eventicle-utilities';
 import { TransactionData } from '@eventicle/eventicle-utilities/dist/datastore';
 import { TransactionListener } from '@eventicle/eventicle-utilities/dist/datastore';
 import { TransactionOptions } from '@eventicle/eventicle-utilities/dist/datastore';
+import { TypegenDisabled } from 'xstate';
 
 declare interface AggregateConfig {
     type: string;
@@ -651,6 +655,13 @@ export declare function registerView(view: EventView): Promise<EventSubscription
 
 export declare function removeAllSagas(): Promise<void>;
 
+/**
+ * This function removes any internal xstate-status events from the given list.
+ * Use inside a {@link Command} in conjunction with an {@link XStateAggregate} to filter out any
+ * XState internal status events and not emit them to the event bus.
+ */
+export declare function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];
+
 declare class Saga<TimeoutNames, InstanceData> {
     readonly name: string;
     streams: string[];
@@ -741,5 +752,37 @@ export { TransactionData }
 export { TransactionListener }
 
 export { TransactionOptions }
+
+/**
+ * An Eventicle Aggregate that uses the XState statechart to manage its internal state.
+ *
+ * @see https://book.eventicle.com/eventiclejs/book/aggregate-root-xstate.html
+ */
+export declare class XStateAggregate<MACHINE> extends AggregateRoot {
+    readonly machineFactory: (_this: any) => any;
+    /**
+     * XState State chart service for this aggregate instance
+     */
+    service: Interpreter<DefaultContext, any, EventObject, {
+        value: any;
+        context: DefaultContext;
+    }, TypegenDisabled>;
+    /**
+     * Constructor
+     *
+     * @param type the name of the aggregate (e.g. "complaints")
+     * @param machineFactory a function that returns a XState StateMachine (from a XState createMachine() function call)
+     */
+    constructor(type: string, machineFactory: (_this: any) => any);
+    raiseEvent(event: EventicleEvent): EventicleEvent;
+    protected initStateMachineService(initialState?: any): void;
+    handleEvent(event: EventicleEvent): void;
+    shutdown(): void;
+    /**
+     * Sends a XState Event into the interpreted XState machine
+     * @param msg
+     */
+    protected xsend(msg: any): void;
+}
 
 export { }
