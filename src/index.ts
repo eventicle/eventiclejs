@@ -5,7 +5,7 @@ export { eventClientOnKafka, connectBroker } from "./events/core/eventclient-kaf
 export {default as aggregates, AggregateRoot} from "./events/aggregate-root";
 export {scheduler, setScheduler} from "./scheduler";
 export {LocalScheduleJobRunner} from "./local-schedule-job-runner";
-
+export { XStateAggregate, removeXstateEvents } from "./events/XStateAggregate"
 export { dispatchCommand, registerCommand, Command, CommandIntent, CommandReturn } from "./events/command";
 export { registerView, EventView, registerRawView, RawEventView } from "./events/view";
 export { registerSaga, saga, SagaInstance, allSagaInstances, allSagas, removeAllSagas } from "./events/saga";

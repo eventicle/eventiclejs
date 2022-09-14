@@ -1,8 +1,11 @@
 * xref:ROOT:index.adoc[The Book of Eventicle]
-** xref:aggregate-roots.adoc[Aggregate Roots]
-** xref:commands.adoc[Commands]
-** xref:sagas.adoc[Sagas]
-** xref:query.adoc[Querying Data]
-** xref:datastore.adoc[The Datastore]
-** xref:observability.adoc[Observability]
-** xref:testing.adoc[Testing]
+** Core Concepts
+*** xref:aggregate-roots.adoc[Aggregate Roots]
+**** xref:aggregate-root-xstate.adoc[XState Aggregate Root -  Formal State Machines]
+*** xref:commands.adoc[Commands]
+*** xref:sagas.adoc[Event Sagas]
+*** xref:query.adoc[Event Views]
+*** xref:datastore.adoc[The Datastore]
+** How To
+*** xref:observability.adoc[Observability]
+*** xref:testing.adoc[Testing]
