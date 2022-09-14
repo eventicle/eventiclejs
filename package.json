@@ -36,7 +36,6 @@
     "winston": "^3.3.3"
   },
   "devDependencies": {
-    "140-opts": "",
     "@eventicle/eventicle-utilities": "^0.0.11",
     "@mermaid-js/mermaid-cli": "^9.1.6",
     "@microsoft/api-documenter": "^7.19.9",
