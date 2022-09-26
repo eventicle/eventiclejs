@@ -51,7 +51,17 @@ export async function registerView(view: EventView): Promise<EventSubscriptionCo
   return control
 }
 
-
+/**
+ * Will register a raw event view
+ *
+ * This subscribes it to the appropriate event streams. For every event received, handeEvent will be called.
+ *
+ * Events are not processed through the {@link EventClientCodec}, and so are observed encoded as an {@link EncodedEvent}
+ *
+ * This can be useful if you want to persist the event in a raw form, as a binary encoded stream.
+ *
+ * @param view The View to subscribe to event streams
+ */
 export async function registerRawView(view: RawEventView): Promise<EventSubscriptionControl> {
   let control = await eventClient().coldHotStream({
     rawEvents: true,

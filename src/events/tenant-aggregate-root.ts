@@ -177,7 +177,7 @@ export default {
       return await lockManager().withLock(
         tenant + aggregate.id,
         async () => {
-          let ret = JSON.parse(JSON.stringify(aggregate.newEvents));
+          let newEvents = JSON.parse(JSON.stringify(aggregate.newEvents));
           aggregate.newEvents.length = 0;
 
           let entity = await dataStore().findEntity(
@@ -189,7 +189,7 @@ export default {
           if (!entity || entity.length == 0) {
             let instance = {
               domainId: aggregate.id,
-              history: ret,
+              history: newEvents,
             };
 
             await dataStore().createEntity(
@@ -199,7 +199,7 @@ export default {
             );
           } else {
             let instance = entity[0];
-            instance.content.history.push(...ret);
+            instance.content.history.push(...newEvents);
             instance.content = maybeAddCheckpointState(aggregate, instance.content)
             await dataStore().saveEntity(
               tenant,
@@ -208,7 +208,7 @@ export default {
             );
           }
 
-          return ret;
+          return newEvents;
         },
         () => {
           logger.warn("Failed to do the thing");

@@ -1,6 +1,6 @@
 {
   "name": "@eventicle/eventiclejs",
-  "version": "0.0.91",
+  "version": "0.0.93",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,7 +28,7 @@
     "cron-parser": "^4.2.1",
     "crypto-js": "^4.0.0",
     "global": "^4.4.0",
-    "kafkajs": "^1.15.0",
+    "kafkajs": "^2.2.0",
     "lodash": "^4.17.21",
     "node-cron": "^3.0.0",
     "serialize-error": "^7.0.1",

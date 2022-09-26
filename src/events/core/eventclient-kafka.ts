@@ -13,7 +13,7 @@ import {eventClientTransactional} from "./eventclient-transactional";
 
 interface KafkaClientHealth {
   healthy: boolean
-  consumers: { [key: string] : HealthCheckStatus }
+  consumers: { [key: string]: HealthCheckStatus }
   producer: HealthCheckStatus
 }
 
@@ -25,19 +25,20 @@ export interface HealthCheckStatus {
 
 let kafka: Kafka
 
-let producerHealth:HealthCheckStatus
+let producerHealth: HealthCheckStatus
 let consumerGroups = []
 
 const consumers: Consumer[] = []
 
 let consumerGroupHealth: {
-  [key: string] : HealthCheckStatus
+  [key: string]: HealthCheckStatus
 } = {}
 let consumerConfigFactory: ConsumerConfigFactory = {
   consumerConfig: (stream, consumerName, type) => {
     return {
       maxWaitTimeInMs: 100,
-      groupId: consumerName}
+      groupId: consumerName
+    }
   },
   consumerRunConfig: (stream, consumerName, type) => {
     if (type === "COLD") {
@@ -98,7 +99,7 @@ class EventclientKafka implements EventClient {
     await admin.connect()
     let existingTopics = await admin.listTopics()
 
-    for(let topic of topics) {
+    for (let topic of topics) {
       if (existingTopics.includes(topic)) {
         admin.deleteTopics({
           topics: [topic]
@@ -121,13 +122,13 @@ class EventclientKafka implements EventClient {
       config.groupId = uuid.v4()
     }
 
-    let healthStatus: HealthCheckStatus ={
+    let healthStatus: HealthCheckStatus = {
       name: config.groupId, healthy: false, status: "disconnected"
     }
     consumerGroupHealth[healthStatus.name] = healthStatus
 
     if (consumerGroups.includes(config.groupId)) {
-      logger.error("Consumer Group has subscribed multiple times, error: "+ config.groupId, new Error("Consumer Group has subscribed multiple times, error " + config.groupId))
+      logger.error("Consumer Group has subscribed multiple times, error: " + config.groupId, new Error("Consumer Group has subscribed multiple times, error " + config.groupId))
       throw new Error("Consumer Group has subscribed multiple times, error " + config.groupId)
     }
 
@@ -279,12 +280,12 @@ class EventclientKafka implements EventClient {
       onError: (error: any) => void
     }): Promise<EventSubscriptionControl> {
     if (consumerGroups.includes(config.consumerName)) {
-      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: "+ config.consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + config.consumerName))
+      logger.error("Consumer Group has subscribed multiple times, this is a bug, error: " + config.consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + config.consumerName))
       throw new Error("Consumer Group has subscribed multiple times, this is a bug, error " + config.consumerName)
     }
 
     consumerGroups.push(config.consumerName)
-    let healthStatus: HealthCheckStatus ={
+    let healthStatus: HealthCheckStatus = {
       name: config.consumerName, healthy: false, status: "disconnected"
     }
     consumerGroupHealth[healthStatus.name] = healthStatus
@@ -371,6 +372,7 @@ function setupMonitor(healthStatus: HealthCheckStatus, cons: Consumer) {
     healthStatus.status = "disconnected"
   })
   cons.on("consumer.crash", args => {
+    (healthStatus as any).args = args
     healthStatus.healthy = false
     healthStatus.status = "error"
   })

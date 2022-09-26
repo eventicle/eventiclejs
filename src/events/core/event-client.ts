@@ -25,7 +25,16 @@ export interface EncodedEvent {
   headers: { [key: string]: any }
 }
 
+/**
+ * Convert {@link EventicleEvent} to/ from {@link EncodedEvent}.
+ *
+ * EncodedEvent is suitable for the {@link EventClient} implementations to send on the wire, as it
+ * is a Buffer and a set of message headers. 
+ */
 export interface EventClientCodec {
+  /**
+   * Convert a raw event binary (as a {@link EncodedEvent}) into a {@link EventicleEvent}
+   */
   encode: (event: EventicleEvent) => Promise<EncodedEvent>
   decode: (encoded: EncodedEvent) => Promise<EventicleEvent>
 }
