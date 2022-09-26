@@ -468,7 +468,16 @@ declare interface EventClient {
 
 export declare function eventClient(): EventClient;
 
+/**
+ * Convert {@link EventicleEvent} to/ from {@link EncodedEvent}.
+ *
+ * EncodedEvent is suitable for the {@link EventClient} implementations to send on the wire, as it
+ * is a Buffer and a set of message headers.
+ */
 export declare interface EventClientCodec {
+    /**
+     * Convert a raw event binary (as a {@link EncodedEvent}) into a {@link EventicleEvent}
+     */
     encode: (event: EventicleEvent) => Promise<EncodedEvent>;
     decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;
 }
@@ -647,6 +656,17 @@ export declare function registerAdapter(adapter: EventAdapter): Promise<EventSub
 
 export declare function registerCommand<I, O>(command: Command<I, O>): void;
 
+/**
+ * Will register a raw event view
+ *
+ * This subscribes it to the appropriate event streams. For every event received, handeEvent will be called.
+ *
+ * Events are not processed through the {@link EventClientCodec}, and so are observed encoded as an {@link EncodedEvent}
+ *
+ * This can be useful if you want to persist the event in a raw form, as a binary encoded stream.
+ *
+ * @param view The View to subscribe to event streams
+ */
 export declare function registerRawView(view: RawEventView): Promise<EventSubscriptionControl>;
 
 export declare function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>): Promise<EventSubscriptionControl>;

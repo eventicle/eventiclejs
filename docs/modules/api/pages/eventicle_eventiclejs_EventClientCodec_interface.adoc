@@ -1,6 +1,8 @@
 = interface EventClientCodec
 
+Convert xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent] to/ from xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent].
 
+EncodedEvent is suitable for the  implementations to send on the wire, as it is a Buffer and a set of message headers.
 
 
 
@@ -28,7 +30,7 @@ decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;
 
 ========
 
-
+Convert a raw event binary (as a xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent]) into a xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
 
 
 

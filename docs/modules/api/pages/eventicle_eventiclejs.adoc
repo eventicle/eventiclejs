@@ -60,7 +60,9 @@ s|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
 It only operates on hot event data, and will never attempt to replay everything
 
 s|xref:eventicle_eventiclejs_EventClientCodec_interface.adoc[EventClientCodec]
-|
+|Convert xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent] to/ from xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent].
+
+EncodedEvent is suitable for the  implementations to send on the wire, as it is a Buffer and a set of message headers.
 
 s|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
 |
@@ -603,7 +605,13 @@ export declare function registerCommand<I, O>(command: Command<I, O>): void;
 
 ========
 
+Will register a raw event view
 
+This subscribes it to the appropriate event streams. For every event received, handeEvent will be called.
+
+Events are not processed through the xref:eventicle_eventiclejs_EventClientCodec_interface.adoc[EventClientCodec], and so are observed encoded as an xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent]
+
+This can be useful if you want to persist the event in a raw form, as a binary encoded stream.
 
 
 
@@ -614,7 +622,7 @@ export declare function registerCommand<I, O>(command: Command<I, O>): void;
 
 m|view
 m|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
-|
+|The View to subscribe to event streams
 
 s|Returns
 m|Promise&lt;\~EventSubscriptionControl&gt;
