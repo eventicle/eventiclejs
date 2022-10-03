@@ -64,9 +64,20 @@ interface NotifySub {
   filterVal: string
 }
 
+/**
+ * The data for a single execution of a {@link Saga}
+ *
+ * Sagas are stateful concepts, and this type contains the state.
+ */
 export class SagaInstance<TimeoutNames, T> {
 
+  /**
+   * Private instance data
+   */
   readonly timersToRemove: TimeoutNames[] = []
+  /**
+   * Private instance data
+   */
   readonly timersToAdd: {
     name: TimeoutNames, config: {
       isCron: true
@@ -79,10 +90,19 @@ export class SagaInstance<TimeoutNames, T> {
 
   constructor(readonly internalData: any, readonly record?: Record) {}
 
+  /**
+   * Get a piece of arbitrary data from the saga instance
+   * @param name THe key
+   */
   get(name: keyof T): any {
     return this.internalData[name]
   }
 
+  /**
+   * Set a piece of arbitrary data into the saga instance
+   * @param name The key
+   * @param value the value. Must be able to encode to JSON.
+   */
   set(name: keyof T, value: any) {
     if (name == "id") throw new Error("SETTING ID IS FORBIDDEN")
     this.internalData[name] = value
@@ -92,6 +112,43 @@ export class SagaInstance<TimeoutNames, T> {
     return null
   }
 
+  /**
+   * Create (or overwrite) a timer to call. Can be either a simple timer (millis to wait), or a cron timer.
+   *
+   * If the timer is no longer wanted, it must be removed by calling {@see removeTimer}
+   *
+   * @param name The timer to call
+   * @param config
+   *
+   * @example
+   * ```
+   *
+   * export function sagaWithTimeouts() {
+   *   return saga<"ShortTimeout" | "PollEveryDay", never>(
+   *     "sagaWithTimeouts"
+   *   )
+   *     .subscribeStreams(["payments"])
+   *     .startOn("payment.created", {}, async (instance, event) => {
+   *       instance.upsertTimer("ShortTimeout", {
+   *         isCron: false,
+   *         timeout: 5000,    // wait for 5s and then call.
+   *       });
+   *       instance.upsertTimer("PollEveryDay", {
+   *         isCron: true,
+   *         crontab: "0 4 * * *" // will run every day at 4am
+   *       });
+   *     })
+   *     .onTimer("ShortTimeout", async (instance) => {
+   *       // this will fire 5000ms after the auction created event arrives
+   *       instance.endSaga();
+   *     });
+   *     .onTimer("PollEveryDay", async (instance) => {
+   *       // this will fire every day at 4am
+   *       console.log("Running at 4am ... ")
+   *     });
+   * }
+   * ```
+   */
   upsertTimer(name: TimeoutNames, config: {
     isCron: true
     crontab: string
@@ -112,6 +169,9 @@ export class SagaInstance<TimeoutNames, T> {
   }
 }
 
+/**
+ *
+ */
 export class Saga<TimeoutNames, InstanceData> {
 
   streams: string[]
@@ -136,6 +196,12 @@ export class Saga<TimeoutNames, InstanceData> {
     return this
   }
 
+  /**
+   * Register a handler for a timer triggered saga step.
+   *
+   * @param name The name of the timer
+   * @param handle the
+   */
   onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     this.timerHandler.set(name, { handle })
     return this
