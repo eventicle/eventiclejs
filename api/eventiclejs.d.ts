@@ -682,6 +682,9 @@ export declare function removeAllSagas(): Promise<void>;
  */
 export declare function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];
 
+/**
+ *
+ */
 declare class Saga<TimeoutNames, InstanceData> {
     readonly name: string;
     streams: string[];
@@ -700,6 +703,12 @@ declare class Saga<TimeoutNames, InstanceData> {
     }>;
     constructor(name: string);
     subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData>;
+    /**
+     * Register a handler for a timer triggered saga step.
+     *
+     * @param name The name of the timer
+     * @param handle the
+     */
     onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
@@ -708,10 +717,21 @@ declare class Saga<TimeoutNames, InstanceData> {
 
 export declare function saga<TimeoutNames, SagaInstanceData>(name: string): Saga<TimeoutNames, SagaInstanceData>;
 
+/**
+ * The data for a single execution of a {@link Saga}
+ *
+ * Sagas are stateful concepts, and this type contains the state.
+ */
 export declare class SagaInstance<TimeoutNames, T> {
     readonly internalData: any;
     readonly record?: Record_2;
+    /**
+     * Private instance data
+     */
     readonly timersToRemove: TimeoutNames[];
+    /**
+     * Private instance data
+     */
     readonly timersToAdd: {
         name: TimeoutNames;
         config: {
@@ -723,9 +743,55 @@ export declare class SagaInstance<TimeoutNames, T> {
         };
     }[];
     constructor(internalData: any, record?: Record_2);
+    /**
+     * Get a piece of arbitrary data from the saga instance
+     * @param name THe key
+     */
     get(name: keyof T): any;
+    /**
+     * Set a piece of arbitrary data into the saga instance
+     * @param name The key
+     * @param value the value. Must be able to encode to JSON.
+     */
     set(name: keyof T, value: any): void;
     lastEvent(): EventicleEvent;
+    /**
+     * Create (or overwrite) a timer to call. Can be either a simple timer (millis to wait), or a cron timer.
+     *
+     * If the timer is no longer wanted, it must be removed by calling {@see removeTimer}
+     *
+     * @param name The timer to call
+     * @param config
+     *
+     * @example
+     * ```
+     *
+     * export function sagaWithTimeouts() {
+     *   return saga<"ShortTimeout" | "PollEveryDay", never>(
+     *     "sagaWithTimeouts"
+     *   )
+     *     .subscribeStreams(["payments"])
+     *     .startOn("payment.created", {}, async (instance, event) => {
+     *       instance.upsertTimer("ShortTimeout", {
+     *         isCron: false,
+     *         timeout: 5000,    // wait for 5s and then call.
+     *       });
+     *       instance.upsertTimer("PollEveryDay", {
+     *         isCron: true,
+     *         crontab: "0 4 * * *" // will run every day at 4am
+     *       });
+     *     })
+     *     .onTimer("ShortTimeout", async (instance) => {
+     *       // this will fire 5000ms after the auction created event arrives
+     *       instance.endSaga();
+     *     });
+     *     .onTimer("PollEveryDay", async (instance) => {
+     *       // this will fire every day at 4am
+     *       console.log("Running at 4am ... ")
+     *     });
+     * }
+     * ```
+     */
     upsertTimer(name: TimeoutNames, config: {
         isCron: true;
         crontab: string;

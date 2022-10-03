@@ -1,6 +1,8 @@
 = class SagaInstance
 
+The data for a single execution of a 
 
+Sagas are stateful concepts, and this type contains the state.
 
 
 
@@ -45,7 +47,7 @@ readonly record?: Record;
 
 ========
 
-
+Private instance data
 
 
 
@@ -71,7 +73,7 @@ readonly timersToAdd: {
 
 ========
 
-
+Private instance data
 
 
 
@@ -154,7 +156,7 @@ endSaga(preserveInstanceData?: boolean): void;
 
 ========
 
-
+Get a piece of arbitrary data from the saga instance
 
 
 
@@ -165,7 +167,7 @@ endSaga(preserveInstanceData?: boolean): void;
 
 m|name
 m|keyof T
-|
+|THe key
 
 s|Returns
 m|any
@@ -231,7 +233,7 @@ removeTimer(name: TimeoutNames): void;
 
 ========
 
-
+Set a piece of arbitrary data into the saga instance
 
 
 
@@ -242,11 +244,11 @@ removeTimer(name: TimeoutNames): void;
 
 m|name
 m|keyof T
-|
+|The key
 
 m|value
 m|any
-|
+|the value. Must be able to encode to JSON.
 
 s|Returns
 m|void
@@ -265,7 +267,9 @@ set(name: keyof T, value: any): void;
 
 ========
 
+Create (or overwrite) a timer to call. Can be either a simple timer (millis to wait), or a cron timer.
 
+If the timer is no longer wanted, it must be removed by calling
 
 
 
@@ -276,7 +280,7 @@ set(name: keyof T, value: any): void;
 
 m|name
 m|TimeoutNames
-|
+|The timer to call
 
 m|config
 m|{

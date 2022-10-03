@@ -24,7 +24,9 @@ s|xref:eventicle_eventiclejs_LocalScheduleJobRunner_class.adoc[LocalScheduleJobR
 Persists and loads schedules on process stop/ start in the datastore with the types `lock-manager-timer` and `lock-manager-cron`
 
 s|xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]
-|
+|The data for a single execution of a 
+
+Sagas are stateful concepts, and this type contains the state.
 
 s|xref:eventicle_eventiclejs_XStateAggregate_class.adoc[XStateAggregate]
 |An Eventicle Aggregate that uses the XState statechart to manage its internal state.
