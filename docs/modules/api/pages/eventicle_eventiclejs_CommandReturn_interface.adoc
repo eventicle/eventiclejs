@@ -1,6 +1,6 @@
 = interface CommandReturn
 
-The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in .
+The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand].
 
 This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture any events that need to be emitted.
 

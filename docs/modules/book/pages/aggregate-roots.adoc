@@ -1,18 +1,63 @@
 
 == Aggregate Roots: Event Driven Domain Entities
 
-[mermaid]
-....
-graph TD
-  A[Christmas] -->|Get money| B(Go shopping)
-  B --> C{Let me think}
-  C -->|One| D[Laptop]
-  C -->|Two| E[iPhonesss]
-  C -->|Three| F[fa:fa-car Car]
+A DDD aggregate is a related set of domain entities that can be loaded and interacted with as a single
+unit.
 
-....
+An Eventicle Aggregate Roots [AR] implement the https://www.eventstore.com/blog/what-is-event-sourcing[Event Sourcing] pattern.
+
+Each Aggregate Root includes a full event history that created it.  Each time the AR is loaded it is fully re-created from it's event history via a set of stateless functional reducers.
+
+=== A Simple Aggregate Root
+
+[source,typescript]
+----
+include::example$app/src/simple-aggregate-root.ts[tags=class]
+----
+<1> Internal property. This will be managed via the event reducers, and never anywhere else.
+<2> Configure the aggregate root. This defines the event stream that Commands will emit events to.
+<3> An Event Reducer function. This takes the given event and applies the content to `this`. It should use the current state of the aggregate when calculating what changes to make, but should never be async or call outside services.
+<4> The first event in the Aggregate Root must initialise the `id` property from the events `domainId` property to give a consistent `domainId` on all subsequent events that the AR generates.
+<5> Reducers can take any (or no) state from the event and generate a view of it to represent the current state of the Aggregate Root as at the event just applied.
+<6> Any mutation to the Aggregate Root must be done by raising events on it.
+
+Aggregate Roots can become very complex, with multiple sub objects and resolver hierarchies.
+
+You may wish to consider using the https://xstate.js.org/[XState] support in Eventicle for building xref:aggregate-root-xstate.adoc[event driven State Machines].
+
+=== Aggregate Root Reducers
+
+An event sourced Aggregate Root is rebuild every time it is loaded. This is done via the Event Reducers that you see in the example above.
+
+Reducers must :
+
+* Be synchronous
+* use the current state of the aggregate and the incoming event to calculate changes to the aggregate.
+* Be deterministic.
+
+=== Loading/ Saving Aggregates
+
+Aggregate Roots instances
+
+=== Using Commands With Aggregate Roots
 
 
-event sourcing
+=== Checkpoints and Directly Querying Aggregate Roots in the Datastore
 
-observing and waiting for async state changes in an AR with observationAdapter
+
+//
+// [mermaid]
+// ....
+// graph TD
+//   A[Christmas] -->|Get money| B(Go shopping)
+//   B --> C{Let me think}
+//   C -->|One| D[Laptop]
+//   C -->|Two| E[iPhonesss]
+//   C -->|Three| F[fa:fa-car Car]
+//
+// ....
+//
+//
+// event sourcing
+//
+// observing and waiting for async state changes in an AR with observationAdapter

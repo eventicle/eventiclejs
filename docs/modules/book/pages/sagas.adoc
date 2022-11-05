@@ -1,2 +1,11 @@
 
-== Complex Interaction: Sagas and Workflows
+== Sagas and Workflows
+
+A Saga is a component that receives event notifications and then interacts with other components in the system in order to create [COmmands Commands]
+
+
+=== Create a Saga
+
+
+
+=== Executing a Saga Step on a Timer

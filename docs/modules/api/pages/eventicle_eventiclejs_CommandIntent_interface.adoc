@@ -1,6 +1,6 @@
 = interface CommandIntent
 
-A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the
+A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
 
 
 

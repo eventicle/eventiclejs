@@ -1,6 +1,8 @@
 
 == Quick Start
 
+This sets up an in memory event driven system that can later be run on Kafka, Redis and Postgres.
+
 .Install
 [source,bash]
 ----

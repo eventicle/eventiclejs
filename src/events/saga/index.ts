@@ -170,7 +170,7 @@ export class SagaInstance<TimeoutNames, T> {
 }
 
 /**
- *
+ * A saga!
  */
 export class Saga<TimeoutNames, InstanceData> {
 
@@ -199,8 +199,12 @@ export class Saga<TimeoutNames, InstanceData> {
   /**
    * Register a handler for a timer triggered saga step.
    *
+   * This will be called on the timer.
+   *
+   * No event is present.
+   *
    * @param name The name of the timer
-   * @param handle the
+   * @param handle the async function to execute.
    */
   onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     this.timerHandler.set(name, { handle })

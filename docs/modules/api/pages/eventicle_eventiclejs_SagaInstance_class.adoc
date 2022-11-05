@@ -1,6 +1,6 @@
 = class SagaInstance
 
-The data for a single execution of a 
+The data for a single execution of a xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
 
 Sagas are stateful concepts, and this type contains the state.
 
@@ -107,7 +107,7 @@ m|any
 |
 
 m|record
-m|Record
+m|\~Record
 |
 |===
 

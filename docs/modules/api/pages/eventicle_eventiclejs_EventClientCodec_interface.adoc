@@ -2,7 +2,7 @@
 
 Convert xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent] to/ from xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent].
 
-EncodedEvent is suitable for the  implementations to send on the wire, as it is a Buffer and a set of message headers.
+EncodedEvent is suitable for the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient] implementations to send on the wire, as it is a Buffer and a set of message headers.
 
 
 

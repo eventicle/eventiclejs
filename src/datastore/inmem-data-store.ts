@@ -89,7 +89,7 @@ export default class implements DataStore {
     const table = getStoreForWorkspace(workspaceId)[type];
     if (!table) return Promise.resolve(null);
     let dat = table[id];
-    return Promise.resolve(dat);
+    return Promise.resolve(JSON.parse(JSON.stringify(dat)));
   }
 
   /**
@@ -138,7 +138,7 @@ export default class implements DataStore {
       });
     }
 
-    return results;
+    return results.map(value => JSON.parse(JSON.stringify(value)));
   }
 
   /**
@@ -168,7 +168,7 @@ export default class implements DataStore {
     const endIndex = startIndex + pageSize;
 
     return {
-      entries: results.slice(startIndex, endIndex),
+      entries: results.slice(startIndex, endIndex).map(value => JSON.parse(JSON.stringify(value))),
       totalCount: results.length,
       pageInfo: {
         currentPage: page,

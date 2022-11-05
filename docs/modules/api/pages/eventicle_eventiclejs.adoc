@@ -23,8 +23,11 @@ s|xref:eventicle_eventiclejs_LocalScheduleJobRunner_class.adoc[LocalScheduleJobR
 
 Persists and loads schedules on process stop/ start in the datastore with the types `lock-manager-timer` and `lock-manager-cron`
 
+s|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
+|A saga!
+
 s|xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]
-|The data for a single execution of a 
+|The data for a single execution of a xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
 
 Sagas are stateful concepts, and this type contains the state.
 
@@ -41,15 +44,15 @@ s|xref:eventicle_eventiclejs_XStateAggregate_class.adoc[XStateAggregate]
 s|xref:eventicle_eventiclejs_Command_interface.adoc[Command]
 |A Command.
 
-It is generally preferred  where the command definition is implicit, and more fully type checked.
+It is generally preferred xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand] where the command definition is implicit, and more fully type checked.
 
 This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
 
 s|xref:eventicle_eventiclejs_CommandIntent_interface.adoc[CommandIntent]
-|A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the
+|A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
 
 s|xref:eventicle_eventiclejs_CommandReturn_interface.adoc[CommandReturn]
-|The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in .
+|The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand].
 
 This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture any events that need to be emitted.
 
@@ -61,10 +64,13 @@ s|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
 
 It only operates on hot event data, and will never attempt to replay everything
 
+s|xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
+|
+
 s|xref:eventicle_eventiclejs_EventClientCodec_interface.adoc[EventClientCodec]
 |Convert xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent] to/ from xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent].
 
-EncodedEvent is suitable for the  implementations to send on the wire, as it is a Buffer and a set of message headers.
+EncodedEvent is suitable for the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient] implementations to send on the wire, as it is a Buffer and a set of message headers.
 
 s|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
 |
@@ -382,7 +388,7 @@ export declare function createAggregateObservationAdapter<AR extends AggregateRo
 
 This will lookup a pre-registered xref:eventicle_eventiclejs_Command_interface.adoc[Command] from the , then execute the command with the given payload.
 
-It is generally preferred  where the command definition is implicit, and more fully type checked.
+It is generally preferred xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand] where the command definition is implicit, and more fully type checked.
 
 This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
 
@@ -406,6 +412,42 @@ m|Promise&lt;xref:eventicle_eventiclejs_CommandReturn_interface.adoc[CommandRetu
 [source,typescript]
 ----
 export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Promise<CommandReturn<T>>;
+----
+
+========
+[id="eventicle_eventiclejs_dispatchDirectCommand_function_1"]
+=== dispatchDirectCommand(command, streamToEmit)
+
+========
+
+Dispatch a command directly, without a CommandIntent message in between.
+
+Cannot be distributed or load balanced, but requires less boilerplate.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|command
+m|() =&gt; Promise&lt;xref:eventicle_eventiclejs_CommandReturn_interface.adoc[CommandReturn]&lt;T&gt;&gt;
+|
+
+m|streamToEmit
+m|string
+|
+
+s|Returns
+m|Promise&lt;T&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string): Promise<T>;
 ----
 
 ========
@@ -485,11 +527,11 @@ m|KafkaConfig
 |
 
 m|consumerConfig
-m|\~ConsumerConfigFactory
+m|ConsumerConfigFactory
 |
 
 s|Returns
-m|Promise&lt;\~EventClient&gt;
+m|Promise&lt;xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]&gt;
 |
 |===
 
@@ -561,7 +603,7 @@ m|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
 |
 
 s|Returns
-m|Promise&lt;\~EventSubscriptionControl&gt;
+m|Promise&lt;EventSubscriptionControl&gt;
 |
 |===
 
@@ -627,7 +669,7 @@ m|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
 |The View to subscribe to event streams
 
 s|Returns
-m|Promise&lt;\~EventSubscriptionControl&gt;
+m|Promise&lt;EventSubscriptionControl&gt;
 |
 |===
 
@@ -653,11 +695,11 @@ export declare function registerRawView(view: RawEventView): Promise<EventSubscr
 |Name |Type |Description
 
 m|saga
-m|\~Saga&lt;TimeoutNames, Y&gt;
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, Y&gt;
 |
 
 s|Returns
-m|Promise&lt;\~EventSubscriptionControl&gt;
+m|Promise&lt;EventSubscriptionControl&gt;
 |
 |===
 
@@ -687,7 +729,7 @@ m|xref:eventicle_eventiclejs_EventView_interface.adoc[EventView]
 |
 
 s|Returns
-m|Promise&lt;\~EventSubscriptionControl&gt;
+m|Promise&lt;EventSubscriptionControl&gt;
 |
 |===
 
@@ -764,7 +806,7 @@ m|string
 |
 
 s|Returns
-m|\~Saga&lt;TimeoutNames, SagaInstanceData&gt;
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, SagaInstanceData&gt;
 |
 |===
 
@@ -807,7 +849,7 @@ export declare function scheduler(): ScheduleJobRunner;
 |Name |Type |Description
 
 m|cl
-m|\~EventClient
+m|xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
 |
 
 s|Returns
