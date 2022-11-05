@@ -67,20 +67,20 @@ The transaction API on the Datastore ensures that any underlying ACID/ transacti
 
 .Transaction that successfully commits
 [source, typescript]
----
+----
 const ret: Record = await dataStore().transaction(async () => {
-    // .. do work within the transaction
+    //.. do work within the transaction
 
     return datastore().createEntity(...)
 })
 
 console.log(ret.content)
 
----
+----
 
 .Transaction that Rolls Back
 [source, typescript]
----
+----
 const ret: Record = await dataStore().transaction(async () => {
     // .. do work within the transaction
 
@@ -88,7 +88,7 @@ const ret: Record = await dataStore().transaction(async () => {
 
 console.log(ret.content)
 
----
+----
 
 === TransactionData
 
