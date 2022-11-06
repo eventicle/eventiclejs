@@ -527,7 +527,7 @@ m|KafkaConfig
 |
 
 m|consumerConfig
-m|ConsumerConfigFactory
+m|\~ConsumerConfigFactory
 |
 
 s|Returns
@@ -603,7 +603,7 @@ m|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -669,7 +669,7 @@ m|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
 |The View to subscribe to event streams
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -699,7 +699,7 @@ m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, Y&gt;
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 
@@ -729,7 +729,7 @@ m|xref:eventicle_eventiclejs_EventView_interface.adoc[EventView]
 |
 
 s|Returns
-m|Promise&lt;EventSubscriptionControl&gt;
+m|Promise&lt;\~EventSubscriptionControl&gt;
 |
 |===
 

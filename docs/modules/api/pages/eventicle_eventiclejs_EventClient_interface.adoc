@@ -1,0 +1,144 @@
+= interface EventClient
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_EventClient_coldHotStream_member"]
+=== coldHotStream
+
+========
+
+Play from persisted storage the continue from in memory
+
+
+
+
+.Signature
+[source,typescript]
+----
+coldHotStream: (config: {
+        rawEvents: true;
+        stream: string | string[];
+        groupId?: string;
+        handler: (event: EncodedEvent) => Promise<void>;
+        onError: (error: any) => void;
+    } | {
+        rawEvents: false;
+        stream: string | string[];
+        groupId?: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+    } | {
+        stream: string | string[];
+        groupId?: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_EventClient_coldStream_member"]
+=== coldStream
+
+========
+
+Play from persisted storage
+
+
+
+
+.Signature
+[source,typescript]
+----
+coldStream: (stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void) => Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_EventClient_emit_member"]
+=== emit
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_EventClient_hotRawStream_member"]
+=== hotRawStream
+
+========
+
+Only play hot data.
+
+
+
+
+.Signature
+[source,typescript]
+----
+hotRawStream: (stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_EventClient_hotStream_member"]
+=== hotStream
+
+========
+
+Only play hot data.
+
+
+
+
+.Signature
+[source,typescript]
+----
+hotStream: (stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+----
+
+========
+[id="eventicle_eventiclejs_EventClient_isConnected_member"]
+=== isConnected
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+isConnected: () => boolean;
+----
+
+========
+[id="eventicle_eventiclejs_EventClient_shutdown_member"]
+=== shutdown
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+shutdown: () => Promise<void>;
+----
+
+========

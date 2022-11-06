@@ -382,6 +382,30 @@ export { dataStore }
  */
 export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Promise<CommandReturn<T>>;
 
+/**
+ * Dispatch a command directly, without a CommandIntent message in between.
+ *
+ * Cannot be distributed or load balanced, but requires less boilerplate.
+ *
+ * @example
+ *
+ * Note that no registration of the Command is necessary.
+ * This is functionally the same as in {@link Command#execute}
+ *
+ * ```
+ *  await dispatchDirectCommand(() => {
+ *       const user = await aggregates.load(UserAggregate, data.userId);
+ *       user.approve();
+ *       return {
+ *         // aggregates returns all the events that were generated after the
+ *         // aggregate was loaded, after it has persisted.
+ *         events: await aggregates.persist(user);
+ *       }
+ *  }, "user")
+ * ```
+ */
+export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string): Promise<T>;
+
 export declare interface EncodedEvent {
     buffer: Buffer;
     key: string;
@@ -404,7 +428,7 @@ export declare interface EventAdapter {
     errorHandler?: (adapter: EventAdapter, event: EventicleEvent, error: Error) => Promise<void>;
 }
 
-declare interface EventClient {
+export declare interface EventClient {
     /**
      *
      * @param event
@@ -683,9 +707,9 @@ export declare function removeAllSagas(): Promise<void>;
 export declare function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];
 
 /**
- *
+ * A saga!
  */
-declare class Saga<TimeoutNames, InstanceData> {
+export declare class Saga<TimeoutNames, InstanceData> {
     readonly name: string;
     streams: string[];
     streamSubs: EventSubscriptionControl[];
@@ -706,8 +730,12 @@ declare class Saga<TimeoutNames, InstanceData> {
     /**
      * Register a handler for a timer triggered saga step.
      *
+     * This will be called on the timer.
+     *
+     * No event is present.
+     *
      * @param name The name of the timer
-     * @param handle the
+     * @param handle the async function to execute.
      */
     onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;

@@ -1,0 +1,341 @@
+= class Saga
+
+A saga!
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_Saga_errorHandler_member"]
+=== errorHandler
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+errorHandler: (saga: any, event: EventicleEvent, error: Error) => Promise<void>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_eventHandler_member"]
+=== eventHandler
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+eventHandler: Map<string, {
+        config: HandlerConfig<any, InstanceData, TimeoutNames>;
+        handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>;
+    }>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_name_member"]
+=== name
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+readonly name: string;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_starts_member"]
+=== starts
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+starts: Map<string, {
+        config: StartHandlerConfig<any, InstanceData, TimeoutNames>;
+        handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>;
+    }>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_streams_member"]
+=== streams
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+streams: string[];
+----
+
+========
+[id="eventicle_eventiclejs_Saga_streamSubs_member"]
+=== streamSubs
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+streamSubs: EventSubscriptionControl[];
+----
+
+========
+[id="eventicle_eventiclejs_Saga_timerHandler_member"]
+=== timerHandler
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+timerHandler: Map<TimeoutNames, {
+        handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>;
+    }>;
+----
+
+========
+
+== Constructors
+
+[id="eventicle_eventiclejs_Saga_constructor_1"]
+=== (constructor)(name)
+
+========
+
+Constructs a new instance of the `Saga` class
+
+
+
+.Parameters
+[%header,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|string
+|
+|===
+
+.Signature
+[source,typescript]
+----
+constructor(name: string);
+----
+
+========
+
+== Methods
+
+[id="eventicle_eventiclejs_Saga_on_member_1"]
+=== on(eventName, config, handler)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|eventName
+m|string
+|
+
+m|config
+m|\~HandlerConfig&lt;T, InstanceData, TimeoutNames&gt;
+|
+
+m|handler
+m|(saga: xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]&lt;TimeoutNames, InstanceData&gt;, event: T) =&gt; Promise&lt;void&gt;
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_onError_member_1"]
+=== onError(handler)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|handler
+m|(saga: any, event: xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent], error: Error) =&gt; Promise&lt;void&gt;
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+onError(handler: (saga: any, event: EventicleEvent, error: Error) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_onTimer_member_1"]
+=== onTimer(name, handle)
+
+========
+
+Register a handler for a timer triggered saga step.
+
+This will be called on the timer.
+
+No event is present.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|name
+m|TimeoutNames
+|The name of the timer
+
+m|handle
+m|(saga: xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]&lt;TimeoutNames, InstanceData&gt;) =&gt; Promise&lt;void&gt;
+|the async function to execute.
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_startOn_member_1"]
+=== startOn(eventName, config, handler)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|eventName
+m|string
+|
+
+m|config
+m|\~StartHandlerConfig&lt;T, InstanceData, TimeoutNames&gt;
+|
+
+m|handler
+m|(saga: xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]&lt;TimeoutNames, InstanceData&gt;, event: T) =&gt; Promise&lt;void&gt;
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_subscribeStreams_member_1"]
+=== subscribeStreams(streams)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|streams
+m|string[]
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData>;
+----
+
+========
