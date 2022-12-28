@@ -7,8 +7,8 @@ import {
   State,
 } from "xstate";
 import {EventicleEvent} from "./core/event-client";
-import {AggregateRoot} from "./aggregate-root";
 import {logger} from "@eventicle/eventicle-utilities";
+import {AggregateRoot} from "./aggregate-root";
 
 export class XStateWorkflowError extends Error {}
 
