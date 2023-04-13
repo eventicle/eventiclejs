@@ -210,8 +210,8 @@ export default {
 
           return newEvents;
         },
-        () => {
-          logger.warn("Failed to do the thing");
+        (err) => {
+          logger.warn("Failed to persist entity, as lock timed out or failed: " + err?.message, err);
         }
       );
     });
