@@ -203,6 +203,8 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     const job = jobId(component, name, id);
 
     if (this.queue) {
+      // force removal of old job, if already exists.
+      await this.queue.remove(job);
       await this.queue.add(
         component,
         { name, id, data },
