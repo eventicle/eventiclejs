@@ -1,6 +1,11 @@
-import {Query} from "@eventicle/eventicle-utilities/dist/datastore";
-import {DataQuery} from "../index";
-import {logger} from "@eventicle/eventicle-utilities";
+import { Query } from "@eventicle/eventicle-utilities/dist/datastore";
+//import { DataQuery } from "../index";
+import { logger } from "@eventicle/eventicle-utilities";
+
+interface DataQuery {
+  value: string | number | [number, number] | string[] | { [key: string]: any }
+  op: "EQ" | "LT" | "GT" | "LTE" | "GTE" | "BETWEEN" | "IN" | "OBJECT" | "LIKE" | "INARRAY"
+}
 
 
 export const isPrimitive = (it: any): boolean =>
@@ -115,6 +120,15 @@ export function filterTableUsingObjectComparison<T>(table: T[], query: Query, ac
               }
             } else {
               fieldsAllMatch = false;
+            }
+            break;
+          case "INARRAY":
+            if (Array.isArray(data)) {
+              if (!(data.includes(val.value))) {
+                fieldsAllMatch = false
+              }
+            } else {
+              fieldsAllMatch = false
             }
             break;
           case "EQ":
