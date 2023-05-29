@@ -243,6 +243,50 @@ describe('Data Store', function() {
       ]))
   })
 
+  it('ARRAY_CONTAINS raw types', async function () {
+    await standardData()
+    const ret = await dataStore().findEntity("first", "first", {
+      arrayVal: {
+        op: "ARRAY_CONTAINS",
+        value: "three"
+      }
+    })
+    expect(ret.length).toBe(3)
+    expect(ret.map((value: any) => value.content))
+      .toStrictEqual(expect.arrayContaining([
+        expect.objectContaining({
+          ide: "three",
+          arrayVal: ["two", "three"]
+        }),
+        expect.objectContaining({
+          ide: "four",
+          arrayVal: ["one", "three"]
+        }),
+        expect.objectContaining({
+          ide: "five",
+          arrayVal: ["four", "two", "three"]
+        }),
+      ]))
+  })
+  it('ARRAY_CONTAINS flat object types', async function () {
+    await standardData()
+    const ret = await dataStore().findEntity("first", "first", {
+      arrayComplexVal: {
+        op: "ARRAY_CONTAINS",
+        value: { type: "one", flag: true }
+      }
+    })
+    expect(ret.length).toBe(2)
+    expect(ret.map((value: any) => value.content))
+      .toStrictEqual(expect.arrayContaining([
+        expect.objectContaining({
+          ide: "first"
+        }),
+        expect.objectContaining({
+          ide: "two"
+        })
+      ]))
+  })
   it("LIKE", async () => {
     await standardData()
 
@@ -305,6 +349,7 @@ async function standardData() {
     ide: "first",
     val: 100,
     arrayVal: ["one", "two"],
+    arrayComplexVal: [{ type: "one", flag: true}, { type: "two", flag: true }, { type: "three", flag: false }],
     nestedVal: {
       secondLayer: "some layer",
       secondArray: ["sour", "anger", "data"]
@@ -314,6 +359,7 @@ async function standardData() {
     ide: "two",
     val: 101,
     arrayVal: ["one", "four"],
+    arrayComplexVal: [{ type: "two", flag: true }, { type: "one", flag: true}, { type: "two", flag: false }],
     nestedVal: {
       secondLayer: "lazy value",
       secondArray: ["eight", "sixteen"]
@@ -322,12 +368,14 @@ async function standardData() {
   await dataStore().createEntity("first", "first", {
     ide: "three",
     val: 102,
-    arrayVal: ["two", "three"]
+    arrayVal: ["two", "three"],
+    arrayComplexVal: [{ type: "two", flag: true }],
   })
   await dataStore().createEntity("first", "first", {
     ide: "four",
     val: 103,
-    arrayVal: ["one", "three"]
+    arrayVal: ["one", "three"],
+    arrayComplexVal: [{ type: "two", flag: false }],
   })
   await dataStore().createEntity("first", "first", {
     ide: "five",

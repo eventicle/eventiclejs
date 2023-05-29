@@ -4,7 +4,7 @@ import {logger} from "@eventicle/eventicle-utilities";
 
 
 export const isPrimitive = (it: any): boolean =>
-  ["string", "number"].includes(typeof it);
+  ["string", "number", "boolean"].includes(typeof it);
 
 export function partialCompareArray(partial: any[], data: any[]): boolean {
   if (partial.some((el) => Array.isArray(el) || typeof el === "object")) {
@@ -106,7 +106,7 @@ export function filterTableUsingObjectComparison<T>(table: T[], query: Query, ac
     Object.keys(query).forEach((key) => {
       if (typeof query[key] === "object") {
         let val = query[key] as DataQuery;
-        let data = accessor(entry)[key];
+        const data = accessor(entry)[key];
         switch (val.op) {
           case "IN":
             if (Array.isArray(val.value)) {
@@ -152,7 +152,7 @@ export function filterTableUsingObjectComparison<T>(table: T[], query: Query, ac
             if (typeof val.value === "string") {
               parsed = JSON.parse(val.value as string);
             }
-            fieldsAllMatch = partialCompareObject(val.value, accessor(entry));
+            fieldsAllMatch = partialCompareObject(parsed, accessor(entry));
             break;
           case "LIKE": {
             if (
@@ -170,6 +170,20 @@ export function filterTableUsingObjectComparison<T>(table: T[], query: Query, ac
             }
             break;
           }
+          case "ARRAY_CONTAINS":
+            if (
+              isPrimitive(val.value)
+            ) {
+              if (!data.includes(val.value)) {
+                fieldsAllMatch = false;
+              }
+            } else {
+              const matches = data?.filter( full => partialCompareObject(val.value, full)) || []
+              if (matches.length == 0) {
+                fieldsAllMatch = false;
+              }
+            }
+            break;
         }
       } else if (query[key] !== accessor(entry)[key]) {
         fieldsAllMatch = false;
