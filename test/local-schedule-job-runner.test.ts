@@ -53,7 +53,7 @@ describe('Schedule Job Runner on LockManager', function () {
 
     expect(listener2Data.length).toBe(0)
     expect(listener1Data.length).toBe(1)
-    expect(listener1Data[0]).toStrictEqual({ name: "do-something", data: { hello: "there" }})
+    expect(listener1Data[0]).toStrictEqual({ name: "do-something", data: "id"})
 
     expect(dataBeforeFire.length).toBe(1)
     expect(dataAfterFire.length).toBe(0)

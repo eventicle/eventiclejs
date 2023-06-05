@@ -146,7 +146,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
         let name = value.content.component + value.content.name
 
         let cron = this.crons.get(name)
-        if (crons) {
+        if (cron) {
           cron.stop()
           this.crons.delete(name)
         }

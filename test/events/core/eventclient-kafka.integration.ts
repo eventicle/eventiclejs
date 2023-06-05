@@ -51,7 +51,7 @@ afterEach(async () => {
   );
 });
 
-test("hot stream recieves events", async function () {
+test("hot stream receives events", async function () {
   let myevents = [] as EventicleEvent[];
 
   let consumer = await eventClient().hotStream(

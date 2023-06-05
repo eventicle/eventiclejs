@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@eventicle/eventicle-utilities": "^0.0.13",
-    "bullmq": "^3.5.1"
+    "bullmq": "^3.15.0"
   },
   "dependencies": {
     "@microsoft/api-documenter": "^7.19.27",
@@ -50,7 +50,7 @@
     "@types/node": "^16.11.7",
     "@types/uuid": "^9.0.0",
     "api-documenter-yaml-to-antora-asciidoc": "^0.0.0-11",
-    "bullmq": "^3.5.1",
+    "bullmq": "^3.15.0",
     "jest": "^29.3.1",
     "prettier": "^2.8.1",
     "ts-jest": "^29.0.3",

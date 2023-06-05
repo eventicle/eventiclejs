@@ -3,9 +3,11 @@ import { logger } from "@eventicle/eventicle-utilities";
 import { maybeRenderError } from "@eventicle/eventicle-utilities/dist/logger-util";
 import * as CronParser from "cron-parser";
 import { dataStore } from "@eventicle/eventicle-utilities/dist/datastore";
-import {Queue, RedisOptions, Worker} from "bullmq";
+import {Queue, QueueEvents, RedisOptions, Worker} from "bullmq";
 import stableStringify from "json-stable-stringify";
 import {eventSourceName} from "./events/core/event-client";
+import * as uuid from "uuid";
+import { als } from "asynchronous-local-storage";
 
 const deepEqual = require("deep-equal");
 
@@ -47,6 +49,10 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
   activeJobs: {
     [key: string]: any;
   } = {};
+
+  private opsOnJobCompletion = new Map<string, {
+    jobId: string, ops: (() => Promise<void>)[]
+  }>()
 
   constructor(readonly config: RedisOptions) {}
 
@@ -203,19 +209,35 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     const job = jobId(component, name, id);
 
     if (this.queue) {
-      // force removal of old job, if already exists.
-      await this.queue.remove(job);
-      await this.queue.add(
-        component,
-        { name, id, data },
-        {
-          delay: config.timeout,
-          jobId: job,
-          removeOnComplete: {
-            age: 1200,
-          },
+      const exec = async () => {
+        // force removal of old job, if already exists.
+        const foundJobs = (await this.queue.getJobs()).filter(val => {
+          return val?.opts?.jobId == job
+        })
+        console.log("REMOVAL RESULT", await Promise.all(foundJobs.map(value => value.remove())))
+        if (foundJobs && foundJobs.length > 0) {
+          logger.debug(`Removed old jobs to make way for new ones ${foundJobs.map(value => value.id)}`)
         }
-      );
+
+        console.log("JOBS AFTER DEL", await this.queue.getJobs())
+
+        const addedJob = await this.queue.add(
+          component,
+          {name, id: uuid.v4(), data},
+          {
+            delay: config.timeout,
+            jobId: job,
+            removeOnComplete: true,
+            removeOnFail: true
+          }
+        );
+        logger.debug("Job added to queue ", addedJob)
+      }
+      if (als.get("in-context")) {
+        (als.get("ops") as any[]).push(exec)
+      } else {
+        exec().catch(reason => logger.warn("Failed to manage timers in Saga instance " + reason.message, reason))
+      }
     }
   }
 
@@ -248,14 +270,20 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     });
 
     if (timers.length > 0) {
-      await Promise.all(
-        timers.map(async (value) => {
-          logger.debug("Removing simple timer ", value);
-
-          await this.queue.remove(jobId(component, value.content.name, id));
-          await dataStore().deleteEntity("system", TIMER, value.id);
-        })
-      );
+      const ops = []
+      for (let value of timers) {
+        logger.debug("Removing simple timer ", value);
+        const bullMqRemoval = async () => {
+          const job = await this.queue.getJob(jobId(component, value.content.name, id))
+          await job.remove()
+        }
+        if (als.get("in-context")) {
+          (als.get("ops") as any[]).push(bullMqRemoval)
+        } else {
+          await bullMqRemoval()
+        }
+        await dataStore().deleteEntity("system", TIMER, value.id);
+      }
     }
 
     const crons = await dataStore().findEntity("system", CRON, {
@@ -287,26 +315,44 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     this.queue = new Queue(eventSourceName() + "SchedulerJobRunner", {
       connection: this.config,
       defaultJobOptions: {
-        removeOnComplete: 500,
+        removeOnComplete: true,
+        removeOnFail: true
       },
     });
+
+    const listener = new QueueEvents("Listener", { connection: this.config })
+    listener.on("duplicated", (args, id) => {
+      logger.debug("Duplicate job added, and will be ignored", {
+        args, id
+      })
+    })
+
     this.worker = new Worker(
       eventSourceName() + "SchedulerJobRunner",
       async (job) => {
         logger.debug("Scheduled Job triggered ", job);
-        const exec = this.listeners.get(job.name);
-        if (!exec) {
-          logger.warn("No handler for job type " + job.name);
-          return;
-        }
-        await exec({ name: job.data.name, id: job.data.id, data: job.data.data });
-        // await Promise.allSettled(this.listeners.map(value => value(job.name, {name: job.data.name, id: job.data.id, data: job.data.data})))
+        als.runWith(async () => {
+          // run in own ALS context.
+          als.set("in-context", true);
+          als.set("ops", []);
+          const exec = this.listeners.get(job.name);
+          if (!exec) {
+            logger.warn("No handler for job type " + job.name);
+            return;
+          }
+          await exec({name: job.data.name, id: job.data.id, data: job.data.data});
+          this.opsOnJobCompletion.set(job.id, {jobId: job.id, ops: als.get("ops")})
+        })
       },
       {
         connection: this.config,
         concurrency: 20,
       }
     );
+
+    this.worker.on("completed", async job => {
+      console.log("Detected job completion. checking ops ... ", this.opsOnJobCompletion.get(job.id))
+    })
 
     // load all the timers
     await dataStore()

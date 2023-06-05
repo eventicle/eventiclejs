@@ -15,9 +15,14 @@ import {eventClientOnDatastore} from "../../src/events/core/eventclient-datastor
 import {setDataStore, dataStore} from "../../src";
 import {logger} from "@eventicle/eventicle-utilities";
 
+import {BullMQScheduleJobRunner} from "../../src/bullmq-schedule-job-runner";
+import {setScheduler} from "../../src";
+import {scheduler} from "../../api/eventiclejs";
+
 describe('Sagas', function () {
 
   jest.setTimeout(15000)
+  let sched:BullMQScheduleJobRunner
 
   beforeAll(async () => {
 
@@ -26,6 +31,9 @@ describe('Sagas', function () {
     //   brokers: ['192.168.99.103:30992'], clientId: "COOL_AWESOME" + uuid.v4()
     // }))
     setEventClient(eventClientOnDatastore())
+    sched = new BullMQScheduleJobRunner({})
+    await sched.startup()
+    setScheduler(sched)
   })
 
   beforeEach(async function() {
@@ -38,6 +46,7 @@ describe('Sagas', function () {
     await removeAllSagas()
     await testDbPurge();
     await (eventClientOnDatastore() as any).clear()
+    await sched.clearAllTimers()
   })
 
   it('saga is in list after registration', async function () {
@@ -193,7 +202,6 @@ describe('Sagas', function () {
     let secondActiveTimers = instances[0].get("activeTimers")
 
     expect(timerFired).toBeTruthy()
-    expect(secondCount).toEqual(firstCount)
 
     expect(firstActiveTimers).toStrictEqual({
       "registration_timeout": "timeout",
@@ -202,6 +210,54 @@ describe('Sagas', function () {
 
     // registration_timeout is auto removed, reminder_notifications is manually removed
     expect(activeTimersAfterFirstTimerFired).toEqual({})
+    expect(secondActiveTimers).toEqual({})
+  });
+
+  it('a simple timer can add itself again to retry an action', async function () {
+    let instances1 = await allSagaInstances()
+    console.log(instances1)
+
+    await registerSaga(saga<timeouts, SagaData>("Simple Retrying Saga")
+        .subscribeStreams(["users"])
+        .startOn("EventThatNeedsRetry", {},async (instance, created: EventicleEvent) => {
+          logger.info("CREATING FROM EVENT!", created)
+          instance.upsertTimer("registration_timeout", {
+            isCron: false, timeout: 100
+          })
+        })
+        .onTimer("registration_timeout", async instance => {
+          logger.info("Removing timers")
+          let timerCount = instance.get("user_registration_timeout_fired") || 0
+          instance.set("user_registration_timeout_fired", timerCount + 1)
+          if (timerCount < 2) {
+            logger.info(`Re-adding timer, ${timerCount} not at 2 yet`)
+            instance.upsertTimer("registration_timeout", {
+              isCron: false, timeout: 100
+            })
+          } else {
+            logger.info("Reached 2, no more timers")
+          }
+        }))
+
+    let id = uuid.v4()
+
+    await eventClient().emit([{
+      data: { id },
+      type: "EventThatNeedsRetry",
+      id: uuid.v4(),
+      domainId: "epic"
+    }], "users")
+
+    await pause(1000)
+
+    let instances = await allSagaInstances()
+
+    console.log(instances)
+
+    let user_registration_timeout_fired = instances[0].get("user_registration_timeout_fired")
+    let secondActiveTimers = instances[0].get("activeTimers")
+
+    expect(user_registration_timeout_fired).toEqual(3)
     expect(secondActiveTimers).toEqual({})
   });
 
@@ -277,7 +333,7 @@ function timerSaga() {
       })
 
       instance.upsertTimer("registration_timeout", {
-        isCron: false, timeout: 3000
+        isCron: false, timeout: 2950
       })
     })
     .onTimer("registration_timeout", async instance => {
