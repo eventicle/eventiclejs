@@ -227,8 +227,8 @@ describe('Sagas', function () {
         })
         .onTimer("registration_timeout", async instance => {
           logger.info("Removing timers")
-          let timerCount = instance.get("user_registration_timeout_fired") || 0
-          instance.set("user_registration_timeout_fired", timerCount + 1)
+          let timerCount = instance.get("user_registration_timeout") || 0
+          instance.set("user_registration_timeout", timerCount + 1)
           if (timerCount < 2) {
             logger.info(`Re-adding timer, ${timerCount} not at 2 yet`)
             instance.upsertTimer("registration_timeout", {
@@ -254,7 +254,7 @@ describe('Sagas', function () {
 
     console.log(instances)
 
-    let user_registration_timeout_fired = instances[0].get("user_registration_timeout_fired")
+    let user_registration_timeout_fired = instances[0].get("user_registration_timeout")
     let secondActiveTimers = instances[0].get("activeTimers")
 
     expect(user_registration_timeout_fired).toEqual(3)
@@ -283,6 +283,7 @@ interface SagaData {
   domainId: string
 
   user_registration_timeout_fired: boolean
+  user_registration_timeout: number
   user_reminder_count: number
 }
 

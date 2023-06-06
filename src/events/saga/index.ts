@@ -94,7 +94,7 @@ export class SagaInstance<TimeoutNames, T> {
    * Get a piece of arbitrary data from the saga instance
    * @param name THe key
    */
-  get(name: keyof T): any {
+  get<K extends keyof T>(name: K): T[K] {
     return this.internalData[name]
   }
 

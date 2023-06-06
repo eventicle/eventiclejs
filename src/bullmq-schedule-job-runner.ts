@@ -50,10 +50,6 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     [key: string]: any;
   } = {};
 
-  private opsOnJobCompletion = new Map<string, {
-    jobId: string, ops: (() => Promise<void>)[]
-  }>()
-
   constructor(readonly config: RedisOptions) {}
 
   async addScheduleTaskListener(
@@ -214,12 +210,9 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
         const foundJobs = (await this.queue.getJobs()).filter(val => {
           return val?.opts?.jobId == job
         })
-        console.log("REMOVAL RESULT", await Promise.all(foundJobs.map(value => value.remove())))
         if (foundJobs && foundJobs.length > 0) {
           logger.debug(`Removed old jobs to make way for new ones ${foundJobs.map(value => value.id)}`)
         }
-
-        console.log("JOBS AFTER DEL", await this.queue.getJobs())
 
         const addedJob = await this.queue.add(
           component,
@@ -270,12 +263,11 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     });
 
     if (timers.length > 0) {
-      const ops = []
       for (let value of timers) {
         logger.debug("Removing simple timer ", value);
         const bullMqRemoval = async () => {
           const job = await this.queue.getJob(jobId(component, value.content.name, id))
-          await job.remove()
+          await job?.remove()
         }
         if (als.get("in-context")) {
           (als.get("ops") as any[]).push(bullMqRemoval)
@@ -341,7 +333,6 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
             return;
           }
           await exec({name: job.data.name, id: job.data.id, data: job.data.data});
-          this.opsOnJobCompletion.set(job.id, {jobId: job.id, ops: als.get("ops")})
         })
       },
       {
@@ -349,10 +340,6 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
         concurrency: 20,
       }
     );
-
-    this.worker.on("completed", async job => {
-      console.log("Detected job completion. checking ops ... ", this.opsOnJobCompletion.get(job.id))
-    })
 
     // load all the timers
     await dataStore()
