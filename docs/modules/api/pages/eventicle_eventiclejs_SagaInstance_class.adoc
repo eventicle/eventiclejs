@@ -166,18 +166,18 @@ Get a piece of arbitrary data from the saga instance
 |Name |Type |Description
 
 m|name
-m|keyof T
+m|K
 |THe key
 
 s|Returns
-m|any
+m|T[K]
 |
 |===
 
 .Signature
 [source,typescript]
 ----
-get(name: keyof T): any;
+get<K extends keyof T>(name: K): T[K];
 ----
 
 ========
