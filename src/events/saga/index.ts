@@ -245,6 +245,15 @@ export async function removeAllSagas(): Promise<void> {
   SAGAS.length = 0
 }
 
+async function handleSagaInstanceEnd(instance: SagaInstance<unknown, unknown>, saga: Saga<any, any>) {
+  if (instance.internalData.ended) {
+    await removeAllTimersForInstance(saga, instance)
+  }
+  if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
+    await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
+  }
+}
+
 async function processSagaInstanceWithExecutor(currentInstance: Record, executor: (instance: SagaInstance<any, any>) => Promise<void>, saga: Saga<any, any>) {
   let instance = new SagaInstance(currentInstance.content, currentInstance)
 
@@ -255,13 +264,7 @@ async function processSagaInstanceWithExecutor(currentInstance: Record, executor
   instance.record.content = instance.internalData
   await processTimersInSagaInstance(saga, instance)
   await dataStore().saveEntity("system", "saga-instance", instance.record)
-
-  if (instance.internalData.ended) {
-    await removeAllTimersForInstance(saga, instance)
-  }
-  if (instance.internalData.ended && !instance.internalData.preserveInstanceData) {
-    await dataStore().deleteEntity("system", "saga-instance", instance.record.id)
-  }
+  await handleSagaInstanceEnd(instance, saga);
 }
 
 async function checkSagaEventHandlers(saga: Saga<any, any>, event: EventicleEvent) {
@@ -326,7 +329,9 @@ async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEven
     let exec = async () => {
       await sagaStep.handle(instance, startEvent)
       await processTimersInSagaInstance(saga, instance)
-      await dataStore().createEntity("system", "saga-instance", instance.internalData)
+      const record = await dataStore().createEntity("system", "saga-instance", instance.internalData)
+      instance = new SagaInstance<any, any>(instance.internalData, record)
+      await handleSagaInstanceEnd(instance, saga)
     }
 
     if (sagaStep.config.withLock) {
