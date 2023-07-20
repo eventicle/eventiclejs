@@ -41,7 +41,6 @@ export async function registerView(
 ): Promise<EventSubscriptionControl> {
   let control = await eventClient().coldHotStream({
     handler: async (event) => {
-      console.log("STARTING TRANSACTION!");
       apmJoinEvent(
         event,
         view.consumerGroup + ":" + event.type,
