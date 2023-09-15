@@ -45,7 +45,7 @@ export class ThrottledProducer {
     this.createProducer();
   }
 
-  public send(event: Message, stream: string) {
+  public send(event: Message[], stream: string) {
     if (!this.isConnected) {
       throw new Error('You must connect before producing actions');
     }
@@ -58,7 +58,7 @@ export class ThrottledProducer {
           reject,
           record: {
             topic: stream,
-            messages: [event]
+            messages: event
           }
         }
       ];

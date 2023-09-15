@@ -1,4 +1,4 @@
-import {Consumer, ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig} from "kafkajs";
+import {Consumer, ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig, Message} from "kafkajs";
 import {
   EncodedEvent,
   EventClient,
@@ -250,24 +250,31 @@ class EventclientKafka implements EventClient {
 
   async emit(events: EventicleEvent[] | EncodedEvent[], stream: string): Promise<void> {
 
-    for (let event of events) {
+    const messages = await Promise.all(events.map(async (event: EventicleEvent | EncodedEvent )  => {
+      let kafkaMessage: Message
+
       if (isRawEvent(event)) {
-        let encoded = event
-        await this.throttle.send({
-          value: encoded.buffer,
+        kafkaMessage ={
+          value: event.buffer,
           key: event.key,
           timestamp: `${event.timestamp}`,
-          headers: encoded.headers
-        }, stream)
+          headers: event.headers
+        }
       } else {
         let encoded = await eventClientCodec().encode(event)
-        await this.throttle.send({
+        kafkaMessage ={
           value: encoded.buffer,
           key: encoded.key,
           timestamp: `${event.createdAt}`,
           headers: encoded.headers
-        }, stream)
+        }
       }
+
+      return kafkaMessage
+    }))
+
+    if (messages.length > 0) {
+      await this.throttle.send(messages, stream)
     }
   }
 

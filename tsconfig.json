@@ -15,6 +15,7 @@
     "alwaysStrict": true,
     "pretty": true,
     "stripInternal": true,
+    "skipLibCheck": true,
     "noImplicitAny": false,
     "allowSyntheticDefaultImports": false,
     "moduleResolution": "node",
@@ -26,7 +27,7 @@
       ]
     },
     "lib": [
-      "es6"
+
     ]
   },
   "include": [
