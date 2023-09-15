@@ -8,8 +8,8 @@ import { DataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { dataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { EventEmitter } from 'events';
 import { KafkaConfig } from 'kafkajs';
+import { LockManager } from '@eventicle/eventicle-utilities';
 import { lockManager } from '@eventicle/eventicle-utilities';
-import { LockManager as LockManager_2 } from '@eventicle/eventicle-utilities';
 import { LogApi } from '@eventicle/eventicle-utilities';
 import * as nodeCron from 'node-cron';
 import { PagedRecords } from '@eventicle/eventicle-utilities/dist/datastore';
@@ -639,9 +639,9 @@ export declare class LocalScheduleJobRunner implements ScheduleJobRunner {
     clearAllTimers(): void;
 }
 
-export { lockManager }
+export { LockManager }
 
-export { LockManager_2 as LockManager }
+export { lockManager }
 
 export { LogApi }
 
