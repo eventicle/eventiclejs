@@ -29,7 +29,7 @@ export interface EncodedEvent {
  * Convert {@link EventicleEvent} to/ from {@link EncodedEvent}.
  *
  * EncodedEvent is suitable for the {@link EventClient} implementations to send on the wire, as it
- * is a Buffer and a set of message headers. 
+ * is a Buffer and a set of message headers.
  */
 export interface EventClientCodec {
   /**
@@ -150,18 +150,18 @@ export interface EventClient {
   coldHotStream: (config: {
     rawEvents: true,
     stream: string | string[],
-    groupId?: string,
+    groupId: string,
     handler: (event: EncodedEvent) => Promise<void>,
     onError: (error: any) => void
   } | {
     rawEvents: false,
     stream: string | string[],
-    groupId?: string,
+    groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void
   } | {
     stream: string | string[],
-    groupId?: string,
+    groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void
   }) => Promise<EventSubscriptionControl>
@@ -187,4 +187,8 @@ export function eventClient(): EventClient {
 
 export function eventClientCodec(): EventClientCodec {
   return EVENT_CODEC
+}
+
+export function isEncodedEvent(event: EventicleEvent | EncodedEvent): event is EncodedEvent {
+  return "key" in event
 }

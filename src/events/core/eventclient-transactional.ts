@@ -44,9 +44,9 @@ class EventclientTransactional implements EventClient {
   }
 
   coldHotStream(config: {
-    rawEvents?: boolean,
+    rawEvents: boolean,
     stream: string | string[],
-    groupId?: string,
+    groupId: string,
     handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
     onError: (error: any) => void
   }): Promise<EventSubscriptionControl> {
