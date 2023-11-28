@@ -467,18 +467,18 @@ export declare interface EventClient {
     coldHotStream: (config: {
         rawEvents: true;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
         rawEvents: false;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     }) => Promise<EventSubscriptionControl>;
