@@ -22,18 +22,18 @@ Play from persisted storage the continue from in memory
 coldHotStream: (config: {
         rawEvents: true;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
         rawEvents: false;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     }) => Promise<EventSubscriptionControl>;
