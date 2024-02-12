@@ -81,6 +81,23 @@ s|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
 
 == Functions
 
+[id="eventicle_eventiclejs_aggregateObservationAdapter_function_1"]
+=== aggregateObservationAdapter()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+aggregateObservationAdapter: () => AggregateObservationAdapter
+----
+
+========
 [id="eventicle_eventiclejs_aggregateObserver_function_1"]
 === aggregateObserver(aggregateType, id, timeout, exec)
 
