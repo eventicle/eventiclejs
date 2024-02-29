@@ -38,7 +38,7 @@ crons: Map<string, nodeCron.ScheduledTask>;
 .Signature
 [source,typescript]
 ----
-events: EventEmitter;
+events: EventEmitter<[never]>;
 ----
 
 ========

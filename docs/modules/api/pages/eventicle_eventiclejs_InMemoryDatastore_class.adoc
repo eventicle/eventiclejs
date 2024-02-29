@@ -21,7 +21,7 @@ This is suitable for testing and single instance demonstration purposes.
 .Signature
 [source,typescript]
 ----
-events: EventEmitter;
+events: EventEmitter<[never]>;
 ----
 
 ========
