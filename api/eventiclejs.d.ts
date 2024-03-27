@@ -565,7 +565,7 @@ declare interface HandlerConfig<T extends EventicleEvent, Y, TimeoutNames> {
  * @see DataStore
  */
 export declare class implements DataStore {
-    events: EventEmitter;
+    events: EventEmitter<[never]>;
     hasTransactionData(): boolean;
     on(event: "transaction.start" | "transaction.commit", listener: (name: string, data: TransactionData) => void): this;
     getTransactionData(): TransactionData;
@@ -621,7 +621,7 @@ declare type LoadBulk = {
 export declare class LocalScheduleJobRunner implements ScheduleJobRunner {
     timers: Map<string, NodeJS.Timeout>;
     crons: Map<string, nodeCron.ScheduledTask>;
-    events: EventEmitter;
+    events: EventEmitter<[never]>;
     constructor();
     addScheduleTaskListener(component: string, exec: (name: string, id: string, data: any) => Promise<void>): Promise<void>;
     addScheduledTask(component: string, name: string, id: string, config: {
