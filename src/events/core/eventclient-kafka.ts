@@ -10,6 +10,7 @@ import * as uuid from "uuid"
 import {logger} from "@eventicle/eventicle-utilities";
 import {ThrottledProducer} from "./kafka-throttle";
 import {eventClientTransactional} from "./eventclient-transactional";
+import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util";
 
 interface KafkaClientHealth {
   healthy: boolean
@@ -161,24 +162,33 @@ class EventclientKafka implements EventClient {
       eachMessage: async payload => {
         logger.debug(`[${config.groupId}] message received on sub id ` + id, payload)
 
-        if (config.rawEvents) {
-          await config.handler({
-            timestamp: payload.message.timestamp ? parseInt(payload.message.timestamp) : 0,
-            key: payload.message.key ? payload.message.key.toString() : null,
-            buffer: payload.message.value,
-            headers: payload.message.headers
-          })
-        } else {
-          let decoded = await eventClientCodec().decode({
-            timestamp: parseInt(payload.message.timestamp),
-            key: payload.message.key ? payload.message.key.toString() : null,
-            headers: payload.message.headers,
-            buffer: payload.message.value
-          })
+        try {
+          if (config.rawEvents) {
+            await config.handler({
+              timestamp: payload.message.timestamp ? parseInt(payload.message.timestamp) : 0,
+              key: payload.message.key ? payload.message.key.toString() : null,
+              buffer: payload.message.value,
+              headers: payload.message.headers
+            })
+          } else {
+            let decoded = await eventClientCodec().decode({
+              timestamp: parseInt(payload.message.timestamp),
+              key: payload.message.key ? payload.message.key.toString() : null,
+              headers: payload.message.headers,
+              buffer: payload.message.value
+            })
+            if (!decoded) {
+              return;
+            }
 
-          decoded.stream = payload.topic
+            decoded.stream = payload.topic
 
-          await config.handler(decoded)
+            await config.handler(decoded)
+          }
+        } catch (e) {
+          logger.warn("Consumer failed to process message, dropping to avoid poisoning queue", {
+            error: maybeRenderError(e), consumer: config.groupId, stream: config.stream
+          });
         }
       }
     })
@@ -323,20 +333,29 @@ class EventclientKafka implements EventClient {
     await cons.run({
       ...newRunConf,
       eachMessage: async (payload) => {
-        let encodedEvent = {
-          timestamp: parseInt(payload.message.timestamp),
-          key: payload.message.key ? payload.message.key.toString() : null,
-          headers: payload.message.headers, buffer: payload.message.value
-        } as EncodedEvent
+        try {
+          let encodedEvent = {
+            timestamp: parseInt(payload.message.timestamp),
+            key: payload.message.key ? payload.message.key.toString() : null,
+            headers: payload.message.headers, buffer: payload.message.value
+          } as EncodedEvent
 
-        if (config.rawEvents) {
-          await config.consumer(encodedEvent)
-        } else {
-          let decoded = await eventClientCodec().decode(encodedEvent)
+          if (config.rawEvents) {
+            await config.consumer(encodedEvent)
+          } else {
+            let decoded = await eventClientCodec().decode(encodedEvent)
+            if (!decoded) {
+              return;
+            }
 
-          decoded.stream = payload.topic
+            decoded.stream = payload.topic
 
-          await config.consumer(decoded)
+            await config.consumer(decoded)
+          }
+        } catch (e) {
+          logger.warn("Consumer failed to process message, dropping to avoid poisoning queue", {
+            error: maybeRenderError(e), consumer: config.consumerName, stream: config.stream
+          })
         }
       }
     })
