@@ -1,20 +1,15 @@
 import {
   CompressionTypes,
   Kafka, KafkaConfig,
-  Message,
-  Partitioners,
   Producer,
   ProducerConfig,
-  ProducerRecord,
   TopicMessages
 } from "kafkajs";
 import {logger} from "@eventicle/eventicle-utilities";
-import {pause} from "../../../util";
 import * as uuid from "uuid";
 import {HealthCheckStatus} from "../eventclient-kafka";
 import {EventOutbox, OutboxSender} from "./outbox-event-client";
-import {dataStore} from "../../../../api/eventiclejs";
-import {EncodedEvent} from "../event-client";
+import {dataStore} from "@eventicle/eventicle-utilities/dist/datastore";
 
 export interface IKafkaJSProtocolError {
   name: string;
