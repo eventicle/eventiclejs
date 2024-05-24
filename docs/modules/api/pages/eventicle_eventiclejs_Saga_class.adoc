@@ -60,6 +60,23 @@ readonly name: string;
 ----
 
 ========
+[id="eventicle_eventiclejs_Saga_parallelEventCount_member"]
+=== parallelEventCount
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+parallelEventCount: number;
+----
+
+========
 [id="eventicle_eventiclejs_Saga_starts_member"]
 === starts
 
@@ -268,6 +285,36 @@ m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData
 [source,typescript]
 ----
 onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_parallelEvents_member_1"]
+=== parallelEvents(val)
+
+========
+
+
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|val
+m|number
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
 ----
 
 ========

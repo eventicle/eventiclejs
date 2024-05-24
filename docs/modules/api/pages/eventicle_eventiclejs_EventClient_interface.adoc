@@ -20,18 +20,21 @@ Play from persisted storage the continue from in memory
 [source,typescript]
 ----
 coldHotStream: (config: {
+        parallelEventCount?: number;
         rawEvents: true;
         stream: string | string[];
         groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
+        parallelEventCount?: number;
         rawEvents: false;
         stream: string | string[];
         groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
+        parallelEventCount?: number;
         stream: string | string[];
         groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
@@ -53,7 +56,12 @@ Play from persisted storage
 .Signature
 [source,typescript]
 ----
-coldStream: (stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void) => Promise<EventSubscriptionControl>;
+coldStream: (config: {
+        stream: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+        onDone: () => void;
+    }) => Promise<EventSubscriptionControl>;
 ----
 
 ========
@@ -87,7 +95,13 @@ Only play hot data.
 .Signature
 [source,typescript]
 ----
-hotRawStream: (stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+hotRawStream: (config: {
+        parallelEventCount?: number;
+        stream: string | string[];
+        groupId: string;
+        handler: (event: EncodedEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
 ----
 
 ========
@@ -104,7 +118,13 @@ Only play hot data.
 .Signature
 [source,typescript]
 ----
-hotStream: (stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+hotStream: (config: {
+        parallelEventCount?: number;
+        stream: string | string[];
+        groupId: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
 ----
 
 ========

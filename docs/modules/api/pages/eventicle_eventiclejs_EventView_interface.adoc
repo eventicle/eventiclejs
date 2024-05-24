@@ -40,6 +40,23 @@ handleEvent: (event: EventicleEvent) => Promise<void>;
 ----
 
 ========
+[id="eventicle_eventiclejs_EventView_parallelEventCount_member"]
+=== parallelEventCount
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+parallelEventCount?: number;
+----
+
+========
 [id="eventicle_eventiclejs_EventView_streamsToSubscribe_member"]
 === streamsToSubscribe
 

@@ -342,7 +342,7 @@ export declare function consumeFullEventLog(stream: string): Promise<EventicleEv
 
 declare interface ConsumerConfigFactory {
     consumerConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerConfig>;
-    consumerRunConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerRunConfig>;
+    consumerRunConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType, partitionsConsumedConcurrently: number) => Partial<ConsumerRunConfig>;
 }
 
 declare type ConsumerConfigStreamType = "HOT" | "COLD" | "COLD_HOT";
@@ -433,50 +433,52 @@ export declare interface EventClient {
     emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>;
     /**
      * Play from persisted storage
-     * @param stream
-     * @param from
-     * @param handler
-     * @param onError
-     * @param onDone
      */
-    coldStream: (stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void) => Promise<EventSubscriptionControl>;
+    coldStream: (config: {
+        stream: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+        onDone: () => void;
+    }) => Promise<EventSubscriptionControl>;
     /**
      * Only play hot data.
-     * @param stream
-     * @param consumerName
-     * @param handler
-     * @param onError
      */
-    hotStream: (stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+    hotStream: (config: {
+        parallelEventCount?: number;
+        stream: string | string[];
+        groupId: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
     /**
      * Only play hot data.
-     * @param stream
-     * @param consumerName
-     * @param handler
-     * @param onError
      */
-    hotRawStream: (stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+    hotRawStream: (config: {
+        parallelEventCount?: number;
+        stream: string | string[];
+        groupId: string;
+        handler: (event: EncodedEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
     /**
      * Play from persisted storage the continue from in memory
-     * @param stream
-     * @param from
-     * @param handler
-     * @param onError
-     * @param onDone
      */
     coldHotStream: (config: {
+        parallelEventCount?: number;
         rawEvents: true;
         stream: string | string[];
         groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
+        parallelEventCount?: number;
         rawEvents: false;
         stream: string | string[];
         groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
+        parallelEventCount?: number;
         stream: string | string[];
         groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
@@ -536,6 +538,7 @@ declare interface EventSubscriptionControl {
 }
 
 export declare interface EventView {
+    parallelEventCount?: number;
     consumerGroup: string;
     handleEvent: (event: EventicleEvent) => Promise<void>;
     streamsToSubscribe: string[];
@@ -702,6 +705,7 @@ export declare class Saga<TimeoutNames, InstanceData> {
     readonly name: string;
     streams: string[];
     streamSubs: EventSubscriptionControl[];
+    parallelEventCount: number;
     starts: Map<string, {
         config: StartHandlerConfig<any, InstanceData, TimeoutNames>;
         handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>;
@@ -715,6 +719,7 @@ export declare class Saga<TimeoutNames, InstanceData> {
         handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>;
     }>;
     constructor(name: string);
+    parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
     subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData>;
     /**
      * Register a handler for a timer triggered saga step.
