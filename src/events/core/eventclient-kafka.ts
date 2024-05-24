@@ -41,7 +41,7 @@ let consumerConfigFactory: ConsumerConfigFactory = {
       groupId: consumerName
     }
   },
-  consumerRunConfig: (stream, consumerName, type) => {
+  consumerRunConfig: (stream, consumerName, type, partitionsConsumedConcurrently) => {
     if (type === "COLD") {
       return {
         autoCommit: true,
@@ -53,7 +53,7 @@ let consumerConfigFactory: ConsumerConfigFactory = {
       autoCommit: true,
       autoCommitInterval: 500,
       autoCommitThreshold: 50,
-      partitionsConsumedConcurrently: 50,
+      partitionsConsumedConcurrently: partitionsConsumedConcurrently ?? 50,
     }
   }
 }
@@ -111,6 +111,7 @@ class EventclientKafka implements EventClient {
 
   async coldHotStream(config: {
     rawEvents?: boolean,
+    parallelEventCount?: number,
     stream: string | string[],
     groupId?: string,
     handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
@@ -156,7 +157,7 @@ class EventclientKafka implements EventClient {
       await cons.subscribe({topic: config.stream, fromBeginning: true})
     }
 
-    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT")
+    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount)
     cons.run({
       ...newRunConf,
       eachMessage: async payload => {
@@ -183,6 +184,7 @@ class EventclientKafka implements EventClient {
 
             decoded.stream = payload.topic
 
+            logger.debug(`Received event ${decoded.id} on ${config.groupId} on topic ${payload.topic}`, decoded)
             await config.handler(decoded)
           }
         } catch (e) {
@@ -202,10 +204,16 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
+  async coldStream(config: {
+    stream: string,
+    parallelEventCount?: number,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void,
+    onDone: () => void
+  }): Promise<EventSubscriptionControl> {
 
     const groupId = uuid.v4()
-    let newConf = consumerConfigFactory.consumerConfig(stream, groupId, "COLD")
+    let newConf = consumerConfigFactory.consumerConfig(config.stream, groupId, "COLD")
 
     let cons = kafka.consumer({
       groupId: newConf.groupId || groupId,
@@ -215,16 +223,16 @@ class EventclientKafka implements EventClient {
     let adm = kafka.admin()
     await adm.connect()
 
-    let partitionOffsets = await adm.fetchTopicOffsets(stream)
+    let partitionOffsets = await adm.fetchTopicOffsets(config.stream)
     let latestOffset = Math.max(...partitionOffsets.map(value => parseInt(value.offset)))
     await adm.disconnect()
 
-    logger.debug(`Cold replay of ${stream} by [${groupId}], seek till ${latestOffset}`)
+    logger.debug(`Cold replay of ${config.stream} by [${groupId}], seek till ${latestOffset}`)
 
     await cons.connect()
 
-    await cons.subscribe({topic: stream, fromBeginning: true})
-    let newRunConf = consumerConfigFactory.consumerRunConfig(stream, groupId, "COLD")
+    await cons.subscribe({topic: config.stream, fromBeginning: true})
+    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, groupId, "COLD", config.parallelEventCount)
 
     cons.run({
       ...newRunConf,
@@ -240,11 +248,11 @@ class EventclientKafka implements EventClient {
 
           decoded.stream = payload.topic
 
-          await handler(decoded)
+          await config.handler(decoded)
         } finally {
           if (parseInt(payload.message.offset) >= latestOffset - 1) {
             logger.debug(`Group ID [${groupId}] finishes cold replay on offset ${payload.message.offset}`)
-            onDone()
+            config.onDone()
             await cons.disconnect()
           }
         }
@@ -290,6 +298,7 @@ class EventclientKafka implements EventClient {
 
   private async hotStreamInternal(
     config: {
+      parallelEventCount?: number
       rawEvents?: boolean,
       stream: string | string[],
       consumerName: string,
@@ -328,7 +337,7 @@ class EventclientKafka implements EventClient {
       await cons.subscribe({topic: config.stream})
     }
 
-    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT")
+    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount)
 
     await cons.run({
       ...newRunConf,
@@ -368,17 +377,32 @@ class EventclientKafka implements EventClient {
     }
   }
 
-  async hotRawStream(stream: string | string[], consumerName: string, consumer: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+  async hotRawStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
     return this.hotStreamInternal({
+      parallelEventCount: config.parallelEventCount,
       rawEvents: true,
-      stream, consumerName, consumer, onError
+      stream:config.stream, consumerName: config.groupId, consumer: config.handler, onError: config.onError,
+
     })
   }
 
-  async hotStream(stream: string | string[], consumerName: string, consumer: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
+  async hotStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
     return this.hotStreamInternal({
+      parallelEventCount: config.parallelEventCount,
       rawEvents: false,
-      stream, consumerName, consumer, onError
+      stream:config.stream, consumerName: config.groupId, consumer: config.handler, onError: config.onError
     })
   }
 
@@ -420,7 +444,7 @@ export type ConsumerConfigStreamType = "HOT" | "COLD" | "COLD_HOT"
 
 export interface ConsumerConfigFactory {
   consumerConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerConfig>;
-  consumerRunConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType) => Partial<ConsumerRunConfig>;
+  consumerRunConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType, partitionsConsumedConcurrently: number) => Partial<ConsumerRunConfig>;
 }
 
 export async function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient> {

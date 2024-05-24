@@ -14,7 +14,7 @@ export function eventSourceName(): string {
   return EVENT_SOURCE
 }
 
-export function isRawEvent(event: EncodedEvent | EventicleEvent): event is EncodedEvent  {
+export function isRawEvent(event: EncodedEvent | EventicleEvent): event is EncodedEvent {
   return event.hasOwnProperty("buffer")
 }
 
@@ -104,62 +104,55 @@ export interface EventClient {
   emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>
   /**
    * Play from persisted storage
-   * @param stream
-   * @param from
-   * @param handler
-   * @param onError
-   * @param onDone
    */
-  coldStream: (stream: string,
-               handler: (event: EventicleEvent) => Promise<void>,
-               onError: (error: any) => void,
-               onDone: () => void) => Promise<EventSubscriptionControl>
+  coldStream: (config: {
+    stream: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void,
+    onDone: () => void
+  }) => Promise<EventSubscriptionControl>
   /**
    * Only play hot data.
-   * @param stream
-   * @param consumerName
-   * @param handler
-   * @param onError
    */
-  hotStream: (stream: string | string[],
-              consumerName: string,
-              handler: (event: EventicleEvent) => Promise<void>,
-              onError: (error: any) => void) => Promise<EventSubscriptionControl>
+  hotStream: (config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  }) => Promise<EventSubscriptionControl>
 
   /**
    * Only play hot data.
-   * @param stream
-   * @param consumerName
-   * @param handler
-   * @param onError
    */
-  hotRawStream: (stream: string | string[],
-                 consumerName: string,
-                 handler: (event: EncodedEvent) => Promise<void>,
-                 onError: (error: any) => void) => Promise<EventSubscriptionControl>
+  hotRawStream: (config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }) => Promise<EventSubscriptionControl>
 
 
   /**
    * Play from persisted storage the continue from in memory
-   * @param stream
-   * @param from
-   * @param handler
-   * @param onError
-   * @param onDone
    */
   coldHotStream: (config: {
+    parallelEventCount?: number,
     rawEvents: true,
     stream: string | string[],
     groupId: string,
     handler: (event: EncodedEvent) => Promise<void>,
     onError: (error: any) => void
   } | {
+    parallelEventCount?: number,
     rawEvents: false,
     stream: string | string[],
     groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void
   } | {
+    parallelEventCount?: number,
     stream: string | string[],
     groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,

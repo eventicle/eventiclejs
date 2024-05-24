@@ -63,10 +63,13 @@ export async function registerAdapter(
     };
   }
 
-  let control = await eventClient().hotStream(
-    adapter.streamsToSubscribe,
-    adapter.consumerGroup,
-    async (event) => {
+  let control = await eventClient().hotStream({
+    stream: adapter.streamsToSubscribe,
+    onError: (error) => {
+      logger.error("Error in adapter", error);
+    },
+    groupId: adapter.consumerGroup,
+    handler: async (event) => {
       await dataStore()
         .transaction(async () => {
           await adapter.handleEvent(event);
@@ -76,10 +79,7 @@ export async function registerAdapter(
           adapter.errorHandler(adapter, event, reason);
         });
     },
-    (error) => {
-      logger.error("Error in adapter", error);
-    }
-  );
+  });
 
   viewControls[adapter.consumerGroup] = control;
 
@@ -104,10 +104,10 @@ export async function registerRawAdapter(
     };
   }
 
-  let control = await eventClient().hotRawStream(
-    view.streamsToSubscribe,
-    view.consumerGroup,
-    async (event) => {
+  let control = await eventClient().hotRawStream({
+    stream: view.streamsToSubscribe,
+    groupId: view.consumerGroup,
+    handler: async (event) => {
       await dataStore()
         .transaction(async () => {
           await view.handleEvent(event);
@@ -117,10 +117,10 @@ export async function registerRawAdapter(
           view.errorHandler(view, event, reason);
         });
     },
-    (error) => {
+    onError: (error) => {
       logger.error("Error in adapter", error);
     }
-  );
+  });
 
   viewControls[view.consumerGroup] = control;
 

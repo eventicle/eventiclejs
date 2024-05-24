@@ -25,11 +25,11 @@ export async function cleanStartingProxyEventClient(createClient: () => Promise<
         }
       })
     },
-    coldStream: (stream, handler, onError, onDone) => {
+    coldStream: (config) => {
       let subControl: EventSubscriptionControl
 
       subscriptionOps.push(async client => {
-        subControl = await client.coldStream(stream, handler, onError, onDone)
+        subControl = await client.coldStream(config)
       })
 
       return Promise.resolve({
@@ -42,11 +42,11 @@ export async function cleanStartingProxyEventClient(createClient: () => Promise<
         }
       })
     },
-    hotRawStream: (stream, consumerName, handler, onError) => {
+    hotRawStream: (config) => {
       let subControl: EventSubscriptionControl
 
       subscriptionOps.push(async client => {
-        subControl = await client.hotRawStream(stream, consumerName, handler, onError)
+        subControl = await client.hotRawStream(config)
       })
 
       return Promise.resolve({
@@ -59,11 +59,11 @@ export async function cleanStartingProxyEventClient(createClient: () => Promise<
         }
       })
     },
-    hotStream: (stream, consumerName, handler, onError) => {
+    hotStream: (config) => {
       let subControl: EventSubscriptionControl
 
       subscriptionOps.push(async client => {
-        subControl = await client.hotStream(stream, consumerName, handler, onError)
+        subControl = await client.hotStream(config)
       })
 
       return Promise.resolve({
@@ -107,9 +107,9 @@ export async function cleanStartingProxyEventClient(createClient: () => Promise<
   return {
     emit: (event, stream) => delegateClient.emit(event, stream),
     coldHotStream: config => delegateClient.coldHotStream(config),
-    hotRawStream: (stream, consumerName, handler, onError) => delegateClient.hotRawStream(stream, consumerName, handler, onError),
-    coldStream: (stream, handler, onError, onDone) => delegateClient.coldStream(stream, handler, onError, onDone),
-    hotStream: (stream, consumerName, handler, onError) => delegateClient.hotStream(stream, consumerName, handler, onError),
+    hotRawStream: (config) => delegateClient.hotRawStream(config),
+    coldStream: (config) => delegateClient.coldStream(config),
+    hotStream: (config) => delegateClient.hotStream(config),
     shutdown: () => delegateClient.shutdown(),
     isConnected: () => delegateClient.isConnected()
   }

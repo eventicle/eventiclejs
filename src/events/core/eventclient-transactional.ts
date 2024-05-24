@@ -57,8 +57,13 @@ class EventclientTransactional implements EventClient {
     (this.delegate as any).clear()
   }
 
-  coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
-    return this.delegate.coldStream(stream, handler, onError, onDone)
+  coldStream(config: {
+    stream: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void,
+    onDone: () => void
+  }): Promise<EventSubscriptionControl> {
+    return this.delegate.coldStream(config)
   }
 
   async emit (event: EventicleEvent[] | EncodedEvent[], stream: string) {
@@ -72,15 +77,24 @@ class EventclientTransactional implements EventClient {
     }
   }
 
-  hotStream(stream: string | string[],
-                  consumerName: string,
-                  handler: (event: EventicleEvent) => Promise<void>,
-                  onError: (error: any) => void) {
-    return this.delegate.hotStream(stream, consumerName, handler, onError)
+  hotStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  }) {
+    return this.delegate.hotStream(config)
   }
 
-  hotRawStream(stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
-    return this.delegate.hotRawStream(stream, consumerName, handler, onError)
+  hotRawStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
+    return this.delegate.hotRawStream(config)
   }
 
   isConnected(): boolean {

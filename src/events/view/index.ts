@@ -40,6 +40,7 @@ export async function registerView(
   view: EventView
 ): Promise<EventSubscriptionControl> {
   let control = await eventClient().coldHotStream({
+    parallelEventCount: view.parallelEventCount,
     handler: async (event) => {
       apmJoinEvent(
         event,
@@ -103,6 +104,7 @@ export async function registerRawView(
 }
 
 export interface EventView {
+  parallelEventCount?: number,
   consumerGroup: string;
   handleEvent: (event: EventicleEvent) => Promise<void>;
   streamsToSubscribe: string[];

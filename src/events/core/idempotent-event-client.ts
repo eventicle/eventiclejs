@@ -37,33 +37,50 @@ export class IdempotentEventClient implements EventClient {
     });
   }
 
-  coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
+  coldStream(config: {
+    stream: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void,
+    onDone: () => void
+  }): Promise<EventSubscriptionControl> {
     /*
      * cold streams don't require event process tracking.
      * They are used for 1 shot replays, not for ongoing event replay that might include duplication handling.
      * Due to their nature, its normal for this to be called multiple times on the same event data, and then expect a full replay.
      */
-    return this.delegate.coldStream(stream, handler, onError, onDone);
+    return this.delegate.coldStream(config);
   }
 
   emit(event: EventicleEvent[] | EncodedEvent[], stream: string): Promise<void> {
     return this.delegate.emit(event, stream);
   }
 
-  hotRawStream(stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
-    return this.delegate.hotRawStream(stream, consumerName, async (event) => {
+  hotRawStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
+    return this.delegate.hotRawStream({...config, handler: async (event) => {
       return dataStore().transaction(async () =>{
-        return this.idempotentlyProcessEvent(consumerName, event, handler)
+        return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
       })
-    }, onError);
+    }});
   }
 
-  hotStream(stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
-    return this.delegate.hotStream(stream, consumerName, async (event) => {
-      return dataStore().transaction(async () =>{
-        return this.idempotentlyProcessEvent(consumerName, event, handler)
-      })
-    }, onError);
+  hotStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
+    return this.delegate.hotStream({ ...config, handler: async (event) => {
+        return dataStore().transaction(async () =>{
+          return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
+        })
+      }});
   }
 
   isConnected(): boolean {
@@ -83,7 +100,13 @@ export class IdempotentEventClient implements EventClient {
       }
       return;
     }
-    const ret = await exec(event)
+    let ret: T
+    try {
+      ret = await exec(event)
+    } catch (e) {
+      logger.warn(`Failed to process event in stream`, event)
+      throw e
+    }
     try {
       await this.idempotentRepo.markEventProcessed(consumerName, event)
     } catch(e) {

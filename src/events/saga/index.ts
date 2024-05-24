@@ -88,7 +88,8 @@ export class SagaInstance<TimeoutNames, T> {
     }
   }[] = []
 
-  constructor(readonly internalData: any, readonly record?: Record) {}
+  constructor(readonly internalData: any, readonly record?: Record) {
+  }
 
   /**
    * Get a piece of arbitrary data from the saga instance
@@ -156,7 +157,7 @@ export class SagaInstance<TimeoutNames, T> {
     isCron: false
     timeout: number
   }) {
-    this.timersToAdd.push({ name, config })
+    this.timersToAdd.push({name, config})
   }
 
   removeTimer(name: TimeoutNames) {
@@ -177,8 +178,16 @@ export class Saga<TimeoutNames, InstanceData> {
   streams: string[]
   streamSubs: EventSubscriptionControl[] = []
 
-  starts: Map<string, { config: StartHandlerConfig<any, InstanceData, TimeoutNames>, handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void> }> = new Map()
-  eventHandler: Map<string, { config: HandlerConfig< any, InstanceData, TimeoutNames>, handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void> }> = new Map()
+  parallelEventCount: number = 50
+
+  starts: Map<string, {
+    config: StartHandlerConfig<any, InstanceData, TimeoutNames>,
+    handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>
+  }> = new Map()
+  eventHandler: Map<string, {
+    config: HandlerConfig<any, InstanceData, TimeoutNames>,
+    handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>
+  }> = new Map()
   errorHandler: (saga, event: EventicleEvent, error: Error) => Promise<void> = async (saga, event, error) => {
     logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
       saga, event
@@ -186,9 +195,16 @@ export class Saga<TimeoutNames, InstanceData> {
     logger.error("Saga error", maybeRenderError(error))
   }
 
-  timerHandler: Map<TimeoutNames, { handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void> }> = new Map
+  timerHandler: Map<TimeoutNames, {
+    handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>
+  }> = new Map
 
   constructor(readonly name: string) {
+  }
+
+  parallelEvents(val: number): Saga<TimeoutNames, InstanceData> {
+    this.parallelEventCount = val
+    return this
   }
 
   subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData> {
@@ -207,7 +223,7 @@ export class Saga<TimeoutNames, InstanceData> {
    * @param handle the async function to execute.
    */
   onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData> {
-    this.timerHandler.set(name, { handle })
+    this.timerHandler.set(name, {handle})
     return this
   }
 
@@ -215,7 +231,7 @@ export class Saga<TimeoutNames, InstanceData> {
     if (this.starts.has(eventName)) {
       throw new Error(`Event has been double registered in Saga startsOn ${this.name}: ${eventName}`)
     }
-    this.starts.set(eventName, { config, handle: handler })
+    this.starts.set(eventName, {config, handle: handler})
     return this
   }
 
@@ -223,7 +239,7 @@ export class Saga<TimeoutNames, InstanceData> {
     if (this.eventHandler.has(eventName)) {
       throw new Error(`Event has been double registered in Saga.on ${this.name}: ${eventName}`)
     }
-    this.eventHandler.set(eventName, { config, handle: handler })
+    this.eventHandler.set(eventName, {config, handle: handler})
     return this
   }
 
@@ -318,7 +334,13 @@ async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEven
 
   logger.debug(`  Saga starting ${saga.name} :: ` + startEvent.type)
 
-  let instance = new SagaInstance<any, any>({activeTimers: {}, saga: saga.name, ended: false, instanceId: uuid.v4(), events: [startEvent]})
+  let instance = new SagaInstance<any, any>({
+    activeTimers: {},
+    saga: saga.name,
+    ended: false,
+    instanceId: uuid.v4(),
+    events: [startEvent]
+  })
 
   apmJoinEvent(startEvent, saga.name + ":" + startEvent.type, "saga-step-" + saga.name, startEvent.type)
   await span(startEvent.type, {}, async theSpan => {
@@ -349,7 +371,7 @@ async function startSagaInstance(saga: Saga<any, any>, startEvent: EventicleEven
 }
 
 async function handleTimerEvent(saga, name, data) {
-  let instanceData = (await dataStore().findEntity("system", "saga-instance", { instanceId: data.instanceId }))
+  let instanceData = (await dataStore().findEntity("system", "saga-instance", {instanceId: data.instanceId}))
 
   logger.debug("Search results for saga-instance", instanceData)
 
@@ -384,7 +406,7 @@ async function processTimersInSagaInstance(saga: Saga<any, any>, instance: SagaI
   for (let timer of instance.timersToAdd) {
     if (!instance.internalData.activeTimers) instance.internalData.activeTimers = {}
     if (!Object.keys(instance.internalData.activeTimers).includes(timer.name)) {
-      instance.internalData.activeTimers[timer.name] = timer.config.isCron ? "cron": "timeout"
+      instance.internalData.activeTimers[timer.name] = timer.config.isCron ? "cron" : "timeout"
     }
     await scheduler().addScheduledTask(saga.name, timer.name, instance.internalData.instanceId, timer.config, {
       instanceId: instance.internalData.instanceId
@@ -397,7 +419,7 @@ async function processTimersInSagaInstance(saga: Saga<any, any>, instance: SagaI
 }
 
 async function removeAllTimersForInstance(saga: Saga<any, any>, instance: SagaInstance<any, any>) {
-  let instanceData = (await dataStore().findEntity("system", "saga-instance", { instanceId: instance.internalData.instanceId }))
+  let instanceData = (await dataStore().findEntity("system", "saga-instance", {instanceId: instance.internalData.instanceId}))
 
   if (instanceData.length > 0) {
     for (let currentInstance of instanceData) {
@@ -416,39 +438,46 @@ export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>)
 
   await scheduler().addScheduleTaskListener(saga.name, async (name, id, data) => handleTimerEvent(saga, name, data))
 
-  let control = await eventClient().hotStream(saga.streams,
-    `saga-${saga.name}`, async (event: EventicleEvent) => {
+  let control = await eventClient().hotStream({
+    stream: saga.streams,
+    groupId: `saga-${saga.name}`,
+    handler: async (event: EventicleEvent) => {
       logger.debug(`Saga event: ${saga.name}`, event)
 
       const timeoutTimer = setTimeout(() => {
-        logger.warn("Saga processing step is taking an excessive amount of time, check for promise errors ", { saga: saga.name, event })
+        logger.warn("Saga processing step is taking an excessive amount of time, check for promise errors ", {
+          saga: saga.name,
+          event
+        })
       }, 60000)
 
       // await dataStore().transaction(async () => {
-        try {
-          logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
-          if (saga.eventHandler.has(event.type)) {
-            logger.debug(`      saga can handle event: ${saga.name} :: ` + event.type)
-            await checkSagaEventHandlers(saga, event)
-            logger.debug(`      done intents: ${saga.name} :: ` + event.type)
-          } else if (saga.starts.has(event.type)) {
-            logger.debug(`      saga can start: ${saga.name} :: ` + event.type)
-            await startSagaInstance(saga, event)
-          }
-          logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
-        } catch (e) {
-          await saga.errorHandler(saga, event, e)
-        } finally {
-          clearTimeout(timeoutTimer)
+      try {
+        logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
+        if (saga.eventHandler.has(event.type)) {
+          logger.debug(`      saga can handle event: ${saga.name} :: ` + event.type)
+          await checkSagaEventHandlers(saga, event)
+          logger.debug(`      done intents: ${saga.name} :: ` + event.type)
+        } else if (saga.starts.has(event.type)) {
+          logger.debug(`      saga can start: ${saga.name} :: ` + event.type)
+          await startSagaInstance(saga, event)
         }
+        logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
+      } catch (e) {
+        await saga.errorHandler(saga, event, e)
+      } finally {
+        clearTimeout(timeoutTimer)
+      }
       // }, {
       //   propagation: "requires"
       // })
-    }, error => {
+    }, onError: error => {
       logger.error("Error subscribing to streams", {
         error, saga: saga.name
       })
-    });
+    },
+    parallelEventCount: saga.parallelEventCount
+  });
 
   saga.streamSubs.push(control);
 

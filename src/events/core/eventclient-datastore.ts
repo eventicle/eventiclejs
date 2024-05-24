@@ -181,27 +181,32 @@ class EventclientDatastore implements EventClient {
     streams.clear()
   }
 
-  async coldStream(stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void): Promise<EventSubscriptionControl> {
+  async coldStream(config: {
+    stream: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void,
+    onDone: () => void
+  }): Promise<EventSubscriptionControl> {
 
     const str = []
-    if (Array.isArray(stream)) {
-      for (let theStream of stream) {
+    if (Array.isArray(config.stream)) {
+      for (let theStream of config.stream) {
         str.push(...await dataStore().findEntity("system", "event-stream", {streamId: theStream}, { createdAt : "ASC"} ))
       }
     } else {
-      str.push(...await dataStore().findEntity("system", "event-stream", {streamId: stream}, { createdAt : "ASC"}))
+      str.push(...await dataStore().findEntity("system", "event-stream", {streamId: config.stream}, { createdAt : "ASC"}))
     }
 
     if (!str) {
-      onError(`No such stream ${stream}`)
+      config.onError(`No such stream ${config.stream}`)
       return
     }
 
     for(let entry of str) {
-      await handler(entry.content.internal)
+      await config.handler(entry.content.internal)
     }
 
-    onDone()
+    config.onDone()
 
     return {
       close: async () => {
@@ -252,11 +257,14 @@ class EventclientDatastore implements EventClient {
     await tickSubs()
   }
 
-  hotStream(stream: string | string[],
-                  consumerName: string,
-                  handler: (event: EventicleEvent) => Promise<void>,
-                  onError: (error: any) => void) {
-    return this.hotStreamInternal(false, stream, consumerName, handler, onError);
+  hotStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EventicleEvent) => Promise<void>,
+    onError: (error: any) => void
+  }) {
+    return this.hotStreamInternal(false, config.stream, config.groupId, config.handler, config.onError);
   }
 
   async hotStreamInternal(
@@ -310,8 +318,14 @@ class EventclientDatastore implements EventClient {
     }
   }
 
-  hotRawStream(stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void): Promise<EventSubscriptionControl> {
-    return this.hotStreamInternal(false, stream, consumerName, handler, onError);
+  hotRawStream(config: {
+    parallelEventCount?: number,
+    stream: string | string[],
+    groupId: string,
+    handler: (event: EncodedEvent) => Promise<void>,
+    onError: (error: any) => void
+  }): Promise<EventSubscriptionControl> {
+    return this.hotStreamInternal(false, config.stream, config.groupId, config.handler, config.onError);
   }
 
   isConnected(): boolean {

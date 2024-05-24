@@ -33,14 +33,14 @@ export async function consumeFullEventLog(
 ): Promise<EventicleEvent[]> {
   let events: EventicleEvent[] = [];
   await new Promise((resolve) => {
-    eventClient().coldStream(
+    eventClient().coldStream({
       stream,
-      async (event) => {
+      handler: async (event) => {
         events.push(event);
       },
-      (error) => console.log(error),
-      resolve as any
-    );
+      onError: (error) => console.log(error),
+      onDone: resolve as any
+    });
   });
 
   return events;
