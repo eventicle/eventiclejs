@@ -49,12 +49,14 @@ let consumerConfigFactory: ConsumerConfigFactory = {
         autoCommitThreshold: 50
       }
     }
-    return {
+    const config =  {
       autoCommit: true,
       autoCommitInterval: 500,
       autoCommitThreshold: 50,
       partitionsConsumedConcurrently: partitionsConsumedConcurrently ?? 50,
     }
+    logger.debug(`Creating topic consumer ${consumerName} for stream ${stream} with run config `, config)
+    return config
   }
 }
 

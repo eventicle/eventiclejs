@@ -30,9 +30,9 @@ export class IdempotentEventClient implements EventClient {
     return this.delegate.coldHotStream({
       ...config,
       handler: async event => {
-        return dataStore().transaction(async () =>{
+        // return dataStore().transaction(async () =>{
           return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
-        })
+        // })
       }
     });
   }
@@ -63,9 +63,9 @@ export class IdempotentEventClient implements EventClient {
     onError: (error: any) => void
   }): Promise<EventSubscriptionControl> {
     return this.delegate.hotRawStream({...config, handler: async (event) => {
-      return dataStore().transaction(async () =>{
+      // return dataStore().transaction(async () =>{
         return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
-      })
+      // })
     }});
   }
 
@@ -77,9 +77,9 @@ export class IdempotentEventClient implements EventClient {
     onError: (error: any) => void
   }): Promise<EventSubscriptionControl> {
     return this.delegate.hotStream({ ...config, handler: async (event) => {
-        return dataStore().transaction(async () =>{
+        // return dataStore().transaction(async () =>{
           return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
-        })
+        // })
       }});
   }
 
