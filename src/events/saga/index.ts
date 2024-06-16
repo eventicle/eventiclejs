@@ -190,7 +190,7 @@ export class Saga<TimeoutNames, InstanceData> {
   }> = new Map()
   errorHandler: (saga, event: EventicleEvent, error: Error) => Promise<void> = async (saga, event, error) => {
     logger.warn("An untrapped error occurred in a saga, Eventicle trapped this event and has consumed it", {
-      saga, event
+      saga, event, message: error?.message
     })
     logger.error("Saga error", maybeRenderError(error))
   }
