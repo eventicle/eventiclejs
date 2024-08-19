@@ -219,6 +219,8 @@ class EventclientDatastore implements EventClient {
 
     for (let ev of event) {
 
+      (ev as any).stream = stream;
+
       if (isRawEvent(ev)) {
 
       } else {

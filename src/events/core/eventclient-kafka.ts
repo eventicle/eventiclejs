@@ -271,6 +271,9 @@ class EventclientKafka implements EventClient {
   async emit(events: EventicleEvent[] | EncodedEvent[], stream: string): Promise<void> {
 
     const messages = await Promise.all(events.map(async (event: EventicleEvent | EncodedEvent )  => {
+
+      (event as any).stream = stream;
+
       let kafkaMessage: Message
 
       if (isRawEvent(event)) {
