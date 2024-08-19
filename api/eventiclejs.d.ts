@@ -1,5 +1,3 @@
-/// <reference types="node" />
-
 import { ConsumerConfig } from 'kafkajs';
 import { ConsumerRunConfig } from 'kafkajs';
 import { DataQuery } from '@eventicle/eventicle-utilities/dist/datastore';
