@@ -38,6 +38,8 @@ export class KafkaOutboxSender implements OutboxSender {
   private isFlushing = false;
   readonly producerHealth: HealthCheckStatus = {} as any
   private kafka: Kafka
+  private errorLastReported: number = 0
+  private lastSendErrored: boolean = false
 
   constructor(
     protected eventOutbox: EventOutbox,
@@ -126,6 +128,11 @@ export class KafkaOutboxSender implements OutboxSender {
 
       if (!outgoingRecords.length) {
         this.isFlushing = false;
+        if (this.lastSendErrored) {
+          logger.info("Kafka outbox sender has read DB correctly after previous failure")
+        }
+        this.errorLastReported = 0
+        this.lastSendErrored = false
         return;
       }
 
@@ -162,6 +169,11 @@ export class KafkaOutboxSender implements OutboxSender {
 
         logger.debug('Flushed queue', {batchId});
         this.isFlushing = false;
+        if (this.lastSendErrored) {
+          this.errorLastReported = 0
+          logger.info("Kafka outbox sender has read DB correctly and sent events successfully after previous failure")
+        }
+        this.lastSendErrored = false
         return;
       } catch (error) {
         /**
@@ -181,7 +193,16 @@ export class KafkaOutboxSender implements OutboxSender {
         }
         return;
       }
-    }, { propagation: "requires" }).finally(() => {
+    }, { propagation: "requires" })
+      .catch(reason => {
+        const ERROR_REPEAT_TIME = 30000
+        if (this.lastSendErrored && this.errorLastReported < Date.now() - ERROR_REPEAT_TIME) {
+          logger.error(`Kafka outbox sender infrastructure failure has been detected. This will not repeat for ${ERROR_REPEAT_TIME}ms`, reason)
+          this.errorLastReported = Date.now()
+        }
+        this.lastSendErrored = true;
+      })
+      .finally(() => {
       this.isFlushing = false;
     })
   };

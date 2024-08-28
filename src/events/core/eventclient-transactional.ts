@@ -38,7 +38,7 @@ class EventclientTransactional implements EventClient {
         }
         data.data.events.length = 0
       } else {
-        logger.info("Events storage in the transactional context is null, indicating a failure in the datastore")
+        // logger.info("Events storage in the transactional context is null, indicating a failure in the datastore")
       }
     })
   }
