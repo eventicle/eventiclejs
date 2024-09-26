@@ -523,11 +523,11 @@ export declare function eventClientOnDatastore(): EventClient;
 
 ========
 [id="eventicle_eventiclejs_eventClientOnKafka_function_1"]
-=== eventClientOnKafka(config, consumerConfig)
+=== eventClientOnKafka(config, consumerConfig, onTopicFailureConfig)
 
 ========
 
-
+https://kafka.js.org/docs/admin\#a-name-create-topics-a-create-topics
 
 
 
@@ -538,11 +538,15 @@ export declare function eventClientOnDatastore(): EventClient;
 
 m|config
 m|KafkaConfig
-|
+|as per kafkjs
 
 m|consumerConfig
 m|\~ConsumerConfigFactory
-|
+|as per kafkajs
+
+m|onTopicFailureConfig
+m|(topicName: any) =&gt; Promise&lt;\~TopicFailureConfiguration&gt;
+|If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config
 
 s|Returns
 m|Promise&lt;xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]&gt;
@@ -552,7 +556,7 @@ m|Promise&lt;xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]&
 .Signature
 [source,typescript]
 ----
-export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient>;
+export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
 ----
 
 ========

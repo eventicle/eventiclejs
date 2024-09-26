@@ -515,7 +515,14 @@ export declare function eventClientCodec(): EventClientCodec;
  */
 export declare function eventClientOnDatastore(): EventClient;
 
-export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient>;
+/**
+ * https://kafka.js.org/docs/admin#a-name-create-topics-a-create-topics
+ *
+ * @param config as per kafkjs
+ * @param consumerConfig as per kafkajs
+ * @param onTopicFailureConfig If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config
+ */
+export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
 
 export declare interface EventicleEvent {
     id?: string;
@@ -852,6 +859,16 @@ declare interface StartHandlerConfig<T extends EventicleEvent, Y, TimeoutNames> 
      */
     withLock?: (instance: SagaInstance<TimeoutNames, Y>, event: T) => string;
 }
+
+declare type TopicFailureConfiguration = {
+    createTopic: boolean;
+    numPartitions?: number;
+    replicationFactor?: number;
+    configEntries?: {
+        name: string;
+        value: string;
+    }[];
+};
 
 export { TransactionData }
 
