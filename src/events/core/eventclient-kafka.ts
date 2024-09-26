@@ -11,6 +11,7 @@ import {logger} from "@eventicle/eventicle-utilities";
 import {ThrottledProducer} from "./kafka-throttle";
 import {eventClientTransactional} from "./eventclient-transactional";
 import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util";
+import {pause} from "../../util";
 
 interface KafkaClientHealth {
   healthy: boolean
@@ -79,6 +80,65 @@ export async function connectBroker(config: KafkaConfig) {
   kafka = new Kafka(config)
 }
 
+type TopicFailureConfiguration = {
+  createTopic: boolean,
+  numPartitions?: number,     // default: -1 (uses broker `num.partitions` configuration)
+  replicationFactor?: number, // default: -1 (uses broker `default.replication.factor` configuration)
+  configEntries?: {
+    name: string, value: string
+  }[]
+}
+let onTopicFailure = async (topicName: string) => {
+  return {
+    createTopic: false
+  } as TopicFailureConfiguration
+}
+
+async function connectConsumerWithOptionalCreation<T>(topicNames: string | string[], executor: () => Promise<T>) {
+  let topics: string[]
+  if (!Array.isArray(topicNames)) {
+    topics = [topicNames]
+  } else {
+    topics = topicNames
+  }
+
+  return executor().catch(async reason => {
+    await Promise.all(topics.map(async topicName => {
+      logger.warn(`Error when connecting to topic ${topicName}, checking fallback configuration`, {
+        topicName, maybeRenderError: reason
+      })
+
+      const config = await onTopicFailure(topicName)
+      if (config.createTopic) {
+        logger.warn(`Error when connecting to topic ${topicName}, will create topic`, {
+          topicName, maybeRenderError: reason
+        })
+
+        const admin = kafka.admin()
+
+        try{
+          await admin.connect()
+          await admin.createTopics({
+            topics: [{
+              topic: topicName,
+              numPartitions: config.numPartitions ?? undefined,
+              replicationFactor: config.replicationFactor ?? undefined,
+              configEntries: config.configEntries ?? [],
+            }]
+          })
+          logger.info(`Created topic ${topicName} in fallback`)
+          await pause(5000)
+        } catch(e) {
+          logger.warn(`Failed to create topic ${topicName} in fallback`, e)
+        } finally {
+          await admin.disconnect()
+        }
+      }
+    }))
+    return executor()
+  })
+}
+
 class EventclientKafka implements EventClient {
 
   throttle: ThrottledProducer
@@ -145,58 +205,60 @@ class EventclientKafka implements EventClient {
       ...newConf
     })
 
-    setupMonitor(healthStatus, cons)
 
-    await cons.connect()
+    setupMonitor(healthStatus, cons)
 
     consumers.push(cons)
 
-    if (Array.isArray(config.stream)) {
-      for (let str of config.stream) {
-        await cons.subscribe({topic: str, fromBeginning: true})
-      }
-    } else {
-      await cons.subscribe({topic: config.stream, fromBeginning: true})
-    }
+    await connectConsumerWithOptionalCreation(config.stream, async () => {
+      await cons.connect()
 
-    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount)
-    cons.run({
-      ...newRunConf,
-      eachMessage: async payload => {
-        logger.debug(`[${config.groupId}] message received on sub id ` + id, payload)
-
-        try {
-          if (config.rawEvents) {
-            await config.handler({
-              timestamp: payload.message.timestamp ? parseInt(payload.message.timestamp) : 0,
-              key: payload.message.key ? payload.message.key.toString() : null,
-              buffer: payload.message.value,
-              headers: payload.message.headers
-            })
-          } else {
-            let decoded = await eventClientCodec().decode({
-              timestamp: parseInt(payload.message.timestamp),
-              key: payload.message.key ? payload.message.key.toString() : null,
-              headers: payload.message.headers,
-              buffer: payload.message.value
-            })
-            if (!decoded) {
-              return;
-            }
-
-            decoded.stream = payload.topic
-
-            logger.debug(`Received event ${decoded.id} on ${config.groupId} on topic ${payload.topic}`, decoded)
-            await config.handler(decoded)
-          }
-        } catch (e) {
-          logger.warn("Consumer failed to process message, dropping to avoid poisoning queue", {
-            error: maybeRenderError(e), consumer: config.groupId, stream: config.stream
-          });
+      if (Array.isArray(config.stream)) {
+        for (let str of config.stream) {
+          await cons.subscribe({topic: str, fromBeginning: true})
         }
+      } else {
+        await cons.subscribe({topic: config.stream, fromBeginning: true})
       }
-    })
 
+      let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount)
+      await cons.run({
+        ...newRunConf,
+        eachMessage: async payload => {
+          logger.debug(`[${config.groupId}] message received on sub id ` + id, payload)
+
+          try {
+            if (config.rawEvents) {
+              await config.handler({
+                timestamp: payload.message.timestamp ? parseInt(payload.message.timestamp) : 0,
+                key: payload.message.key ? payload.message.key.toString() : null,
+                buffer: payload.message.value,
+                headers: payload.message.headers
+              })
+            } else {
+              let decoded = await eventClientCodec().decode({
+                timestamp: parseInt(payload.message.timestamp),
+                key: payload.message.key ? payload.message.key.toString() : null,
+                headers: payload.message.headers,
+                buffer: payload.message.value
+              })
+              if (!decoded) {
+                return;
+              }
+
+              decoded.stream = payload.topic
+
+              logger.debug(`Received event ${decoded.id} on ${config.groupId} on topic ${payload.topic}`, decoded)
+              await config.handler(decoded)
+            }
+          } catch (e) {
+            logger.warn("Consumer failed to process message, dropping to avoid poisoning queue", {
+              error: maybeRenderError(e), consumer: config.groupId, stream: config.stream
+            });
+          }
+        }
+      })
+    })
 
     return {
       close: async () => {
@@ -218,9 +280,10 @@ class EventclientKafka implements EventClient {
     let newConf = consumerConfigFactory.consumerConfig(config.stream, groupId, "COLD")
 
     let cons = kafka.consumer({
-      groupId: newConf.groupId || groupId,
-      ...newConf
-    })
+        groupId: newConf.groupId || groupId,
+        ...newConf
+      })
+
 
     let adm = kafka.admin()
     await adm.connect()
@@ -231,7 +294,9 @@ class EventclientKafka implements EventClient {
 
     logger.debug(`Cold replay of ${config.stream} by [${groupId}], seek till ${latestOffset}`)
 
-    await cons.connect()
+    await connectConsumerWithOptionalCreation(config.stream, async () => {
+      await cons.connect()
+    })
 
     await cons.subscribe({topic: config.stream, fromBeginning: true})
     let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, groupId, "COLD", config.parallelEventCount)
@@ -324,54 +389,55 @@ class EventclientKafka implements EventClient {
     let newConf = consumerConfigFactory.consumerConfig(config.stream, config.consumerName, "HOT")
 
     let cons = kafka.consumer({
-      groupId: newConf.groupId || config.consumerName,
-      ...newConf
-    })
+        groupId: newConf.groupId || config.consumerName,
+        ...newConf
+      })
 
     setupMonitor(healthStatus, cons)
-
-    await cons.connect()
-
     consumers.push(cons)
 
-    if (Array.isArray(config.stream)) {
-      for (let str of config.stream) {
-        await cons.subscribe({topic: str})
-      }
-    } else {
-      await cons.subscribe({topic: config.stream})
-    }
+    await connectConsumerWithOptionalCreation(config.stream, async () => {
+      await cons.connect()
 
-    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount)
-
-    await cons.run({
-      ...newRunConf,
-      eachMessage: async (payload) => {
-        try {
-          let encodedEvent = {
-            timestamp: parseInt(payload.message.timestamp),
-            key: payload.message.key ? payload.message.key.toString() : null,
-            headers: payload.message.headers, buffer: payload.message.value
-          } as EncodedEvent
-
-          if (config.rawEvents) {
-            await config.consumer(encodedEvent)
-          } else {
-            let decoded = await eventClientCodec().decode(encodedEvent)
-            if (!decoded) {
-              return;
-            }
-
-            decoded.stream = payload.topic
-
-            await config.consumer(decoded)
-          }
-        } catch (e) {
-          logger.warn("Consumer failed to process message, dropping to avoid poisoning queue", {
-            error: maybeRenderError(e), consumer: config.consumerName, stream: config.stream
-          })
+      if (Array.isArray(config.stream)) {
+        for (let str of config.stream) {
+          await cons.subscribe({topic: str})
         }
+      } else {
+        await cons.subscribe({topic: config.stream})
       }
+
+      let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount)
+
+      await cons.run({
+        ...newRunConf,
+        eachMessage: async (payload) => {
+          try {
+            let encodedEvent = {
+              timestamp: parseInt(payload.message.timestamp),
+              key: payload.message.key ? payload.message.key.toString() : null,
+              headers: payload.message.headers, buffer: payload.message.value
+            } as EncodedEvent
+
+            if (config.rawEvents) {
+              await config.consumer(encodedEvent)
+            } else {
+              let decoded = await eventClientCodec().decode(encodedEvent)
+              if (!decoded) {
+                return;
+              }
+
+              decoded.stream = payload.topic
+
+              await config.consumer(decoded)
+            }
+          } catch (e) {
+            logger.warn("Consumer failed to process message, dropping to avoid poisoning queue", {
+              error: maybeRenderError(e), consumer: config.consumerName, stream: config.stream
+            })
+          }
+        }
+      })
     })
 
     return {
@@ -452,7 +518,18 @@ export interface ConsumerConfigFactory {
   consumerRunConfig?: (stream: string | string[], consumerName: string, type: ConsumerConfigStreamType, partitionsConsumedConcurrently: number) => Partial<ConsumerRunConfig>;
 }
 
-export async function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient> {
+
+
+/**
+ * https://kafka.js.org/docs/admin#a-name-create-topics-a-create-topics
+ *
+ * @param config as per kafkjs
+ * @param consumerConfig as per kafkajs
+ * @param onTopicFailureConfig If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config
+ */
+export async function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName) => Promise<TopicFailureConfiguration>): Promise<EventClient> {
+  if (onTopicFailureConfig) onTopicFailure = onTopicFailureConfig
+
   if (consumerConfig && consumerConfig.consumerConfig) {
     consumerConfigFactory.consumerConfig = consumerConfig.consumerConfig
   }
