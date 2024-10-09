@@ -80,7 +80,7 @@ export async function connectBroker(config: KafkaConfig) {
   kafka = new Kafka(config)
 }
 
-type TopicFailureConfiguration = {
+export type TopicFailureConfiguration = {
   createTopic: boolean,
   numPartitions?: number,     // default: -1 (uses broker `num.partitions` configuration)
   replicationFactor?: number, // default: -1 (uses broker `default.replication.factor` configuration)
@@ -92,6 +92,38 @@ let onTopicFailure = async (topicName: string) => {
   return {
     createTopic: false
   } as TopicFailureConfiguration
+}
+
+export async function maybeCreateTopic(config: TopicFailureConfiguration, topicName: string, reason) {
+  if (config.createTopic) {
+    logger.warn(`Error when connecting to topic ${topicName}, will create topic`, {
+      topicName, maybeRenderError: reason
+    })
+
+    const admin = kafka.admin()
+
+    try {
+      await admin.connect()
+      const topics = await admin.listTopics()
+      if (topics.find(val => val == topicName)) {
+        return;
+      }
+      await admin.createTopics({
+        topics: [{
+          topic: topicName,
+          numPartitions: config.numPartitions ?? undefined,
+          replicationFactor: config.replicationFactor ?? undefined,
+          configEntries: config.configEntries ?? [],
+        }]
+      })
+      logger.info(`Created topic ${topicName} in fallback`)
+      await pause(5000)
+    } catch (e) {
+      logger.warn(`Failed to create topic ${topicName} in fallback`, e)
+    } finally {
+      await admin.disconnect()
+    }
+  }
 }
 
 async function connectConsumerWithOptionalCreation<T>(topicNames: string | string[], executor: () => Promise<T>) {
@@ -109,31 +141,7 @@ async function connectConsumerWithOptionalCreation<T>(topicNames: string | strin
       })
 
       const config = await onTopicFailure(topicName)
-      if (config.createTopic) {
-        logger.warn(`Error when connecting to topic ${topicName}, will create topic`, {
-          topicName, maybeRenderError: reason
-        })
-
-        const admin = kafka.admin()
-
-        try{
-          await admin.connect()
-          await admin.createTopics({
-            topics: [{
-              topic: topicName,
-              numPartitions: config.numPartitions ?? undefined,
-              replicationFactor: config.replicationFactor ?? undefined,
-              configEntries: config.configEntries ?? [],
-            }]
-          })
-          logger.info(`Created topic ${topicName} in fallback`)
-          await pause(5000)
-        } catch(e) {
-          logger.warn(`Failed to create topic ${topicName} in fallback`, e)
-        } finally {
-          await admin.disconnect()
-        }
-      }
+      await maybeCreateTopic(config, topicName, reason);
     }))
     return executor()
   })
@@ -152,7 +160,7 @@ class EventclientKafka implements EventClient {
     producerHealth = {
       healthy: false, status: "disconnected", name: "message-sender"
     }
-    this.throttle = new ThrottledProducer(this.broker(), {}, producerHealth)
+    this.throttle = new ThrottledProducer(this.broker(), {}, producerHealth, onTopicFailure)
     await this.throttle.connect()
     return this
   }

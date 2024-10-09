@@ -2,7 +2,7 @@ import {CompressionTypes, Kafka, Message, Partitioners, Producer, ProducerConfig
 import {logger} from "@eventicle/eventicle-utilities";
 import {pause} from "../../util";
 import * as uuid from "uuid";
-import {HealthCheckStatus} from "./eventclient-kafka";
+import {HealthCheckStatus, maybeCreateTopic, TopicFailureConfiguration} from "./eventclient-kafka";
 
 export interface IKafkaJSProtocolError {
   name: string;
@@ -30,6 +30,7 @@ export class ThrottledProducer {
   private intervalTimeout: any;
   private recordQueue: IQueuedRecord[] = [];
   private isFlushing = false;
+  private confirmedTopics = new Set<string>
 
   constructor(
     protected kafka: Kafka,
@@ -40,15 +41,22 @@ export class ThrottledProducer {
       maxOutgoingBatchSize: 10000,
       flushIntervalMs: 40
     },
-    readonly producerHealth: HealthCheckStatus
+    readonly producerHealth: HealthCheckStatus,
+    readonly onTopicFailure: (name: string) => Promise<TopicFailureConfiguration>
   ) {
     this.createProducer();
   }
 
-  public send(event: Message[], stream: string) {
+  public async send(event: Message[], stream: string) {
     if (!this.isConnected) {
       throw new Error('You must connect before producing actions');
     }
+
+    if(!this.confirmedTopics.has(stream)) {
+      const createConfig = await this.onTopicFailure(stream);
+      await maybeCreateTopic(createConfig, stream, new Error(""));
+    }
+    this.confirmedTopics.add(stream)
 
     return new Promise<void>((resolve, reject) => {
       this.recordQueue = [
@@ -165,7 +173,7 @@ export class ThrottledProducer {
       return;
     } catch (error) {
       /**
-       * If for some reason this producer is no longer recognized by th\\e broker,
+       * If for some reason this producer is no longer recognized by the broker,
        * create a new producer.
        */
       if (isKafkaJSProtocolError(error) && error.type === 'UNKNOWN_PRODUCER_ID') {
@@ -178,6 +186,17 @@ export class ThrottledProducer {
         );
         await this.flush(outgoingRecords, retryCounter + 1, batchId);
         return;
+      }
+      if (isKafkaJSProtocolError(error) && error.type === 'UNKNOWN_TOPIC_OR_PARTITION') {
+
+        for (const record of outgoingRecords) {
+          const topic = record.record.topic
+          const config = await this.onTopicFailure(topic)
+          await maybeCreateTopic(config, topic, error)
+        }
+
+        await this.flush(outgoingRecords, retryCounter + 1, batchId)
+        return
       }
 
       outgoingRecords.forEach(({reject}) => reject(error));
