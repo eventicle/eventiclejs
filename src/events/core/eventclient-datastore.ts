@@ -179,6 +179,7 @@ class EventclientDatastore implements EventClient {
     }
     subscriptions.length=0
     streams.clear()
+    consumerGroups.length = 0
   }
 
   async coldStream(config: {
