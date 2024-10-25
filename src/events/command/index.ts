@@ -3,6 +3,7 @@ import * as tenant from "./tenant-command";
 import { logger, span } from "@eventicle/eventicle-utilities";
 import { serializeError } from "serialize-error";
 import { dataStore } from "../../index";
+import {TransactionOptions} from "@eventicle/eventicle-utilities/dist/datastore";
 
 /**
  * A CommandIntent is a message instructing Eventicle to perform an action that
@@ -179,7 +180,8 @@ export async function dispatchCommand<T>(
  */
 export async function dispatchDirectCommand<T>(
   command: () => Promise<CommandReturn<T>>,
-  streamToEmit: string
+  streamToEmit: string,
+  transactionControl?: TransactionOptions
 ): Promise<T> {
   const ret = await dataStore().transaction(async () => {
     return span(`Command DYNAMIC - execute`, {}, async (span) => {
@@ -200,7 +202,7 @@ export async function dispatchDirectCommand<T>(
         throw e;
       }
     });
-  });
+  }, transactionControl);
 
   if (ret.webError) throw ret.webError;
 
