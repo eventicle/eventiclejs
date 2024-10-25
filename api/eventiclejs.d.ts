@@ -398,7 +398,7 @@ export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Pro
  *  }, "user")
  * ```
  */
-export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string): Promise<T>;
+export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string, transactionControl?: TransactionOptions): Promise<T>;
 
 export declare interface EncodedEvent {
     buffer: Buffer;

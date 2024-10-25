@@ -430,7 +430,7 @@ export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Pro
 
 ========
 [id="eventicle_eventiclejs_dispatchDirectCommand_function_1"]
-=== dispatchDirectCommand(command, streamToEmit)
+=== dispatchDirectCommand(command, streamToEmit, transactionControl)
 
 ========
 
@@ -453,6 +453,10 @@ m|streamToEmit
 m|string
 |
 
+m|transactionControl
+m|TransactionOptions
+|
+
 s|Returns
 m|Promise&lt;T&gt;
 |
@@ -461,7 +465,7 @@ m|Promise&lt;T&gt;
 .Signature
 [source,typescript]
 ----
-export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string): Promise<T>;
+export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string, transactionControl?: TransactionOptions): Promise<T>;
 ----
 
 ========
