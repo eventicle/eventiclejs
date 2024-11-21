@@ -62,11 +62,7 @@ export class IdempotentEventClient implements EventClient {
     handler: (event: EncodedEvent) => Promise<void>,
     onError: (error: any) => void
   }): Promise<EventSubscriptionControl> {
-    return this.delegate.hotRawStream({...config, handler: async (event) => {
-      // return dataStore().transaction(async () =>{
-        return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
-      // })
-    }});
+    return this.delegate.hotRawStream({...config, handler: config.handler});
   }
 
   hotStream(config: {
@@ -76,11 +72,7 @@ export class IdempotentEventClient implements EventClient {
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void
   }): Promise<EventSubscriptionControl> {
-    return this.delegate.hotStream({ ...config, handler: async (event) => {
-        // return dataStore().transaction(async () =>{
-          return this.idempotentlyProcessEvent(config.groupId, event, config.handler)
-        // })
-      }});
+    return this.delegate.hotStream({ ...config, handler: config.handler});
   }
 
   isConnected(): boolean {
