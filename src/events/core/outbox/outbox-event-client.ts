@@ -6,6 +6,8 @@ import {
   EventSubscriptionControl,
   isEncodedEvent
 } from "../event-client";
+import {dataStore} from "@eventicle/eventicle-utilities/dist/datastore";
+
 
 export type OutboxEventList = {
   stream: string
@@ -31,9 +33,11 @@ export class OutboxEventClient implements EventClient {
   }
 
   async emit(event: EventicleEvent[] | EncodedEvent[], stream: string): Promise<void> {
-    const events = await Promise.all(event.map(async ev => isEncodedEvent(ev)? ev: eventClientCodec().encode(ev)))
-    await this.repo.persist({ events, stream, persistedAt: new Date() })
-    this.sender.notify();
+    dataStore().transaction(async () => {
+      const events = await Promise.all(event.map(async ev => isEncodedEvent(ev)? ev: eventClientCodec().encode(ev)))
+      await this.repo.persist({ events, stream, persistedAt: new Date() })
+      await this.sender.notify();
+    })
   }
 
   coldHotStream(config: {

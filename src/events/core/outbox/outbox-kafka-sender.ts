@@ -119,7 +119,7 @@ export class KafkaOutboxSender implements OutboxSender {
     }
     /**
      * Ensures that if the interval call ends up being concurrent due latency in sendBatch,
-     * unintentinally overlapping cycles are deferred to the next interval.
+     * unintentionally overlapping cycles are deferred to the next interval.
      */
     this.isFlushing = true;
     return dataStore().transaction(async () => {
