@@ -23,12 +23,6 @@ export function isKafkaJSProtocolError(error: unknown): error is IKafkaJSProtoco
   return error && typeof error === 'object' && (error as any).name === 'KafkaJSProtocolError';
 }
 
-// export interface IQueuedRecord {
-//   resolve: () => void;
-//   reject: (...args: any[]) => void;
-//   record: Pick<ProducerRecord, 'topic' | 'messages'>;
-// }
-
 export class KafkaOutboxSender implements OutboxSender {
   public recordsSent = 0;
 
@@ -80,9 +74,10 @@ export class KafkaOutboxSender implements OutboxSender {
       this.producerHealth.healthy = false
     })
 
-    const flushIntervalMs = this.producerConfig.flushIntervalMs || 100;
+    // how often to do a heartbeat flush.  Most messages will go via the `notify` route.
+    const regularFlushIntervalMs = 400;
     await this.producer.connect();
-    this.intervalTimeout = setInterval(this.flush, flushIntervalMs);
+    this.intervalTimeout = setInterval(() => this.flush(), regularFlushIntervalMs);
 
     this.isConnected = true;
   };
@@ -112,8 +107,8 @@ export class KafkaOutboxSender implements OutboxSender {
   };
 
   // tslint:disable-next-line: cyclomatic-complexity
-  private flush = async (
-  ) => {
+  private async flush (
+  ) {
     if (this.isFlushing) {
       return;
     }
@@ -121,9 +116,11 @@ export class KafkaOutboxSender implements OutboxSender {
      * Ensures that if the interval call ends up being concurrent due latency in sendBatch,
      * unintentionally overlapping cycles are deferred to the next interval.
      */
+    const out = this.eventOutbox
     this.isFlushing = true;
     return dataStore().transaction(async () => {
-      const outgoingRecords = await this.eventOutbox.readOutbox()
+      const txData = dataStore().getTransactionData()
+      const outgoingRecords = await out.readOutbox()
       const batchId = uuid.v4();
 
       if (!outgoingRecords.length) {
@@ -135,7 +132,6 @@ export class KafkaOutboxSender implements OutboxSender {
         this.lastSendErrored = false
         return;
       }
-
       logger.debug(
         'Flushing queue',
         {
@@ -153,11 +149,12 @@ export class KafkaOutboxSender implements OutboxSender {
               value: encoded.buffer,
               key: encoded.key,
               timestamp: `${encoded.timestamp}`,
-              headers: encoded.headers
+              headers: { ...encoded.headers, sendingservice: process.env.PROCESSNAME }
             }))
           } as TopicMessages
         })
 
+        logger.verbose("Send message batch ", topicMessages)
         await this.producer.sendBatch({
           topicMessages,
           acks: -1,
@@ -165,6 +162,7 @@ export class KafkaOutboxSender implements OutboxSender {
         });
 
         this.recordsSent += outgoingRecords.length;
+
         await this.eventOutbox.removeOutboxEntries(outgoingRecords);
 
         logger.debug('Flushed queue', {batchId});
@@ -193,7 +191,7 @@ export class KafkaOutboxSender implements OutboxSender {
         }
         return;
       }
-    }, { propagation: "requires" })
+    }, { propagation: "requires_new" })
       .catch(reason => {
         const ERROR_REPEAT_TIME = 30000
         if (this.lastSendErrored && this.errorLastReported < Date.now() - ERROR_REPEAT_TIME) {
