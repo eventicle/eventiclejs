@@ -33,7 +33,7 @@ export class OutboxEventClient implements EventClient {
   }
 
   async emit(event: EventicleEvent[] | EncodedEvent[], stream: string): Promise<void> {
-    dataStore().transaction(async () => {
+    return dataStore().transaction(async () => {
       const events = await Promise.all(event.map(async ev => isEncodedEvent(ev)? ev: eventClientCodec().encode(ev)))
       await this.repo.persist({ events, stream, persistedAt: new Date() })
       await this.sender.notify();
