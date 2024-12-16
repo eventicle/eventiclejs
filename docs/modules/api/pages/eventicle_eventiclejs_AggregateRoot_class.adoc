@@ -223,14 +223,14 @@ m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
 |
 
 s|Returns
-m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]&lt;any&gt;
 |
 |===
 
 .Signature
 [source,typescript]
 ----
-raiseEvent(event: EventicleEvent): EventicleEvent;
+raiseEvent(event: EventicleEvent): EventicleEvent<any>;
 ----
 
 ========

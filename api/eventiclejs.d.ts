@@ -153,7 +153,7 @@ export declare abstract class AggregateRoot {
     readonly config: AggregateConfig;
     constructor(type: string | AggregateConfig);
     currentCheckpoint(): object;
-    raiseEvent(event: EventicleEvent): EventicleEvent;
+    raiseEvent(event: EventicleEvent): EventicleEvent<any>;
     handleEvent(event: EventicleEvent): void;
     get type(): string;
 }
@@ -524,7 +524,7 @@ export declare function eventClientOnDatastore(): EventClient;
  */
 export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
 
-export declare interface EventicleEvent {
+export declare interface EventicleEvent<T = any> {
     id?: string;
     type: string;
     source?: string;
@@ -533,7 +533,7 @@ export declare interface EventicleEvent {
     stream?: string;
     domainId?: string;
     createdAt?: number;
-    data: any;
+    data: T;
 }
 
 export declare function eventSourceName(): string;
