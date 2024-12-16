@@ -143,18 +143,19 @@ export class KafkaOutboxSender implements OutboxSender {
       try {
 
         const topicMessages = outgoingRecords.map(value => {
+
           return {
             topic: value.stream,
             messages: value.events.map(encoded => ({
               value: encoded.buffer,
               key: encoded.key,
               timestamp: `${encoded.timestamp}`,
-              headers: { ...encoded.headers, sendingservice: process.env.PROCESSNAME }
+              headers: { ...encoded.headers, sendingservice: process.env.PROCESSNAME || process.env.HOSTNAME || "unknown-host"}
             }))
           } as TopicMessages
         })
 
-        logger.verbose("Send message batch ", topicMessages)
+        logger.debug("Send message batch ", topicMessages)
         await this.producer.sendBatch({
           topicMessages,
           acks: -1,

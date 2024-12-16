@@ -78,8 +78,7 @@ export class EventClientJsonCodec implements EventClientCodec {
   }
 }
 
-
-export interface EventicleEvent {
+export interface EventicleEvent<T = any> {
   id?: string
   type: string
   source?: string
@@ -88,7 +87,7 @@ export interface EventicleEvent {
   stream?: string
   domainId?: string
   createdAt?: number
-  data: any
+  data: T
 }
 
 export interface EventSubscriptionControl {
