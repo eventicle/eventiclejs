@@ -10,6 +10,7 @@ import * as uuid from "uuid";
 import {HealthCheckStatus} from "../eventclient-kafka";
 import {EventOutbox, OutboxSender} from "./outbox-event-client";
 import {dataStore} from "@eventicle/eventicle-utilities/dist/datastore";
+import {eventSourceName} from "../event-client";
 
 export interface IKafkaJSProtocolError {
   name: string;
@@ -150,7 +151,7 @@ export class KafkaOutboxSender implements OutboxSender {
               value: encoded.buffer,
               key: encoded.key,
               timestamp: `${encoded.timestamp}`,
-              headers: { ...encoded.headers, sendingservice: process.env.PROCESSNAME || process.env.HOSTNAME || "unknown-host"}
+              headers: { ...encoded.headers, source: eventSourceName(), sendingservice: process.env.PROCESSNAME || process.env.HOSTNAME || "unknown-host"}
             }))
           } as TopicMessages
         })
@@ -192,7 +193,7 @@ export class KafkaOutboxSender implements OutboxSender {
         }
         return;
       }
-    }, { propagation: "requires_new" })
+    }, { propagation: "requires_new", isolationLevel: "serializable" })
       .catch(reason => {
         const ERROR_REPEAT_TIME = 30000
         if (this.lastSendErrored && this.errorLastReported < Date.now() - ERROR_REPEAT_TIME) {
