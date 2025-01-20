@@ -1,6 +1,6 @@
 {
   "name": "@eventicle/eventiclejs",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,7 @@
   },
   "peerDependencies": {
     "@eventicle/eventicle-utilities": "^0.0.15",
-    "bullmq": "^3.15.0"
+    "bullmq": ">=3.15.0 <6"
   },
   "dependencies": {
     "@microsoft/api-documenter": "^7.19.27",
