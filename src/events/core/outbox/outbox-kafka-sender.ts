@@ -171,7 +171,7 @@ export class KafkaOutboxSender implements OutboxSender {
         this.isFlushing = false;
         if (this.lastSendErrored) {
           this.errorLastReported = 0
-          logger.info("Kafka outbox sender has read DB correctly and sent events successfully after previous failure")
+          logger.info(`Kafka outbox sender has read DB correctly and sent events [${outgoingRecords.length}] successfully after previous failure`)
         }
         this.lastSendErrored = false
         return;
@@ -191,12 +191,12 @@ export class KafkaOutboxSender implements OutboxSender {
           await this.flush();
           return;
         }
-        return;
+        throw error;
       }
     }, { propagation: "requires_new", isolationLevel: "serializable" })
       .catch(reason => {
         const ERROR_REPEAT_TIME = 30000
-        if (this.lastSendErrored && this.errorLastReported < Date.now() - ERROR_REPEAT_TIME) {
+        if (this.errorLastReported < Date.now() - ERROR_REPEAT_TIME) {
           logger.error(`Kafka outbox sender infrastructure failure has been detected. This will not repeat for ${ERROR_REPEAT_TIME}ms`, reason)
           this.errorLastReported = Date.now()
         }
