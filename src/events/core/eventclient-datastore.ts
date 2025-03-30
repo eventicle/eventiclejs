@@ -102,6 +102,10 @@ export function eventClientOnDatastore(): EventClient {
   return eventClientTransactional(new EventclientDatastore())
 }
 
+/**
+ * Represents a datastore implementation of an EventClient that maintains and processes events.
+ * This class provides methods for handling cold/hot event subscriptions, emitting events, and managing streams.
+ */
 class EventclientDatastore implements EventClient {
 
   constructor() {}

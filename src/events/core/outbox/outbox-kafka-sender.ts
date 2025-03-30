@@ -24,6 +24,28 @@ export function isKafkaJSProtocolError(error: unknown): error is IKafkaJSProtoco
   return error && typeof error === 'object' && (error as any).name === 'KafkaJSProtocolError';
 }
 
+/**
+ * KafkaOutboxSender is responsible for sending events from an event outbox to Kafka, ensuring
+ * reliable event delivery using an outbox pattern. It interacts with a Kafka producer, manages
+ * connection state, and handles errors that may arise during data transmission.
+ *
+ * This class provides methods to handle connection management, data batching, and reliable
+ * flushing of messages to Kafka. It ensures idempotent delivery of events via Kafka's producer
+ * configurations.
+ *
+ * Features:
+ * - Connects and disconnects from Kafka safely.
+ * - Reads batched events from an outbox and pushes them to Kafka.
+ * - Implements a retry mechanism in case of specific Kafka errors (e.g., UNKNOWN_PRODUCER_ID).
+ * - Tracks producer health status.
+ * - Manages periodic heartbeat flushes for idle intervals.
+ * - Reports infrastructure failures during message transmission.
+ *
+ * Dependencies:
+ * - Requires an instance of `EventOutbox` for outbox functionality.
+ * - Requires Kafka configuration (`KafkaConfig`) to initialize the Kafka connection.
+ * - Optionally accepts additional producer configurations like `maxOutgoingBatchSize` and `flushIntervalMs`.
+ */
 export class KafkaOutboxSender implements OutboxSender {
   public recordsSent = 0;
 
@@ -193,7 +215,7 @@ export class KafkaOutboxSender implements OutboxSender {
         }
         throw error;
       }
-    }, { propagation: "requires_new", isolationLevel: "serializable" })
+    }, { propagation: "requires_new", isolationLevel: "read-committed" })
       .catch(reason => {
         const ERROR_REPEAT_TIME = 30000
         if (this.errorLastReported < Date.now() - ERROR_REPEAT_TIME) {

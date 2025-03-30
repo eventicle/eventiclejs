@@ -2,10 +2,32 @@ import * as avro from 'avsc';
 import {logger, getApmTraceparent} from "@eventicle/eventicle-utilities";
 import { EventClientCodec, EncodedEvent, EventicleEvent } from './event-client';
 
+/**
+ * Abstract base class for encoding and decoding events using Avro.
+ * Implements the EventClientCodec interface to handle conversion of events
+ * to and from Avro encoded buffers.
+ *
+ * This class provides functions to:
+ * - Decode an encoded event into an EventicleEvent object.
+ * - Encode an EventicleEvent object into an EncodedEvent.
+ * - Parse Avro schema/protocol and register Avro types.
+ *
+ * Concrete implementations must implement the `loadAvro` method to initialize
+ * and load the required Avro schemas.
+ */
 export abstract class AvroCodec implements EventClientCodec {
 
   protected _types = new Map<String, avro.Type>();
 
+  /**
+   * Retrieves the Avro type for a given event type name.
+   *
+   * @param {string} typeName - The name of the event type to retrieve.
+   * @return {avro.Type | undefined} The corresponding Avro Type or undefined if not found.
+   */
+  protected getAvroType(typeName: string): avro.Type | undefined {
+    return this._types.get(typeName);
+  }
   /**
    *
    */
@@ -13,6 +35,13 @@ export abstract class AvroCodec implements EventClientCodec {
     this.loadAvro();
   }
 
+  /**
+   * Decodes an encoded event into a EventicleEvent object.
+   *
+   * @param {EncodedEvent} encoded - The encoded event containing headers and buffer data to be decoded.
+   * @return {Promise<EventicleEvent>} The decoded EventicleEvent object.
+   * @throws {Error} Throws an error if the input encoded object is undefined or if decoding fails.
+   */
   async decode(encoded: EncodedEvent): Promise<EventicleEvent> {
 
     const addTrace = (ev: EventicleEvent) => {

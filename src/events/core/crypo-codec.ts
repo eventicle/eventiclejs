@@ -83,6 +83,36 @@ export function encryptData(key: string, value: any) {
   }
 
 
+/**
+ * The `EventClientCryptoCodec` class is responsible for encoding and decoding events,
+ * with support for cryptographic operations on specified event properties. It serves
+ * as a codec implementation, delegating non-encryption-specific tasks to another codec.
+ *
+ * The class uses the provided cryptographic configuration to determine how events of
+ * specific types should be encrypted or decrypted, applying cryptographic transformations
+ * to designated properties within the event payload.
+ *
+ * Constructor parameters:
+ * @param {CryptoCodecConfiguration} config - The configuration object specifying which
+ * properties of specific event types require cryptographic processing.
+ * @param {EventClientCodec} delegate - The underlying codec implementation that handles
+ * non-cryptographic encoding and decoding operations.
+ * @param {string} dsWorkspace - The workspace identifier used to retrieve keys for cryptographic operations.
+ *
+ * Methods:
+ *
+ * @method decode
+ * Decodes an encoded event, applying decryption to specified properties depending on the
+ * event type and configuration.
+ * @param {EncodedEvent} encoded - The encoded event data.
+ * @returns {Promise<EventicleEvent>} - A promise resolving to the decoded event.
+ *
+ * @method encode
+ * Encodes an event, applying encryption to specified properties depending on the event
+ * type and configuration.
+ * @param {EventicleEvent} event - The event to be encoded.
+ * @returns {Promise<EncodedEvent>} - A promise resolving to the encoded event.
+ */
 export class EventClientCryptoCodec implements EventClientCodec {
 
   constructor(readonly config: CryptoCodecConfiguration, readonly delegate: EventClientCodec, readonly dsWorkspace: string) {}

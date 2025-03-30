@@ -1,6 +1,14 @@
 import {eventClient, EventClient, EventSubscriptionControl} from "./event-client";
 import {logger} from "@eventicle/eventicle-utilities";
 
+/**
+ * Creates a proxy `EventClient` that attempts to connect to the underlying `EventClient`.
+ * If the connection is delayed or fails, the proxy client will handle method calls
+ * as no-operations or queue subscription setups until the connection is established.
+ *
+ * @param {Function} createClient - A function that returns a promise which resolves to an `EventClient` instance.
+ * @return {Promise<EventClient>} A proxy `EventClient` instance that manages connection retries and operation delegation.
+ */
 export async function cleanStartingProxyEventClient(createClient: () => Promise<EventClient>): Promise<EventClient> {
 
   const subscriptionOps = [] as ((client: EventClient) => Promise<void>)[]

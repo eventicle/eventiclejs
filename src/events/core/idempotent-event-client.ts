@@ -6,6 +6,11 @@ import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util"
 import {dataStore} from "@eventicle/eventicle-utilities/dist/datastore";
 
 
+/**
+ * IdempotentEventClient ensures that event processing is handled idempotently on top of a delegate `EventClient`.
+ * It uses `ProcessedEventRepo` to track and prevent duplicate event processing for specific consumer groups.
+ * This class wraps around another `EventClient` instance, adding idempotency to its event handling operations.
+ */
 export class IdempotentEventClient implements EventClient {
   constructor(private delegate: EventClient, private idempotentRepo: ProcessedEventRepo) {}
 

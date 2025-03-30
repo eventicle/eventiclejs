@@ -39,6 +39,24 @@ export interface EventClientCodec {
   decode: (encoded: EncodedEvent) => Promise<EventicleEvent>
 }
 
+/**
+ * `EventClientJsonCodec` is an implementation of the `EventClientCodec` interface
+ * responsible for encoding and decoding events to and from JSON format.
+ * This codec helps in transforming event objects to encoded representations
+ * suitable for transport or storage and back to event objects.
+ *
+ * The codec embeds tracing information where applicable, ensuring traceability
+ * across services using traceparent headers.
+ *
+ * Methods:
+ * - `decode(encoded: EncodedEvent): Promise<EventicleEvent>`: Converts an `EncodedEvent` object containing a JSON representation
+ *   of an event back into an `EventicleEvent` object. If the encoded event contains
+ *   a `traceparent` header, it is added to the resulting event object.
+ *
+ * - `encode(event: EventicleEvent): Promise<EncodedEvent>`: Converts an `EventicleEvent` object into an `EncodedEvent` object
+ *   with a serialized JSON representation. The encoded event includes metadata such as timestamps, keys, headers, and optional
+ *   traceparent information for observability.
+ */
 export class EventClientJsonCodec implements EventClientCodec {
   decode(encoded: EncodedEvent): Promise<EventicleEvent> {
     const addTrace = (ev: EventicleEvent) => {

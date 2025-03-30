@@ -17,16 +17,28 @@ export type OutboxEventList = {
 
 export type OutboxEventListWithId = { id: string } & OutboxEventList;
 
+/**
+ * Interface for managing an Event Outbox system used for persisting,
+ * retrieving, and removing events from a temporary storage.
+ */
 export interface EventOutbox {
   persist(events: OutboxEventList): Promise<void>
   readOutbox(): Promise<OutboxEventListWithId[]>
   removeOutboxEntries(events: OutboxEventListWithId[]): Promise<void>
 }
 
+/**
+ * Represents a mechanism to handle and send notifications for outgoing messages stored in an outbox.
+ */
 export interface OutboxSender {
   notify(): Promise<void>
 }
 
+/**
+ * OutboxEventClient is an implementation of the EventClient interface that manages event storage and processing
+ * through an event outbox mechanism. It integrates with a persistence layer and a sender for event notification.
+ * This class also delegates certain operations to an underlying EventClient instance.
+ */
 export class OutboxEventClient implements EventClient {
 
   constructor(private repo: EventOutbox, private sender: OutboxSender, private delegate: EventClient) {

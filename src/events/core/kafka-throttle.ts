@@ -22,6 +22,13 @@ export interface IQueuedRecord {
   record: Pick<ProducerRecord, 'topic' | 'messages'>;
 }
 
+/**
+ * The ThrottledProducer class is responsible for producing messages to a Kafka topic
+ * while throttling the outgoing batch sizes. It ensures that messages are sent
+ * in a controlled manner to prevent overloading the Kafka broker. It also handles
+ * reliable connection management and retries for producing messages in case of
+ * specific Kafka protocol errors.
+ */
 export class ThrottledProducer {
   public recordsSent = 0;
 

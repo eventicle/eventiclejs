@@ -13,7 +13,7 @@ import {dataStore} from "../../";
 import {logger} from "@eventicle/eventicle-utilities";
 
 /**
- * Evernt client that wraps a delegate and integrate with the transaction manager.
+ * Event client that wraps a delegate and integrate with the transaction manager.
  *
  * Will collect events during a transaction and emit them once the transaction commits.
  *

@@ -147,6 +147,10 @@ async function connectConsumerWithOptionalCreation<T>(topicNames: string | strin
   })
 }
 
+/**
+ * Represents an Event Client with Kafka integration. Provides methods to manage Kafka connections,
+ * publish events, and subscribe to streams for event processing.
+ */
 class EventclientKafka implements EventClient {
 
   throttle: ThrottledProducer
