@@ -288,59 +288,229 @@ class EventclientKafka implements EventClient {
     onDone: () => void
   }): Promise<EventSubscriptionControl> {
 
-    const groupId = uuid.v4()
+    // Always use a unique group ID for cold replay to ensure we get all partitions
+    const groupId = `cold-replay-${uuid.v4()}`
     let newConf = consumerConfigFactory.consumerConfig(config.stream, groupId, "COLD")
 
+    // Force sessionTimeout to be high enough to allow time for processing
     let cons = kafka.consumer({
-        groupId: newConf.groupId || groupId,
-        ...newConf
+      groupId: groupId, // Don't use newConf.groupId to ensure uniqueness
+      sessionTimeout: 60000, // 60 seconds
+      rebalanceTimeout: 60000, // 60 seconds
+      heartbeatInterval: 3000, // 3 seconds
+      ...newConf
+    })
+
+    // Create a map to track the latest offsets and consumed offsets
+    const latestOffsets = new Map();
+    const consumedOffsets = new Map();
+    const emptyPartitions = new Set();
+    const partitionsWithMessages = new Set();
+    let allPartitions = [];
+    let messagesProcessed = false;
+
+    // Connect to admin client to get topic metadata
+    let adm = kafka.admin()
+    try {
+      await adm.connect()
+
+      // Fetch metadata about the topic to get a complete list of partitions
+      const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] })
+      const topicMetadata = metadata.topics.find(t => t.name === config.stream)
+
+      if (!topicMetadata) {
+        throw new Error(`Topic ${config.stream} not found in metadata`)
+      }
+
+      // Get a complete list of partitions for this topic
+      allPartitions = topicMetadata.partitions.map(p => p.partitionId)
+
+      // Now fetch offsets for each partition
+      let topicOffsets = await adm.fetchTopicOffsets(config.stream)
+
+      // Log if the number of partitions from metadata doesn't match offset data
+      if (allPartitions.length !== topicOffsets.length) {
+        logger.warn(`Mismatch between metadata partitions (${allPartitions.length}) and offset partitions (${topicOffsets.length})`)
+      }
+
+      // Initialize tracking for all partitions from metadata
+      allPartitions.forEach(partition => {
+        consumedOffsets.set(partition, BigInt(-1))
       })
 
+      // Process offset information
+      topicOffsets.forEach(({ partition, high }) => {
+        const highOffset = BigInt(high);
+        latestOffsets.set(partition, highOffset);
 
-    let adm = kafka.admin()
-    await adm.connect()
+        // If this partition is empty (high offset is 0), mark it as empty
+        if (highOffset === BigInt(0)) {
+          emptyPartitions.add(partition);
+        } else {
+          partitionsWithMessages.add(partition);
+        }
 
-    let partitionOffsets = await adm.fetchTopicOffsets(config.stream)
-    let latestOffset = Math.max(...partitionOffsets.map(value => parseInt(value.offset)))
-    await adm.disconnect()
+        logger.debug(`Partition ${partition} has high offset ${high}`)
+      })
+    } finally {
+      await adm.disconnect()
+    }
 
-    logger.debug(`Cold replay of ${config.stream} by [${groupId}], seek till ${latestOffset}`)
+    const partitionsToProcess = allPartitions.length;
 
-    await connectConsumerWithOptionalCreation(config.stream, async () => {
-      await cons.connect()
-    })
+    // Convert BigInt values to strings for logging
+    const serializableLatestOffsets = {};
+    latestOffsets.forEach((value, key) => {
+      serializableLatestOffsets[key] = value.toString();
+    });
 
-    await cons.subscribe({topic: config.stream, fromBeginning: true})
-    let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, groupId, "COLD", config.parallelEventCount)
+    logger.debug(`Cold replay of ${config.stream} by [${groupId}], partitions:`, {
+      allPartitions,
+      partitionsWithMessages: Array.from(partitionsWithMessages),
+      emptyPartitions: Array.from(emptyPartitions),
+      latestOffsets: serializableLatestOffsets
+    });
 
-    cons.run({
-      ...newRunConf,
-      eachMessage: async payload => {
-        logger.trace("Cold message lands", payload)
-        try {
-          let decoded = await eventClientCodec().decode({
-            timestamp: parseInt(payload.message.timestamp),
-            key: payload.message.key ? payload.message.key.toString() : null,
-            headers: payload.message.headers,
-            buffer: payload.message.value
-          })
+    // Connect the consumer
+    try {
+      await connectConsumerWithOptionalCreation(config.stream, async () => {
+        await cons.connect()
+      })
 
-          decoded.stream = payload.topic
+      // Subscribe to the topic from the beginning
+      await cons.subscribe({
+        topic: config.stream,
+        fromBeginning: true
+      })
 
-          await config.handler(decoded)
-        } finally {
-          if (parseInt(payload.message.offset) >= latestOffset - 1) {
-            logger.debug(`Group ID [${groupId}] finishes cold replay on offset ${payload.message.offset}`)
-            config.onDone()
-            await cons.disconnect()
+      // Get the run config
+      let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, groupId, "COLD", config.parallelEventCount)
+
+      // Setup a heartbeat interval to keep checking if we're stuck
+      let stuckCheckInterval;
+      let lastActivity = Date.now();
+
+      // Track the partitions we've seen messages from
+      const seenPartitions = new Set();
+
+      stuckCheckInterval = setInterval(() => {
+        const now = Date.now();
+        const timeWithoutActivity = now - lastActivity;
+
+        // If we have partitions we've never seen messages from and we've been idle for more than 10 seconds
+        if (timeWithoutActivity > 10000) {
+          // Convert BigInt values to strings for logging
+          const serializableConsumedOffsets = {};
+          consumedOffsets.forEach((value, key) => {
+            serializableConsumedOffsets[key] = value.toString();
+          });
+
+          logger.debug(`Cold replay has been idle for ${timeWithoutActivity}ms. Checking state:`, {
+            seenPartitions: Array.from(seenPartitions),
+            consumedOffsets: serializableConsumedOffsets,
+            partitionsWithMessages: Array.from(partitionsWithMessages)
+          });
+
+          // Check if we might be stuck due to missing partitions
+          partitionsWithMessages.forEach(partition => {
+            if (!seenPartitions.has(partition)) {
+              logger.warn(`Partition ${partition} has messages but we haven't seen any yet`);
+            }
+          });
+        }
+      }, 10000);
+
+      // Run the consumer
+      await cons.run({
+        ...newRunConf,
+        eachMessage: async ({ topic, partition, message }) => {
+          lastActivity = Date.now();
+
+          // Track that we've seen this partition
+          seenPartitions.add(partition);
+
+          logger.trace(`Cold message from partition ${partition}, offset ${message.offset}`)
+          try {
+            let decoded = await eventClientCodec().decode({
+              timestamp: parseInt(message.timestamp),
+              key: message.key ? message.key.toString() : null,
+              headers: message.headers,
+              buffer: message.value
+            })
+
+            decoded.stream = topic
+
+            await config.handler(decoded)
+            messagesProcessed = true;
+          } finally {
+            // Update consumed offset
+            consumedOffsets.set(partition, BigInt(message.offset));
+
+            // Check if we've caught up on all partitions
+            const allCaughtUp = Array.from(latestOffsets.entries()).every(([partition, endOffset]) => {
+              // If this partition is empty, we consider it caught up
+              if (emptyPartitions.has(partition)) {
+                return true;
+              }
+              const currentOffset = consumedOffsets.get(partition);
+              return currentOffset >= endOffset - BigInt(1); // Subtract 1 because offset is 0-based
+            });
+
+            if (allCaughtUp) {
+              // Convert BigInt values to strings for logging
+              const serializableConsumedOffsets = {};
+              const serializableLatestOffsets = {};
+
+              consumedOffsets.forEach((value, key) => {
+                serializableConsumedOffsets[key] = value.toString();
+              });
+
+              latestOffsets.forEach((value, key) => {
+                serializableLatestOffsets[key] = value.toString();
+              });
+
+              logger.debug(`Group ID [${groupId}] finishes cold replay`, {
+                stream: config.stream,
+                seenPartitions: Array.from(seenPartitions),
+                partitionsWithMessages: Array.from(partitionsWithMessages),
+                consumedOffsets: serializableConsumedOffsets,
+                latestOffsets: serializableLatestOffsets,
+                messagesProcessed
+              });
+
+              // Clear the stuck check interval
+              clearInterval(stuckCheckInterval);
+
+              // Call onDone and disconnect
+              await pause(5000)
+              config.onDone();
+              // let it commit the offsets of the last batch
+              setTimeout(() => {
+                cons.disconnect();
+              }, 3000)
+            }
           }
         }
+      });
+
+      // Handle the case of completely empty topics
+      if (emptyPartitions.size === partitionsToProcess) {
+        logger.debug(`Topic ${config.stream} is completely empty, finishing immediately`);
+        clearInterval(stuckCheckInterval);
+        setTimeout(async () => {
+          config.onDone();
+          await cons.disconnect();
+        }, 1000); // Small delay to ensure consumer has fully connected
       }
-    })
+    } catch (error) {
+      logger.error(`Error in cold replay of ${config.stream}:`, error);
+      config.onError(error);
+      await cons.disconnect().catch(e => logger.error("Error disconnecting consumer:", e));
+    }
 
     return {
       close: async () => {
-        await cons.disconnect()
+        await cons.disconnect().catch(e => logger.error("Error disconnecting consumer:", e));
       }
     }
   }

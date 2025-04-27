@@ -124,6 +124,7 @@ export interface EventClient {
    */
   coldStream: (config: {
     stream: string,
+    parallelEventCount?: number,
     handler: (event: EventicleEvent) => Promise<void>,
     onError: (error: any) => void,
     onDone: () => void
