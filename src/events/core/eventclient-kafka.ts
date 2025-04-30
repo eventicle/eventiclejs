@@ -497,10 +497,13 @@ class EventclientKafka implements EventClient {
       if (emptyPartitions.size === partitionsToProcess) {
         logger.debug(`Topic ${config.stream} is completely empty, finishing immediately`);
         clearInterval(stuckCheckInterval);
-        setTimeout(async () => {
-          config.onDone();
-          await cons.disconnect();
-        }, 1000); // Small delay to ensure consumer has fully connected
+        config.onDone();
+        await cons.disconnect();
+        return {
+          close: async () => {
+            // Already disconnected
+          }
+        };
       }
     } catch (error) {
       logger.error(`Error in cold replay of ${config.stream}:`, error);
