@@ -316,10 +316,21 @@ class EventclientKafka implements EventClient {
 
       // Fetch metadata about the topic to get a complete list of partitions
       const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] })
-      const topicMetadata = metadata.topics.find(t => t.name === config.stream)
+      let topicMetadata = metadata.topics.find(t => t.name === config.stream)
 
       if (!topicMetadata) {
-        throw new Error(`Topic ${config.stream} not found in metadata`)
+        const createConfig = await onTopicFailure(config.stream);
+        await maybeCreateTopic(createConfig, config.stream, new Error('Topic not found in metadata'));
+
+        // Retry fetching metadata after topic creation
+        const newMetadata = await adm.fetchTopicMetadata({topics: [config.stream]});
+        const newTopicMetadata = newMetadata.topics.find(t => t.name === config.stream);
+
+        if (!newTopicMetadata) {
+          throw new Error(`Failed to create topic ${config.stream}`);
+        }
+
+        topicMetadata = newTopicMetadata;
       }
 
       // Get a complete list of partitions for this topic
