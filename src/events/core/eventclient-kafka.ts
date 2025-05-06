@@ -315,8 +315,10 @@ class EventclientKafka implements EventClient {
       await adm.connect()
 
       // Fetch metadata about the topic to get a complete list of partitions
-      const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] })
-      let topicMetadata = metadata.topics.find(t => t.name === config.stream)
+      const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] }).catch(async reason => {
+        return null
+      })
+      let topicMetadata = metadata?.topics?.find(t => t.name === config.stream)
 
       if (!topicMetadata) {
         const createConfig = await onTopicFailure(config.stream);
@@ -422,12 +424,19 @@ class EventclientKafka implements EventClient {
             partitionsWithMessages: Array.from(partitionsWithMessages)
           });
 
-          // Check if we might be stuck due to missing partitions
+          // Check for missing partitions but continue anyway
           partitionsWithMessages.forEach(partition => {
             if (!seenPartitions.has(partition)) {
-              logger.warn(`Partition ${partition} has messages but we haven't seen any yet`);
+              logger.warn(`Ignoring partition ${partition} that has messages but wasn't seen`);
             }
           });
+
+          // Clear interval and finish
+          clearInterval(stuckCheckInterval);
+          config.onDone();
+          setTimeout(() => {
+            cons.disconnect();
+          }, 3000);
         }
       }, 10000);
 

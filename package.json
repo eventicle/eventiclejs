@@ -1,6 +1,6 @@
 {
   "name": "@eventicle/eventiclejs",
-  "version": "1.0.23",
+  "version": "1.1.0-beta.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,6 +20,7 @@
   "dependencies": {
     "@microsoft/api-documenter": "^7.19.27",
     "@microsoft/api-extractor": "^7.33.7",
+    "@taskforcesh/bullmq-pro": "^7.35.0",
     "@types/crypto-js": "^4.1.1",
     "@types/node-cron": "^3.0.6",
     "@types/serialize-error": "^4.0.1",
