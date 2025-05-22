@@ -1,7 +1,6 @@
 import {EventicleEvent} from "../core/event-client";
 import {Saga} from "./index";
 import {handleTimerEvent, sagaHandleEvent} from "./handlers";
-import {Record} from "../../index";
 
 export interface SagaScheduler {
   sagaHandleEvent(saga: Saga<any, any>, event: EventicleEvent, instanceId: string): Promise<void>
