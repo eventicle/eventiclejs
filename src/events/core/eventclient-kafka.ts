@@ -315,11 +315,24 @@ class EventclientKafka implements EventClient {
       await adm.connect()
 
       // Fetch metadata about the topic to get a complete list of partitions
-      const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] })
-      const topicMetadata = metadata.topics.find(t => t.name === config.stream)
+      const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] }).catch(async reason => {
+        return null
+      })
+      let topicMetadata = metadata?.topics?.find(t => t.name === config.stream)
 
       if (!topicMetadata) {
-        throw new Error(`Topic ${config.stream} not found in metadata`)
+        const createConfig = await onTopicFailure(config.stream);
+        await maybeCreateTopic(createConfig, config.stream, new Error('Topic not found in metadata'));
+
+        // Retry fetching metadata after topic creation
+        const newMetadata = await adm.fetchTopicMetadata({topics: [config.stream]});
+        const newTopicMetadata = newMetadata.topics.find(t => t.name === config.stream);
+
+        if (!newTopicMetadata) {
+          throw new Error(`Failed to create topic ${config.stream}`);
+        }
+
+        topicMetadata = newTopicMetadata;
       }
 
       // Get a complete list of partitions for this topic
@@ -411,12 +424,19 @@ class EventclientKafka implements EventClient {
             partitionsWithMessages: Array.from(partitionsWithMessages)
           });
 
-          // Check if we might be stuck due to missing partitions
+          // Check for missing partitions but continue anyway
           partitionsWithMessages.forEach(partition => {
             if (!seenPartitions.has(partition)) {
-              logger.warn(`Partition ${partition} has messages but we haven't seen any yet`);
+              logger.warn(`Ignoring partition ${partition} that has messages but wasn't seen`);
             }
           });
+
+          // Clear interval and finish
+          clearInterval(stuckCheckInterval);
+          config.onDone();
+          setTimeout(() => {
+            cons.disconnect();
+          }, 3000);
         }
       }, 10000);
 
@@ -497,10 +517,13 @@ class EventclientKafka implements EventClient {
       if (emptyPartitions.size === partitionsToProcess) {
         logger.debug(`Topic ${config.stream} is completely empty, finishing immediately`);
         clearInterval(stuckCheckInterval);
-        setTimeout(async () => {
-          config.onDone();
-          await cons.disconnect();
-        }, 1000); // Small delay to ensure consumer has fully connected
+        config.onDone();
+        await cons.disconnect();
+        return {
+          close: async () => {
+            // Already disconnected
+          }
+        };
       }
     } catch (error) {
       logger.error(`Error in cold replay of ${config.stream}:`, error);

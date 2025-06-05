@@ -4,7 +4,7 @@ import { maybeRenderError } from "@eventicle/eventicle-utilities/dist/logger-uti
 import * as CronParser from "cron-parser";
 import { dataStore } from "@eventicle/eventicle-utilities/dist/datastore";
 import {Queue, QueueEvents, RedisOptions, Worker} from "bullmq";
-import stableStringify from "json-stable-stringify";
+import safeStringify from 'fast-safe-stringify';
 import {eventSourceName} from "./events/core/event-client";
 import * as uuid from "uuid";
 import { als } from "asynchronous-local-storage";
@@ -19,39 +19,196 @@ const TIMER = "lock-manager-timer";
 const CRON = "lock-manager-cron";
 
 /**
- * A Scheduled Job Runner that uses BullMQ
- *
- * Compatible with LocalScheduleRunner data types (ie, lock-manager-cron)
+ * A production-ready scheduled job runner implementation using BullMQ for Redis-backed persistence.
+ * 
+ * This scheduler provides reliable, distributed timer execution for Eventicle sagas and other
+ * time-based operations. It supports both simple delay-based timers and cron-based recurring
+ * schedules with persistence across application restarts.
+ * 
+ * @example
+ * ```typescript
+ * import { BullMQScheduleJobRunner } from '@eventicle/eventiclejs';
+ * 
+ * const scheduler = new BullMQScheduleJobRunner({
+ *   host: 'localhost',
+ *   port: 6379,
+ *   password: 'redis-password'
+ * });
+ * 
+ * await scheduler.startup();
+ * 
+ * // Add a simple timer
+ * await scheduler.addScheduledTask(
+ *   'payment-saga',
+ *   'timeout',
+ *   'payment-123',
+ *   { isCron: false, timeout: 30000 }, // 30 seconds
+ *   { orderId: 'order-456' }
+ * );
+ * 
+ * // Add a recurring cron job
+ * await scheduler.addScheduledTask(
+ *   'cleanup-saga', 
+ *   'daily-cleanup',
+ *   'system',
+ *   { isCron: true, crontab: '0 2 * * *' }, // Daily at 2 AM
+ *   { maxAge: 30 }
+ * );
+ * ```
+ * 
+ * @see {@link ScheduleJobRunner} For the interface contract
+ * @see {@link LocalScheduleJobRunner} For development/testing alternative
+ * 
+ * Features:
+ * - **Persistence**: Timers survive application restarts via Redis storage
+ * - **Distribution**: Multiple worker instances can process jobs concurrently
+ * - **Reliability**: Built-in retry mechanisms and job status tracking
+ * - **Scalability**: Configurable concurrency and job cleanup policies
+ * - **Monitoring**: Job execution tracking and error handling
+ * 
+ * Configuration Options:
+ * - `removeOnComplete`: Automatically clean up completed jobs
+ * - `removeOnFail`: Automatically clean up failed jobs
+ * - `concurrency`: Number of jobs to process concurrently per worker
+ * - Redis connection settings for clustering and authentication
+ * 
+ * @since 1.0.0
  */
 export class BullMQScheduleJobRunner implements ScheduleJobRunner {
   /**
-   * Listeners are functions that are called on a per component basis
-   * a component would be, in the case of sagas, the Saga name. So, there is a single
-   * timer listener function for the Saga, which takes all timed executions and dispatches them
-   * internally inside the saga
+   * Runtime tracking of currently executing scheduled tasks.
+   * 
+   * This map provides visibility into active job execution for monitoring and debugging.
+   * Each entry contains:
+   * - Component name and execution arguments
+   * - Start timestamp for duration tracking
+   * - Job metadata for troubleshooting
+   * 
+   * Jobs are automatically added when execution starts and removed when complete
+   * or failed, providing a real-time view of scheduler activity.
+   * 
+   * @example
+   * ```typescript
+   * // Check currently active jobs
+   * console.log('Active jobs:', scheduler.activeJobs);
+   * // Output: { "PaymentSaga_timeout_payment-123": { component: "PaymentSaga", ... } }
+   * ```
+   */
+  /**
+   * Component-specific timer execution handlers.
+   * 
+   * Maps component names (typically saga names) to their timer execution functions.
+   * When a scheduled timer fires, the appropriate listener is called with the timer
+   * name, instance ID, and any associated data.
+   * 
+   * @example
+   * ```typescript
+   * // Automatically registered when a saga is set up
+   * scheduler.listeners.set('PaymentSaga', async (args) => {
+   *   await handleSagaTimer(args.name, args.id, args.data);
+   * });
+   * ```
    */
   listeners = new Map<string, (args: any) => Promise<void>>();
 
   /**
-   * The BullMQ execution queue.
+   * The BullMQ job queue for managing scheduled tasks.
    *
-   * This supports delayed (eg, simple timers) and cron executions (repeatables, in BullMQ terms)
+   * Handles both delayed executions (simple timers) and recurring schedules (cron jobs).
+   * Provides persistent storage, job retry mechanisms, and distributed processing
+   * capabilities through Redis.
+   * 
+   * Features:
+   * - Delayed job execution for simple timers
+   * - Repeatable jobs for cron-based scheduling  
+   * - Job deduplication to prevent duplicate timers
+   * - Automatic cleanup of completed/failed jobs
    */
   queue: Queue<any, any, string>;
+  
   /**
-   * The BullMQ job executor. There will be one per process, that will run multiple timed executions in
-   * parallel.
+   * The BullMQ worker process for executing scheduled jobs.
+   * 
+   * Configures parallel job processing with configurable concurrency limits.
+   * Each worker instance can process multiple timer executions simultaneously
+   * while maintaining proper error handling and job lifecycle management.
+   * 
+   * Worker features:
+   * - Concurrent job processing (default: 20 jobs)
+   * - Automatic job retry on failure
+   * - Error logging and monitoring integration
+   * - Graceful shutdown handling
    */
   worker: Worker<any, void, string>;
+  
   /**
-   * Local metadata about what this scheduler is executing at the moment.
+   * Runtime tracking of currently executing scheduled tasks.
+   * 
+   * This map provides visibility into active job execution for monitoring and debugging.
+   * Each entry contains:
+   * - Component name and execution arguments
+   * - Start timestamp for duration tracking
+   * - Job metadata for troubleshooting
+   * 
+   * Jobs are automatically added when execution starts and removed when complete
+   * or failed, providing a real-time view of scheduler activity.
+   * 
+   * @example
+   * ```typescript
+   * // Check currently active jobs
+   * console.log('Active jobs:', scheduler.activeJobs);
+   * // Output: { "PaymentSaga_timeout_payment-123": { component: "PaymentSaga", ... } }
+   * ```
    */
   activeJobs: {
     [key: string]: any;
   } = {};
 
+  /**
+   * Creates a new BullMQ-based scheduler instance.
+   * 
+   * @param config - Redis connection configuration options
+   * @param config.host - Redis server hostname
+   * @param config.port - Redis server port (default: 6379) 
+   * @param config.password - Redis authentication password
+   * @param config.db - Redis database number to use
+   * @param config.retryDelayOnFailover - Delay before retry on failover
+   * @param config.maxRetriesPerRequest - Maximum retry attempts per request
+   * 
+   * @example
+   * ```typescript
+   * const scheduler = new BullMQScheduleJobRunner({
+   *   host: 'redis.example.com',
+   *   port: 6379,
+   *   password: 'secure-password',
+   *   db: 0,
+   *   maxRetriesPerRequest: 3
+   * });
+   * ```
+   */
   constructor(readonly config: RedisOptions) {}
 
+  /**
+   * Registers a timer execution handler for a specific component.
+   * 
+   * This method is typically called automatically when sagas are registered,
+   * but can be used manually for custom timer handling logic.
+   * 
+   * @param component - The component name (usually a saga name)
+   * @param exec - The execution function called when timers fire
+   * @param exec.name - The timer name that was scheduled
+   * @param exec.id - The unique timer instance identifier 
+   * @param exec.data - Any data associated with the timer
+   * 
+   * @example
+   * ```typescript
+   * await scheduler.addScheduleTaskListener('PaymentSaga', async (name, id, data) => {
+   *   if (name === 'timeout') {
+   *     await handlePaymentTimeout(id, data);
+   *   }
+   * });
+   * ```
+   */
   async addScheduleTaskListener(
     component: string,
     exec: (name: string, id: string, data: any) => Promise<void>
@@ -62,7 +219,7 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
           component,
           args,
         });
-        this.activeJobs[stableStringify({component, args})] = {
+        this.activeJobs[safeStringify({component, args})] = {
           component,
           args,
           startedAt: new Date().toISOString(),
@@ -75,7 +232,7 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
             })
           )
           .finally(() => {
-            delete this.activeJobs[stableStringify({component, args})];
+            delete this.activeJobs[safeStringify({component, args})];
           });
       } catch (e) {
         logger.error("FAILED Executing a schedule task listener", e)
@@ -83,6 +240,43 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
     });
   }
 
+  /**
+   * Schedules a new task for future execution.
+   * 
+   * Supports both simple delay-based timers and cron-based recurring schedules.
+   * Tasks are persisted to Redis and will survive application restarts.
+   * 
+   * @param component - The component name (typically saga name)
+   * @param name - The timer name within the component
+   * @param id - Unique identifier for this timer instance
+   * @param config - Timer configuration (simple delay or cron schedule)
+   * @param config.isCron - Whether this is a cron-based recurring timer
+   * @param config.timeout - Delay in milliseconds (for simple timers)
+   * @param config.crontab - Cron expression (for recurring timers)
+   * @param data - Arbitrary data to pass to the timer handler
+   * 
+   * @example Simple timer
+   * ```typescript
+   * await scheduler.addScheduledTask(
+   *   'PaymentSaga',
+   *   'timeout', 
+   *   'payment-123',
+   *   { isCron: false, timeout: 30000 }, // 30 seconds
+   *   { orderId: 'order-456', amount: 100 }
+   * );
+   * ```
+   * 
+   * @example Cron timer
+   * ```typescript
+   * await scheduler.addScheduledTask(
+   *   'ReportSaga',
+   *   'daily-report',
+   *   'system',
+   *   { isCron: true, crontab: '0 9 * * *' }, // Daily at 9 AM
+   *   { reportType: 'sales' }
+   * );
+   * ```
+   */
   async addScheduledTask(
     component: string,
     name: string,

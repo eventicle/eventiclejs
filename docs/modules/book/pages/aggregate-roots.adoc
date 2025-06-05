@@ -1,63 +1,471 @@
 
-== Aggregate Roots: Event Driven Domain Entities
+= Aggregate Roots
 
-A DDD aggregate is a related set of domain entities that can be loaded and interacted with as a single
-unit.
+Aggregate Roots are the heart of domain-driven design and event sourcing in Eventicle. They encapsulate business logic, maintain consistency boundaries, and generate events that represent state changes.
 
-An Eventicle Aggregate Roots [AR] implement the https://www.eventstore.com/blog/what-is-event-sourcing[Event Sourcing] pattern.
+== What Are Aggregate Roots?
 
-Each Aggregate Root includes a full event history that created it.  Each time the AR is loaded it is fully re-created from it's event history via a set of stateless functional reducers.
+An Aggregate Root is an entity that:
 
-=== A Simple Aggregate Root
+* **Controls Access**: Acts as the single entry point for modifying aggregate state
+* **Ensures Consistency**: Enforces business rules and invariants
+* **Generates Events**: Emits events when state changes occur
+* **Rebuilds State**: Reconstructs current state from historical events
+* **Provides Identity**: Has a unique identifier within its bounded context
+
+== Basic Aggregate Structure
 
 [source,typescript]
 ----
-include::example$app/src/simple-aggregate-root.ts[tags=class]
+import { AggregateRoot } from "@eventicle/eventiclejs";
+
+class BankAccount extends AggregateRoot {
+  balance: number = 0;
+  status: "active" | "frozen" | "closed" = "active";
+  
+  constructor() {
+    super("bank-accounts", []);
+    
+    // Define event reducers
+    this.reducers = {
+      AccountOpened: (event) => {
+        this.id = event.payload.accountId;
+        this.balance = event.payload.initialDeposit;
+        this.status = "active";
+      },
+      
+      MoneyDeposited: (event) => {
+        this.balance += event.payload.amount;
+      },
+      
+      MoneyWithdrawn: (event) => {
+        this.balance -= event.payload.amount;
+      },
+      
+      AccountFrozen: (event) => {
+        this.status = "frozen";
+      }
+    };
+  }
+  
+  // Business methods
+  static open(accountId: string, initialDeposit: number): BankAccount {
+    const account = new BankAccount();
+    account.raiseEvent({
+      type: "AccountOpened",
+      payload: { accountId, initialDeposit }
+    });
+    return account;
+  }
+  
+  deposit(amount: number) {
+    if (this.status !== "active") {
+      throw new Error("Cannot deposit to inactive account");
+    }
+    
+    this.raiseEvent({
+      type: "MoneyDeposited",
+      payload: { amount, timestamp: new Date() }
+    });
+  }
+  
+  withdraw(amount: number) {
+    if (this.status !== "active") {
+      throw new Error("Cannot withdraw from inactive account");
+    }
+    
+    if (this.balance < amount) {
+      throw new Error("Insufficient funds");
+    }
+    
+    this.raiseEvent({
+      type: "MoneyWithdrawn",
+      payload: { amount, timestamp: new Date() }
+    });
+  }
+  
+  freeze() {
+    if (this.status === "active") {
+      this.raiseEvent({
+        type: "AccountFrozen",
+        payload: { reason: "Manual freeze", timestamp: new Date() }
+      });
+    }
+  }
+}
 ----
-<1> Internal property. This will be managed via the event reducers, and never anywhere else.
-<2> Configure the aggregate root. This defines the event stream that Commands will emit events to.
-<3> An Event Reducer function. This takes the given event and applies the content to `this`. It should use the current state of the aggregate when calculating what changes to make, but should never be async or call outside services.
-<4> The first event in the Aggregate Root must initialise the `id` property from the events `domainId` property to give a consistent `domainId` on all subsequent events that the AR generates.
-<5> Reducers can take any (or no) state from the event and generate a view of it to represent the current state of the Aggregate Root as at the event just applied.
-<6> Any mutation to the Aggregate Root must be done by raising events on it.
 
-Aggregate Roots can become very complex, with multiple sub objects and resolver hierarchies.
+== Aggregate Root Lifecycle
 
-You may wish to consider using the https://xstate.js.org/[XState] support in Eventicle for building xref:aggregate-root-xstate.adoc[event driven State Machines].
+=== 1. Creation
 
-=== Aggregate Root Reducers
+Aggregates are typically created through static factory methods:
 
-An event sourced Aggregate Root is rebuild every time it is loaded. This is done via the Event Reducers that you see in the example above.
+[source,typescript]
+----
+// Create new aggregate
+const account = BankAccount.open("acc-123", 1000);
 
-Reducers must :
+// At this point, the aggregate has:
+// - Generated an "AccountOpened" event
+// - Applied the event to set initial state
+// - Event is pending (not yet persisted)
+----
 
-* Be synchronous
-* use the current state of the aggregate and the incoming event to calculate changes to the aggregate.
-* Be deterministic.
+=== 2. Loading from Events
 
-=== Loading/ Saving Aggregates
+Existing aggregates are reconstructed from their event history:
 
-Aggregate Roots instances
+[source,typescript]
+----
+import { aggregates } from "@eventicle/eventiclejs";
 
-=== Using Commands With Aggregate Roots
+// Load aggregate by ID
+const account = await aggregates.load(BankAccount, "acc-123");
 
+// The aggregate is rebuilt by:
+// 1. Loading all events for the aggregate
+// 2. Applying each event through reducers
+// 3. Resulting in current state
+----
 
-=== Checkpoints and Directly Querying Aggregate Roots in the Datastore
+=== 3. Modification
 
+Business operations modify state through event generation:
 
-//
-// [mermaid]
-// ....
-// graph TD
-//   A[Christmas] -->|Get money| B(Go shopping)
-//   B --> C{Let me think}
-//   C -->|One| D[Laptop]
-//   C -->|Two| E[iPhonesss]
-//   C -->|Three| F[fa:fa-car Car]
-//
-// ....
-//
-//
-// event sourcing
-//
-// observing and waiting for async state changes in an AR with observationAdapter
+[source,typescript]
+----
+// Load existing aggregate
+const account = await aggregates.load(BankAccount, "acc-123");
+
+// Perform business operations
+account.deposit(500);
+account.withdraw(200);
+
+// Events are raised but not yet persisted
+console.log(account.newEvents.length); // 2
+----
+
+=== 4. Persistence
+
+Changes are persisted by saving the aggregate:
+
+[source,typescript]
+----
+// Save the aggregate (emits all pending events)
+const emittedEvents = await aggregates.persist(account);
+
+// After persistence:
+// - Events are emitted to the event stream
+// - newEvents array is cleared
+// - Other components can react to the events
+----
+
+== Event Reducers
+
+Reducers are pure functions that apply events to aggregate state:
+
+[source,typescript]
+----
+class Order extends AggregateRoot {
+  items: OrderItem[] = [];
+  status: string = "draft";
+  total: number = 0;
+  
+  constructor() {
+    super("orders", []);
+    
+    this.reducers = {
+      // Simple state assignment
+      OrderCreated: (event) => {
+        this.id = event.payload.orderId;
+        this.status = "created";
+      },
+      
+      // Complex state calculation
+      ItemAdded: (event) => {
+        this.items.push(event.payload.item);
+        this.total = this.items.reduce((sum, item) => 
+          sum + (item.price * item.quantity), 0
+        );
+      },
+      
+      // Conditional state changes
+      PaymentReceived: (event) => {
+        if (event.payload.amount >= this.total) {
+          this.status = "paid";
+        }
+      }
+    };
+  }
+}
+----
+
+=== Reducer Best Practices
+
+1. **Keep Pure**: Reducers should not have side effects
+2. **Be Idempotent**: Applying the same event multiple times should be safe
+3. **Handle All Events**: Include reducers for all events your aggregate can generate
+4. **Validate State**: Ensure resulting state is consistent
+
+== Business Logic and Invariants
+
+Aggregates enforce business rules before generating events:
+
+[source,typescript]
+----
+class ShoppingCart extends AggregateRoot {
+  items: CartItem[] = [];
+  customerId: string = "";
+  maxItems: number = 10;
+  
+  addItem(productId: string, quantity: number, price: number) {
+    // Validate business rules
+    if (this.items.length >= this.maxItems) {
+      throw new Error("Cart is full");
+    }
+    
+    if (quantity <= 0) {
+      throw new Error("Quantity must be positive");
+    }
+    
+    if (price < 0) {
+      throw new Error("Price cannot be negative");
+    }
+    
+    // Check if item already exists
+    const existingItem = this.items.find(i => i.productId === productId);
+    if (existingItem) {
+      throw new Error("Item already in cart");
+    }
+    
+    // Business rule passed, raise event
+    this.raiseEvent({
+      type: "ItemAddedToCart",
+      payload: { productId, quantity, price }
+    });
+  }
+}
+----
+
+== Loading and Saving Aggregates
+
+=== Basic Operations
+
+[source,typescript]
+----
+import { aggregates } from "@eventicle/eventiclejs";
+
+// Create and save new aggregate
+const newOrder = Order.create("order-123", "customer-456");
+await aggregates.persist(newOrder);
+
+// Load existing aggregate
+const existingOrder = await aggregates.load(Order, "order-123");
+
+// Modify and save
+existingOrder.addItem("product-1", 2, 29.99);
+await aggregates.persist(existingOrder);
+----
+
+=== Bulk Operations
+
+[source,typescript]
+----
+// Save multiple aggregates
+const orders = [order1, order2, order3];
+const allEvents = await aggregates.persistAll(orders);
+
+// Load multiple aggregates
+const orderIds = ["order-1", "order-2", "order-3"];
+const loadedOrders = await aggregates.loadAll(Order, orderIds);
+----
+
+=== Querying Aggregates
+
+[source,typescript]
+----
+// Query aggregates by criteria
+const activeOrders = await aggregates.query(Order, {
+  where: { status: "active" },
+  limit: 100
+});
+
+// Count aggregates
+const orderCount = await aggregates.count(Order, {
+  where: { customerId: "customer-123" }
+});
+----
+
+== Checkpoints and Performance
+
+For aggregates with many events, use checkpoints to improve loading performance:
+
+[source,typescript]
+----
+class HighVolumeAggregate extends AggregateRoot {
+  constructor() {
+    super("high-volume", [], {
+      checkpointFrequency: 100  // Create checkpoint every 100 events
+    });
+  }
+  
+  // Get current checkpoint data
+  currentCheckpoint() {
+    return {
+      balance: this.balance,
+      transactionCount: this.transactionCount,
+      lastActivity: this.lastActivity
+    };
+  }
+  
+  // Restore from checkpoint
+  fromCheckpoint(data: any) {
+    this.balance = data.balance;
+    this.transactionCount = data.transactionCount;
+    this.lastActivity = data.lastActivity;
+  }
+}
+----
+
+== Multi-Tenant Aggregates
+
+For multi-tenant systems, use `TenantAggregateRoot`:
+
+[source,typescript]
+----
+import { TenantAggregateRoot } from "@eventicle/eventiclejs";
+
+class TenantOrder extends TenantAggregateRoot {
+  constructor() {
+    super("tenant-orders", []);
+    
+    this.reducers = {
+      OrderCreated: (event) => {
+        this.id = event.payload.orderId;
+        this.tenantId = event.payload.tenantId;
+      }
+    };
+  }
+  
+  static create(orderId: string, tenantId: string): TenantOrder {
+    const order = new TenantOrder();
+    order.raiseEvent({
+      type: "OrderCreated",
+      payload: { orderId, tenantId }
+    });
+    return order;
+  }
+}
+
+// Load tenant-specific aggregate
+const tenantOrder = await aggregates.loadTenant(TenantOrder, "order-123", "tenant-abc");
+----
+
+== Automatically Raised Events
+
+Some events are automatically generated by the framework:
+
+* **Snapshot Events**: When checkpoints are created
+* **Lifecycle Events**: For aggregate creation/deletion
+* **Causation Events**: Tracking event relationships
+
+[source,typescript]
+----
+// These events are automatically added:
+// - AggregateCreated when first events are raised
+// - AggregateSnapshot when checkpoints occur
+// - CausationTracking for event relationships
+----
+
+== Using Commands with Aggregate Roots
+
+Combine aggregates with commands for clean separation:
+
+[source,typescript]
+----
+import { dispatchDirectCommand } from "@eventicle/eventiclejs";
+
+export class AccountCommands {
+  static async openAccount(accountId: string, initialDeposit: number) {
+    return dispatchDirectCommand(async () => {
+      const account = BankAccount.open(accountId, initialDeposit);
+      
+      return {
+        response: account.id,
+        events: await aggregates.persist(account)
+      };
+    }, "bank-accounts");
+  }
+  
+  static async deposit(accountId: string, amount: number) {
+    return dispatchDirectCommand(async () => {
+      const account = await aggregates.load(BankAccount, accountId);
+      account.deposit(amount);
+      
+      return {
+        response: { newBalance: account.balance },
+        events: await aggregates.persist(account)
+      };
+    }, "bank-accounts");
+  }
+}
+----
+
+== Error Handling
+
+[source,typescript]
+----
+class RobustAggregate extends AggregateRoot {
+  performOperation(data: any) {
+    try {
+      // Validate input
+      this.validateInput(data);
+      
+      // Check business rules
+      this.enforceBusinessRules(data);
+      
+      // Generate event
+      this.raiseEvent({
+        type: "OperationPerformed",
+        payload: data
+      });
+      
+    } catch (error) {
+      // Log error but don't raise event
+      console.error("Operation failed:", error.message);
+      throw error;
+    }
+  }
+  
+  private validateInput(data: any) {
+    if (!data || typeof data !== 'object') {
+      throw new Error("Invalid input data");
+    }
+  }
+  
+  private enforceBusinessRules(data: any) {
+    // Business rule validation
+    if (this.someBusinessCondition(data)) {
+      throw new Error("Business rule violation");
+    }
+  }
+}
+----
+
+== Best Practices
+
+1. **Single Responsibility**: Each aggregate should have one clear purpose
+2. **Small Boundaries**: Keep aggregates focused and avoid large object graphs
+3. **Immutable Events**: Never modify events after they're created
+4. **Validate Early**: Check business rules before raising events
+5. **Handle Errors**: Provide clear error messages for business rule violations
+6. **Use Checkpoints**: For aggregates with many events
+7. **Test Thoroughly**: Test both happy path and error scenarios
+
+== Next Steps
+
+* Learn about xref:aggregate-root-xstate.adoc[XState Aggregate Roots] for complex state machines
+* Explore xref:commands.adoc[Commands] for handling user actions
+* Understand xref:testing.adoc[Testing Aggregates] thoroughly
+* See xref:performance-optimization.adoc[Performance Optimization] for large aggregates

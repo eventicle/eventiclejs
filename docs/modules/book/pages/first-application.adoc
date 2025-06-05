@@ -1,0 +1,978 @@
+= Your First Eventicle Application
+
+This guide walks through building a complete event-sourced application using Eventicle. We'll create a task management system that demonstrates all major concepts: aggregates, commands, views, and sagas.
+
+== Application Overview
+
+We'll build a task management system with these features:
+
+* Create and assign tasks
+* Track task progress and completion
+* Send notifications when tasks are overdue
+* Generate reports on task completion
+
+The system will demonstrate:
+
+* **Aggregates**: Task and Project entities
+* **Commands**: User actions like creating tasks
+* **Views**: Query-optimized projections
+* **Sagas**: Notification workflows
+
+== Project Setup
+
+[source,bash]
+----
+mkdir task-manager
+cd task-manager
+npm init -y
+npm install @eventicle/eventiclejs uuid @types/uuid
+npm install -D typescript @types/node ts-node jest @types/jest
+npx tsc --init
+----
+
+Update `tsconfig.json`:
+
+[source,json]
+----
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
+----
+
+== Domain Events
+
+Define our event types in `src/events/task-events.ts`:
+
+[source,typescript]
+----
+export interface TaskCreated {
+  type: "TaskCreated";
+  payload: {
+    taskId: string;
+    projectId: string;
+    title: string;
+    description: string;
+    assigneeId: string;
+    dueDate: Date;
+    priority: "low" | "medium" | "high";
+    createdAt: Date;
+  };
+}
+
+export interface TaskAssigned {
+  type: "TaskAssigned";
+  payload: {
+    taskId: string;
+    fromAssigneeId?: string;
+    toAssigneeId: string;
+    assignedAt: Date;
+  };
+}
+
+export interface TaskStatusChanged {
+  type: "TaskStatusChanged";
+  payload: {
+    taskId: string;
+    fromStatus: string;
+    toStatus: string;
+    changedAt: Date;
+    note?: string;
+  };
+}
+
+export interface TaskCompleted {
+  type: "TaskCompleted";
+  payload: {
+    taskId: string;
+    completedBy: string;
+    completedAt: Date;
+    actualHours?: number;
+  };
+}
+
+export interface TaskOverdue {
+  type: "TaskOverdue";
+  payload: {
+    taskId: string;
+    dueDate: Date;
+    daysPastDue: number;
+    assigneeId: string;
+  };
+}
+
+export type TaskEvent = 
+  | TaskCreated 
+  | TaskAssigned 
+  | TaskStatusChanged 
+  | TaskCompleted 
+  | TaskOverdue;
+----
+
+== Task Aggregate
+
+Create `src/aggregates/task.ts`:
+
+[source,typescript]
+----
+import { AggregateRoot } from "@eventicle/eventiclejs";
+import { v4 as uuid } from "uuid";
+import { TaskEvent } from "../events/task-events";
+
+export class Task extends AggregateRoot {
+  projectId: string = "";
+  title: string = "";
+  description: string = "";
+  assigneeId: string = "";
+  status: "todo" | "in-progress" | "review" | "done" = "todo";
+  priority: "low" | "medium" | "high" = "medium";
+  dueDate: Date | null = null;
+  createdAt: Date | null = null;
+  completedAt: Date | null = null;
+  estimatedHours?: number;
+  actualHours?: number;
+
+  constructor() {
+    super("tasks", []);
+
+    this.reducers = {
+      TaskCreated: (event) => {
+        this.id = event.payload.taskId;
+        this.projectId = event.payload.projectId;
+        this.title = event.payload.title;
+        this.description = event.payload.description;
+        this.assigneeId = event.payload.assigneeId;
+        this.priority = event.payload.priority;
+        this.dueDate = event.payload.dueDate;
+        this.createdAt = event.payload.createdAt;
+      },
+
+      TaskAssigned: (event) => {
+        this.assigneeId = event.payload.toAssigneeId;
+      },
+
+      TaskStatusChanged: (event) => {
+        this.status = event.payload.toStatus as any;
+      },
+
+      TaskCompleted: (event) => {
+        this.status = "done";
+        this.completedAt = event.payload.completedAt;
+        this.actualHours = event.payload.actualHours;
+      },
+
+      TaskOverdue: (event) => {
+        // Task is marked as overdue - could add a flag
+      }
+    };
+  }
+
+  static create(params: {
+    projectId: string;
+    title: string;
+    description: string;
+    assigneeId: string;
+    dueDate: Date;
+    priority: "low" | "medium" | "high";
+    estimatedHours?: number;
+  }): Task {
+    const task = new Task();
+    
+    task.raiseEvent({
+      type: "TaskCreated",
+      payload: {
+        taskId: uuid(),
+        ...params,
+        createdAt: new Date()
+      }
+    });
+
+    return task;
+  }
+
+  reassign(newAssigneeId: string) {
+    if (this.status === "done") {
+      throw new Error("Cannot reassign completed task");
+    }
+
+    if (this.assigneeId === newAssigneeId) {
+      throw new Error("Task already assigned to this user");
+    }
+
+    this.raiseEvent({
+      type: "TaskAssigned",
+      payload: {
+        taskId: this.id,
+        fromAssigneeId: this.assigneeId,
+        toAssigneeId: newAssigneeId,
+        assignedAt: new Date()
+      }
+    });
+  }
+
+  updateStatus(newStatus: "todo" | "in-progress" | "review" | "done", note?: string) {
+    if (this.status === newStatus) {
+      return; // No change needed
+    }
+
+    if (this.status === "done") {
+      throw new Error("Cannot change status of completed task");
+    }
+
+    // Business rule: must go through proper progression
+    const validTransitions = {
+      "todo": ["in-progress"],
+      "in-progress": ["review", "todo"],
+      "review": ["done", "in-progress"],
+      "done": [] // No transitions from done
+    };
+
+    if (!validTransitions[this.status].includes(newStatus)) {
+      throw new Error(`Invalid status transition from ${this.status} to ${newStatus}`);
+    }
+
+    if (newStatus === "done") {
+      this.complete();
+    } else {
+      this.raiseEvent({
+        type: "TaskStatusChanged",
+        payload: {
+          taskId: this.id,
+          fromStatus: this.status,
+          toStatus: newStatus,
+          changedAt: new Date(),
+          note
+        }
+      });
+    }
+  }
+
+  complete(actualHours?: number) {
+    if (this.status === "done") {
+      throw new Error("Task already completed");
+    }
+
+    this.raiseEvent({
+      type: "TaskCompleted",
+      payload: {
+        taskId: this.id,
+        completedBy: this.assigneeId,
+        completedAt: new Date(),
+        actualHours
+      }
+    });
+  }
+
+  markOverdue() {
+    if (!this.dueDate || this.status === "done") {
+      return;
+    }
+
+    const now = new Date();
+    if (now <= this.dueDate) {
+      return; // Not overdue
+    }
+
+    const daysPastDue = Math.floor(
+      (now.getTime() - this.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    this.raiseEvent({
+      type: "TaskOverdue",
+      payload: {
+        taskId: this.id,
+        dueDate: this.dueDate,
+        daysPastDue,
+        assigneeId: this.assigneeId
+      }
+    });
+  }
+}
+----
+
+== Commands
+
+Create command handlers in `src/commands/task-commands.ts`:
+
+[source,typescript]
+----
+import { dispatchDirectCommand, aggregates } from "@eventicle/eventiclejs";
+import { Task } from "../aggregates/task";
+
+export class TaskCommands {
+  static async createTask(params: {
+    projectId: string;
+    title: string;
+    description: string;
+    assigneeId: string;
+    dueDate: Date;
+    priority: "low" | "medium" | "high";
+    estimatedHours?: number;
+  }) {
+    return dispatchDirectCommand(async () => {
+      // Validate input
+      if (!params.title.trim()) {
+        throw new Error("Task title is required");
+      }
+
+      if (!params.assigneeId) {
+        throw new Error("Task must be assigned to someone");
+      }
+
+      if (params.dueDate <= new Date()) {
+        throw new Error("Due date must be in the future");
+      }
+
+      // Create task
+      const task = Task.create(params);
+
+      return {
+        response: { taskId: task.id },
+        events: await aggregates.persist(task)
+      };
+    }, "tasks");
+  }
+
+  static async reassignTask(taskId: string, newAssigneeId: string) {
+    return dispatchDirectCommand(async () => {
+      const task = await aggregates.load(Task, taskId);
+      
+      if (!task) {
+        throw new Error("Task not found");
+      }
+
+      task.reassign(newAssigneeId);
+
+      return {
+        response: { taskId: task.id, newAssigneeId },
+        events: await aggregates.persist(task)
+      };
+    }, "tasks");
+  }
+
+  static async updateTaskStatus(
+    taskId: string, 
+    newStatus: "todo" | "in-progress" | "review" | "done",
+    note?: string
+  ) {
+    return dispatchDirectCommand(async () => {
+      const task = await aggregates.load(Task, taskId);
+      
+      if (!task) {
+        throw new Error("Task not found");
+      }
+
+      task.updateStatus(newStatus, note);
+
+      return {
+        response: { taskId: task.id, status: newStatus },
+        events: await aggregates.persist(task)
+      };
+    }, "tasks");
+  }
+
+  static async completeTask(taskId: string, actualHours?: number) {
+    return dispatchDirectCommand(async () => {
+      const task = await aggregates.load(Task, taskId);
+      
+      if (!task) {
+        throw new Error("Task not found");
+      }
+
+      task.complete(actualHours);
+
+      return {
+        response: { taskId: task.id, completedAt: new Date() },
+        events: await aggregates.persist(task)
+      };
+    }, "tasks");
+  }
+}
+----
+
+== Event Views
+
+Create views for querying in `src/views/task-views.ts`:
+
+[source,typescript]
+----
+import { EventView, EventicleEvent, dataStore } from "@eventicle/eventiclejs";
+
+export interface TaskSummary {
+  taskId: string;
+  projectId: string;
+  title: string;
+  assigneeId: string;
+  status: string;
+  priority: string;
+  dueDate: Date | null;
+  createdAt: Date;
+  completedAt: Date | null;
+  estimatedHours?: number;
+  actualHours?: number;
+  isOverdue: boolean;
+}
+
+export class TaskSummaryView implements EventView {
+  consumerGroup = "TaskSummaryView";
+  streamsToSubscribe = ["tasks"];
+  parallelEventCount = 10;
+
+  async handleEvent(event: EventicleEvent): Promise<void> {
+    const store = await dataStore();
+
+    switch (event.type) {
+      case "TaskCreated":
+        await store.save("task-summaries", event.payload.taskId, {
+          taskId: event.payload.taskId,
+          projectId: event.payload.projectId,
+          title: event.payload.title,
+          assigneeId: event.payload.assigneeId,
+          status: "todo",
+          priority: event.payload.priority,
+          dueDate: event.payload.dueDate,
+          createdAt: event.payload.createdAt,
+          completedAt: null,
+          estimatedHours: event.payload.estimatedHours,
+          actualHours: null,
+          isOverdue: false
+        });
+        break;
+
+      case "TaskAssigned":
+        const taskForAssignment = await store.load("task-summaries", event.payload.taskId);
+        if (taskForAssignment) {
+          taskForAssignment.assigneeId = event.payload.toAssigneeId;
+          await store.save("task-summaries", event.payload.taskId, taskForAssignment);
+        }
+        break;
+
+      case "TaskStatusChanged":
+        const taskForStatus = await store.load("task-summaries", event.payload.taskId);
+        if (taskForStatus) {
+          taskForStatus.status = event.payload.toStatus;
+          await store.save("task-summaries", event.payload.taskId, taskForStatus);
+        }
+        break;
+
+      case "TaskCompleted":
+        const completedTask = await store.load("task-summaries", event.payload.taskId);
+        if (completedTask) {
+          completedTask.status = "done";
+          completedTask.completedAt = event.payload.completedAt;
+          completedTask.actualHours = event.payload.actualHours;
+          await store.save("task-summaries", event.payload.taskId, completedTask);
+        }
+        break;
+
+      case "TaskOverdue":
+        const overdueTask = await store.load("task-summaries", event.payload.taskId);
+        if (overdueTask) {
+          overdueTask.isOverdue = true;
+          await store.save("task-summaries", event.payload.taskId, overdueTask);
+        }
+        break;
+    }
+  }
+
+  async getTask(taskId: string): Promise<TaskSummary | null> {
+    const store = await dataStore();
+    return await store.load("task-summaries", taskId);
+  }
+
+  async getTasksByAssignee(assigneeId: string): Promise<TaskSummary[]> {
+    const store = await dataStore();
+    const allTasks = await store.scan("task-summaries");
+    return allTasks.filter(task => task.assigneeId === assigneeId);
+  }
+
+  async getTasksByProject(projectId: string): Promise<TaskSummary[]> {
+    const store = await dataStore();
+    const allTasks = await store.scan("task-summaries");
+    return allTasks.filter(task => task.projectId === projectId);
+  }
+
+  async getOverdueTasks(): Promise<TaskSummary[]> {
+    const store = await dataStore();
+    const allTasks = await store.scan("task-summaries");
+    return allTasks.filter(task => task.isOverdue && task.status !== "done");
+  }
+
+  async getTasksByStatus(status: string): Promise<TaskSummary[]> {
+    const store = await dataStore();
+    const allTasks = await store.scan("task-summaries");
+    return allTasks.filter(task => task.status === status);
+  }
+}
+
+export class ProjectMetricsView implements EventView {
+  consumerGroup = "ProjectMetricsView";
+  streamsToSubscribe = ["tasks"];
+
+  async handleEvent(event: EventicleEvent): Promise<void> {
+    const store = await dataStore();
+
+    switch (event.type) {
+      case "TaskCreated":
+        await this.updateProjectMetrics(event.payload.projectId, "taskCreated");
+        break;
+
+      case "TaskCompleted":
+        const task = await store.load("task-summaries", event.payload.taskId);
+        if (task) {
+          await this.updateProjectMetrics(task.projectId, "taskCompleted", {
+            estimatedHours: task.estimatedHours,
+            actualHours: event.payload.actualHours
+          });
+        }
+        break;
+    }
+  }
+
+  private async updateProjectMetrics(
+    projectId: string, 
+    action: string, 
+    taskData?: any
+  ): Promise<void> {
+    const store = await dataStore();
+    
+    let metrics = await store.load("project-metrics", projectId) || {
+      projectId,
+      totalTasks: 0,
+      completedTasks: 0,
+      totalEstimatedHours: 0,
+      totalActualHours: 0,
+      completionRate: 0
+    };
+
+    switch (action) {
+      case "taskCreated":
+        metrics.totalTasks++;
+        break;
+
+      case "taskCompleted":
+        metrics.completedTasks++;
+        if (taskData?.estimatedHours) {
+          metrics.totalEstimatedHours += taskData.estimatedHours;
+        }
+        if (taskData?.actualHours) {
+          metrics.totalActualHours += taskData.actualHours;
+        }
+        break;
+    }
+
+    metrics.completionRate = metrics.totalTasks > 0 
+      ? (metrics.completedTasks / metrics.totalTasks) * 100 
+      : 0;
+
+    await store.save("project-metrics", projectId, metrics);
+  }
+
+  async getProjectMetrics(projectId: string): Promise<any> {
+    const store = await dataStore();
+    return await store.load("project-metrics", projectId);
+  }
+}
+----
+
+== Notification Saga
+
+Create a saga for notifications in `src/sagas/notification-saga.ts`:
+
+[source,typescript]
+----
+import { saga, SagaInstance } from "@eventicle/eventiclejs";
+
+interface NotificationData {
+  taskId: string;
+  assigneeId: string;
+  notificationType: "overdue" | "assigned" | "completed";
+  sentAt?: Date;
+}
+
+export function notificationSaga() {
+  return saga<any, NotificationData>("TaskNotificationSaga")
+    .subscribeStreams(["tasks"])
+    .on(
+      "TaskAssigned",
+      {
+        startNewInstance: true,
+        instanceProperty: "taskId",
+        value: (event) => event.payload.taskId
+      },
+      async (instance, event) => {
+        instance.data = {
+          taskId: event.payload.taskId,
+          assigneeId: event.payload.toAssigneeId,
+          notificationType: "assigned"
+        };
+
+        await sendNotification(
+          event.payload.toAssigneeId,
+          `You have been assigned a new task: ${event.payload.taskId}`
+        );
+
+        instance.data.sentAt = new Date();
+      }
+    )
+    .on(
+      "TaskOverdue",
+      {
+        matchInstance: (event) => ({ 
+          instanceProperty: "taskId", 
+          value: event.payload.taskId 
+        })
+      },
+      async (instance, event) => {
+        // Send overdue notification
+        await sendNotification(
+          event.payload.assigneeId,
+          `Task ${event.payload.taskId} is ${event.payload.daysPastDue} days overdue!`
+        );
+
+        // Schedule follow-up reminder in 1 day
+        instance.scheduleTimer("followUpReminder", 24 * 60 * 60 * 1000);
+      }
+    )
+    .on(
+      "TaskCompleted",
+      {
+        matchInstance: (event) => ({ 
+          instanceProperty: "taskId", 
+          value: event.payload.taskId 
+        })
+      },
+      async (instance, event) => {
+        await sendNotification(
+          event.payload.completedBy,
+          `Great job completing task ${event.payload.taskId}!`
+        );
+
+        // End the saga instance
+        instance.complete();
+      }
+    )
+    .onTimer("followUpReminder", async (instance) => {
+      await sendNotification(
+        instance.data.assigneeId,
+        `Reminder: Task ${instance.data.taskId} is still overdue!`
+      );
+
+      // Schedule another reminder in 1 day
+      instance.scheduleTimer("followUpReminder", 24 * 60 * 60 * 1000);
+    });
+}
+
+async function sendNotification(userId: string, message: string): Promise<void> {
+  // In a real application, this would integrate with:
+  // - Email service
+  // - Slack/Teams
+  // - Push notifications
+  // - SMS service
+  
+  console.log(`📧 Notification to ${userId}: ${message}`);
+  
+  // Could emit an event for other systems to handle
+  // await eventClient().emit([{
+  //   type: "NotificationSent",
+  //   stream: "notifications",
+  //   domainId: uuid(),
+  //   payload: { userId, message, sentAt: new Date() }
+  // }]);
+}
+----
+
+== Application Configuration
+
+Create `src/config.ts`:
+
+[source,typescript]
+----
+import {
+  setEventClient,
+  eventClientInMemory,
+  setDataStore,
+  InMemoryDatastore,
+  registerView,
+  registerSaga
+} from "@eventicle/eventiclejs";
+
+import { TaskSummaryView, ProjectMetricsView } from "./views/task-views";
+import { notificationSaga } from "./sagas/notification-saga";
+
+export function configureApplication() {
+  // Use in-memory implementations for this example
+  // In production, use Kafka and PostgreSQL
+  setDataStore(new InMemoryDatastore());
+  setEventClient(eventClientInMemory());
+
+  // Register views
+  registerView(new TaskSummaryView());
+  registerView(new ProjectMetricsView());
+
+  // Register sagas
+  registerSaga(notificationSaga());
+
+  console.log("✅ Application configured successfully");
+}
+----
+
+== Main Application
+
+Create `src/app.ts`:
+
+[source,typescript]
+----
+import { configureApplication } from "./config";
+import { TaskCommands } from "./commands/task-commands";
+import { TaskSummaryView, ProjectMetricsView } from "./views/task-views";
+import { aggregates, allViews } from "@eventicle/eventiclejs";
+import { Task } from "./aggregates/task";
+
+class TaskManagerApp {
+  private taskView: TaskSummaryView;
+  private metricsView: ProjectMetricsView;
+
+  constructor() {
+    configureApplication();
+    
+    // Get registered views
+    const views = allViews();
+    this.taskView = views.find(v => v instanceof TaskSummaryView) as TaskSummaryView;
+    this.metricsView = views.find(v => v instanceof ProjectMetricsView) as ProjectMetricsView;
+  }
+
+  async createSampleData() {
+    console.log("🚀 Creating sample tasks...");
+
+    // Create some tasks
+    const task1 = await TaskCommands.createTask({
+      projectId: "project-1",
+      title: "Implement user authentication",
+      description: "Add login and registration functionality",
+      assigneeId: "dev-1",
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      priority: "high",
+      estimatedHours: 16
+    });
+
+    const task2 = await TaskCommands.createTask({
+      projectId: "project-1",
+      title: "Design database schema",
+      description: "Create tables for user and task management",
+      assigneeId: "dev-2",
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      priority: "high",
+      estimatedHours: 8
+    });
+
+    const task3 = await TaskCommands.createTask({
+      projectId: "project-2",
+      title: "Write documentation",
+      description: "Create API documentation",
+      assigneeId: "dev-1",
+      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
+      priority: "medium",
+      estimatedHours: 12
+    });
+
+    // Progress some tasks
+    await TaskCommands.updateTaskStatus(task1.response.taskId, "in-progress");
+    await TaskCommands.updateTaskStatus(task2.response.taskId, "in-progress");
+    await TaskCommands.updateTaskStatus(task2.response.taskId, "review");
+    await TaskCommands.completeTask(task2.response.taskId, 6);
+
+    // Reassign a task
+    await TaskCommands.reassignTask(task3.response.taskId, "dev-3");
+
+    // Simulate an overdue task
+    const overdueTask = await this.createOverdueTask();
+    
+    return {
+      task1: task1.response.taskId,
+      task2: task2.response.taskId,
+      task3: task3.response.taskId,
+      overdueTask: overdueTask.id
+    };
+  }
+
+  private async createOverdueTask(): Promise<Task> {
+    const task = Task.create({
+      projectId: "project-1",
+      title: "Fix critical bug",
+      description: "Production issue needs immediate attention",
+      assigneeId: "dev-1",
+      dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      priority: "high"
+    });
+
+    await aggregates.persist(task);
+    
+    // Mark as overdue
+    task.markOverdue();
+    await aggregates.persist(task);
+
+    return task;
+  }
+
+  async demonstrateQueries() {
+    // Wait a bit for views to process events
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    console.log("\\n📊 Querying task data...");
+
+    // Get all tasks
+    const allTasks = await this.taskView.getTasksByProject("project-1");
+    console.log(`Project 1 has ${allTasks.length} tasks`);
+
+    // Get tasks by assignee
+    const dev1Tasks = await this.taskView.getTasksByAssignee("dev-1");
+    console.log(`Dev-1 has ${dev1Tasks.length} assigned tasks`);
+
+    // Get completed tasks
+    const completedTasks = await this.taskView.getTasksByStatus("done");
+    console.log(`${completedTasks.length} tasks completed`);
+
+    // Get overdue tasks
+    const overdueTasks = await this.taskView.getOverdueTasks();
+    console.log(`${overdueTasks.length} tasks are overdue`);
+
+    // Get project metrics
+    const project1Metrics = await this.metricsView.getProjectMetrics("project-1");
+    console.log("Project 1 metrics:", project1Metrics);
+
+    return {
+      totalTasks: allTasks.length,
+      completedTasks: completedTasks.length,
+      overdueTasks: overdueTasks.length,
+      project1Metrics
+    };
+  }
+
+  async run() {
+    console.log("🎯 Starting Task Manager Application\\n");
+
+    try {
+      const taskIds = await this.createSampleData();
+      const queryResults = await this.demonstrateQueries();
+
+      console.log("\\n✅ Application completed successfully!");
+      console.log("\\nSummary:");
+      console.log(`- Created ${Object.keys(taskIds).length} tasks`);
+      console.log(`- ${queryResults.completedTasks} tasks completed`);
+      console.log(`- ${queryResults.overdueTasks} tasks overdue`);
+      console.log(`- Project completion rate: ${queryResults.project1Metrics?.completionRate?.toFixed(1)}%`);
+
+    } catch (error) {
+      console.error("❌ Application error:", error);
+      throw error;
+    }
+  }
+}
+
+// Run the application
+const app = new TaskManagerApp();
+app.run().catch(console.error);
+----
+
+== Running the Application
+
+Create a script in `package.json`:
+
+[source,json]
+----
+{
+  "scripts": {
+    "start": "ts-node src/app.ts",
+    "build": "tsc",
+    "test": "jest"
+  }
+}
+----
+
+Run the application:
+
+[source,bash]
+----
+npm start
+----
+
+You should see output like:
+
+[source]
+----
+✅ Application configured successfully
+🚀 Creating sample tasks...
+📧 Notification to dev-2: You have been assigned a new task: task-uuid
+📧 Notification to dev-1: Great job completing task task-uuid!
+📧 Notification to dev-3: You have been assigned a new task: task-uuid
+📧 Notification to dev-1: Task task-uuid is 2 days overdue!
+
+📊 Querying task data...
+Project 1 has 3 tasks
+Dev-1 has 2 assigned tasks
+1 tasks completed
+1 tasks are overdue
+
+✅ Application completed successfully!
+
+Summary:
+- Created 4 tasks
+- 1 tasks completed
+- 1 tasks overdue
+- Project completion rate: 33.3%
+----
+
+== What We've Built
+
+This application demonstrates:
+
+1. **Event Sourcing**: All changes are captured as events
+2. **CQRS**: Separate read and write models
+3. **Business Logic**: Encapsulated in aggregates with proper validation
+4. **Projections**: Views provide optimized queries
+5. **Workflows**: Sagas handle notifications and time-based operations
+6. **Type Safety**: Full TypeScript integration
+
+== Production Considerations
+
+To make this production-ready:
+
+1. **Replace In-Memory Components**:
+   - Use Kafka for event streaming
+   - Use PostgreSQL for data storage
+   - Use Redis for distributed locking
+
+2. **Add Error Handling**:
+   - Implement retry mechanisms
+   - Add circuit breakers
+   - Handle partial failures
+
+3. **Add Monitoring**:
+   - Metrics collection
+   - Health checks
+   - Performance monitoring
+
+4. **Add Security**:
+   - Authentication
+   - Authorization
+   - Input validation
+
+5. **Add Testing**:
+   - Unit tests for aggregates
+   - Integration tests for commands
+   - End-to-end tests for workflows
+
+== Next Steps
+
+* Learn about xref:testing.adoc[Testing Patterns] for this application
+* Explore xref:performance-optimization.adoc[Performance Optimization]
+* Understand xref:deployment.adoc[Deployment Strategies]
+* See xref:observability.adoc[Monitoring and Observability]

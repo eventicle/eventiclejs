@@ -3,17 +3,109 @@ import aggregatesTenant, {BulkResponse} from "./tenant-aggregate-root";
 import {DataSorting, Query} from "@eventicle/eventicle-utilities/dist/datastore";
 import uuid = require("uuid");
 
+/**
+ * Configuration options for aggregate root behavior.
+ * 
+ * @see {@link AggregateRoot} For usage details
+ */
 export interface AggregateConfig {
+  /** The aggregate type name used for stream naming and identification */
   type: string;
+  /** Whether to store periodic checkpoints for performance optimization */
   storeCheckpoint: boolean;
 }
 
+/**
+ * Base class for implementing event-sourced aggregate roots.
+ * 
+ * Aggregate roots are the core building blocks of domain-driven design and event sourcing.
+ * They encapsulate business logic, maintain consistency boundaries, and generate events
+ * that represent state changes. The aggregate's current state is rebuilt by replaying
+ * its historical events through reducer functions.
+ * 
+ * Key Features:
+ * - **Event Sourcing**: State is derived from events, not stored directly
+ * - **Business Logic**: Encapsulates domain rules and invariants
+ * - **Event Generation**: Emits events when state changes occur
+ * - **Immutable History**: Complete audit trail of all changes
+ * - **Checkpointing**: Optional performance optimization for large event histories
+ * 
+ * @example Basic aggregate
+ * ```typescript
+ * class BankAccount extends AggregateRoot {
+ *   balance: number = 0;
+ *   status: 'active' | 'frozen' = 'active';
+ * 
+ *   constructor() {
+ *     super('bank-accounts');
+ *     
+ *     this.reducers = {
+ *       AccountOpened: (event) => {
+ *         this.id = event.data.accountId;
+ *         this.balance = event.data.initialDeposit;
+ *       },
+ *       MoneyDeposited: (event) => {
+ *         this.balance += event.data.amount;
+ *       },
+ *       MoneyWithdrawn: (event) => {
+ *         this.balance -= event.data.amount;
+ *       }
+ *     };
+ *   }
+ * 
+ *   static open(accountId: string, initialDeposit: number): BankAccount {
+ *     const account = new BankAccount();
+ *     account.raiseEvent({
+ *       type: 'AccountOpened',
+ *       data: { accountId, initialDeposit }
+ *     });
+ *     return account;
+ *   }
+ * 
+ *   deposit(amount: number) {
+ *     if (this.status !== 'active') {
+ *       throw new Error('Account is not active');
+ *     }
+ *     this.raiseEvent({
+ *       type: 'MoneyDeposited',
+ *       data: { amount, timestamp: new Date() }
+ *     });
+ *   }
+ * }
+ * ```
+ * 
+ * @example With checkpointing
+ * ```typescript
+ * class HighVolumeAggregate extends AggregateRoot {
+ *   constructor() {
+ *     super({ type: 'high-volume', storeCheckpoint: true });
+ *   }
+ * 
+ *   currentCheckpoint() {
+ *     return {
+ *       balance: this.balance,
+ *       transactionCount: this.transactionCount
+ *     };
+ *   }
+ * }
+ * ```
+ * 
+ * @see {@link AggregateRepository} For persistence operations
+ * @see {@link XStateAggregate} For state machine-based aggregates
+ * @see {@link TenantAggregateRoot} For multi-tenant scenarios
+ */
 export abstract class AggregateRoot {
+  /** Complete event history for this aggregate instance */
   history: EventicleEvent[] = [];
+  /** Events raised since last persistence (pending events) */
   newEvents: EventicleEvent[] = [];
+  /** Unique identifier for this aggregate instance */
   id: string;
+  /** Event reducer functions mapping event types to state update logic */
   reducers: any;
+  /** Flag indicating if aggregate is currently replaying historical events */
   replaying: boolean;
+  /** Aggregate configuration settings */
   readonly config: AggregateConfig;
 
   constructor(type: string | AggregateConfig) {
@@ -28,6 +120,26 @@ export abstract class AggregateRoot {
     }
   }
 
+  /**
+   * Returns the current state as a checkpoint for performance optimization.
+   * 
+   * Checkpoints allow aggregates with long event histories to snapshot their
+   * current state, reducing the time needed to rebuild from events. This method
+   * should be implemented when `storeCheckpoint` is enabled in the config.
+   * 
+   * @returns Object representing the current aggregate state
+   * 
+   * @example
+   * ```typescript
+   * currentCheckpoint() {
+   *   return {
+   *     balance: this.balance,
+   *     status: this.status,
+   *     lastTransactionDate: this.lastTransactionDate
+   *   };
+   * }
+   * ```
+   */
   currentCheckpoint(): object {
     throw new Error(`
     Checkpoint is not implemented, but has been configured.
@@ -35,6 +147,32 @@ export abstract class AggregateRoot {
     `);
   }
 
+  /**
+   * Raises a new domain event and applies it to the aggregate state.
+   * 
+   * This is the primary method for recording state changes in event-sourced
+   * aggregates. The event is automatically assigned metadata (ID, timestamp,
+   * source) and applied through the appropriate reducer function.
+   * 
+   * @param event - The domain event to raise
+   * @returns The event with populated metadata
+   * 
+   * @example
+   * ```typescript
+   * deposit(amount: number) {
+   *   // Validate business rules first
+   *   if (amount <= 0) {
+   *     throw new Error('Amount must be positive');
+   *   }
+   * 
+   *   // Raise the event
+   *   this.raiseEvent({
+   *     type: 'MoneyDeposited',
+   *     data: { amount, timestamp: new Date() }
+   *   });
+   * }
+   * ```
+   */
   raiseEvent(event: EventicleEvent) {
     event.id = uuid.v4();
     if (!event.createdAt) {
@@ -51,6 +189,25 @@ export abstract class AggregateRoot {
     return event;
   }
 
+  /**
+   * Applies an event to the aggregate state using the appropriate reducer.
+   * 
+   * This method is called automatically by `raiseEvent` and during event
+   * replay. It looks up the reducer function for the event type and applies
+   * the event to update the aggregate's state.
+   * 
+   * @param event - The event to apply to the aggregate state
+   * 
+   * @example Reducer function
+   * ```typescript
+   * this.reducers = {
+   *   MoneyDeposited: (event) => {
+   *     this.balance += event.data.amount;
+   *     this.lastActivity = event.data.timestamp;
+   *   }
+   * };
+   * ```
+   */
   handleEvent(event: EventicleEvent) {
     let func = this.reducers[event.type];
     if (func) func.call(this, event);

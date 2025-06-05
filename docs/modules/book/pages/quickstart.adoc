@@ -1,0 +1,345 @@
+= Quick Start Tutorial
+
+This tutorial will walk you through the basics of Eventicle by building a simple order management system using event sourcing.
+
+== What We'll Build
+
+We'll create a basic order system that can:
+
+* Create orders
+* Add items to orders
+* Complete orders
+* Query order status
+
+== Step 1: Set Up the Project
+
+[source,bash]
+----
+mkdir order-system
+cd order-system
+npm init -y
+npm install @eventicle/eventiclejs typescript @types/node
+npx tsc --init
+----
+
+== Step 2: Configure Eventicle
+
+Create `src/config.ts`:
+
+[source,typescript]
+----
+import { 
+  setEventClient, 
+  eventClientInMemory,
+  setDataStore,
+  InMemoryDatastore
+} from "@eventicle/eventiclejs";
+
+export function configureEventicle() {
+  // Use in-memory implementations for this tutorial
+  setDataStore(new InMemoryDatastore());
+  setEventClient(eventClientInMemory());
+}
+----
+
+== Step 3: Define Event Types
+
+Create `src/events/order-events.ts`:
+
+[source,typescript]
+----
+export interface OrderCreated {
+  type: "OrderCreated";
+  payload: {
+    orderId: string;
+    customerId: string;
+    createdAt: Date;
+  };
+}
+
+export interface ItemAdded {
+  type: "ItemAdded";
+  payload: {
+    orderId: string;
+    itemId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+  };
+}
+
+export interface OrderCompleted {
+  type: "OrderCompleted";
+  payload: {
+    orderId: string;
+    totalAmount: number;
+    completedAt: Date;
+  };
+}
+
+export type OrderEvent = OrderCreated | ItemAdded | OrderCompleted;
+----
+
+== Step 4: Create the Order Aggregate
+
+Create `src/aggregates/order.ts`:
+
+[source,typescript]
+----
+import { AggregateRoot } from "@eventicle/eventiclejs";
+import { OrderCreated, ItemAdded, OrderCompleted, OrderEvent } from "../events/order-events";
+
+interface OrderItem {
+  itemId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+}
+
+export class Order extends AggregateRoot {
+  customerId: string = "";
+  items: OrderItem[] = [];
+  totalAmount: number = 0;
+  status: "pending" | "completed" = "pending";
+  
+  constructor() {
+    super("orders", []);
+    
+    // Define how events update the aggregate state
+    this.reducers = {
+      OrderCreated: (event: OrderCreated) => {
+        this.id = event.payload.orderId;
+        this.customerId = event.payload.customerId;
+      },
+      
+      ItemAdded: (event: ItemAdded) => {
+        this.items.push({
+          itemId: event.payload.itemId,
+          productName: event.payload.productName,
+          quantity: event.payload.quantity,
+          price: event.payload.price
+        });
+        this.totalAmount += event.payload.quantity * event.payload.price;
+      },
+      
+      OrderCompleted: (event: OrderCompleted) => {
+        this.status = "completed";
+      }
+    };
+  }
+  
+  // Business methods that emit events
+  static create(orderId: string, customerId: string): Order {
+    const order = new Order();
+    order.raiseEvent({
+      type: "OrderCreated",
+      payload: {
+        orderId,
+        customerId,
+        createdAt: new Date()
+      }
+    });
+    return order;
+  }
+  
+  addItem(itemId: string, productName: string, quantity: number, price: number) {
+    if (this.status === "completed") {
+      throw new Error("Cannot add items to completed order");
+    }
+    
+    this.raiseEvent({
+      type: "ItemAdded",
+      payload: {
+        orderId: this.id,
+        itemId,
+        productName,
+        quantity,
+        price
+      }
+    });
+  }
+  
+  complete() {
+    if (this.status === "completed") {
+      throw new Error("Order already completed");
+    }
+    
+    if (this.items.length === 0) {
+      throw new Error("Cannot complete empty order");
+    }
+    
+    this.raiseEvent({
+      type: "OrderCompleted",
+      payload: {
+        orderId: this.id,
+        totalAmount: this.totalAmount,
+        completedAt: new Date()
+      }
+    });
+  }
+}
+----
+
+== Step 5: Create an Event View
+
+Create `src/views/order-summary-view.ts`:
+
+[source,typescript]
+----
+import { EventView, EventicleEvent, dataStore } from "@eventicle/eventiclejs";
+
+interface OrderSummary {
+  orderId: string;
+  customerId: string;
+  itemCount: number;
+  totalAmount: number;
+  status: string;
+  createdAt: Date;
+  completedAt?: Date;
+}
+
+export class OrderSummaryView implements EventView {
+  consumerGroup = "OrderSummaryView";
+  streamsToSubscribe = ["orders"];
+  
+  async handleEvent(event: EventicleEvent): Promise<void> {
+    const store = await dataStore();
+    
+    switch (event.type) {
+      case "OrderCreated":
+        await store.save("order-summaries", event.payload.orderId, {
+          orderId: event.payload.orderId,
+          customerId: event.payload.customerId,
+          itemCount: 0,
+          totalAmount: 0,
+          status: "pending",
+          createdAt: event.payload.createdAt
+        });
+        break;
+        
+      case "ItemAdded":
+        const order = await store.load("order-summaries", event.payload.orderId);
+        if (order) {
+          order.itemCount += 1;
+          order.totalAmount += event.payload.quantity * event.payload.price;
+          await store.save("order-summaries", event.payload.orderId, order);
+        }
+        break;
+        
+      case "OrderCompleted":
+        const completedOrder = await store.load("order-summaries", event.payload.orderId);
+        if (completedOrder) {
+          completedOrder.status = "completed";
+          completedOrder.completedAt = event.payload.completedAt;
+          await store.save("order-summaries", event.payload.orderId, completedOrder);
+        }
+        break;
+    }
+  }
+  
+  async findByCustomer(customerId: string): Promise<OrderSummary[]> {
+    const store = await dataStore();
+    const all = await store.scan("order-summaries");
+    return all.filter(order => order.customerId === customerId);
+  }
+  
+  async getOrder(orderId: string): Promise<OrderSummary | null> {
+    const store = await dataStore();
+    return await store.load("order-summaries", orderId);
+  }
+}
+----
+
+== Step 6: Wire Everything Together
+
+Create `src/index.ts`:
+
+[source,typescript]
+----
+import { configureEventicle } from "./config";
+import { Order } from "./aggregates/order";
+import { OrderSummaryView } from "./views/order-summary-view";
+import { registerView, aggregates, eventClient } from "@eventicle/eventiclejs";
+
+async function main() {
+  // Configure Eventicle
+  configureEventicle();
+  
+  // Register the view
+  const orderView = new OrderSummaryView();
+  registerView(orderView);
+  
+  // Create an order
+  const order = Order.create("order-123", "customer-456");
+  
+  // Add some items
+  order.addItem("item-1", "Coffee", 2, 4.50);
+  order.addItem("item-2", "Sandwich", 1, 8.99);
+  
+  // Complete the order
+  order.complete();
+  
+  // Save the aggregate (this emits all events)
+  await aggregates.persist(order);
+  
+  // Give the view time to process events
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Query the view
+  const summary = await orderView.getOrder("order-123");
+  console.log("Order Summary:", summary);
+  
+  // Find all orders for a customer
+  const customerOrders = await orderView.findByCustomer("customer-456");
+  console.log("Customer Orders:", customerOrders);
+}
+
+main().catch(console.error);
+----
+
+== Step 7: Run the Application
+
+[source,bash]
+----
+npx ts-node src/index.ts
+----
+
+You should see output like:
+
+[source]
+----
+Order Summary: {
+  orderId: 'order-123',
+  customerId: 'customer-456',
+  itemCount: 2,
+  totalAmount: 17.99,
+  status: 'completed',
+  createdAt: 2024-01-20T10:30:00.000Z,
+  completedAt: 2024-01-20T10:30:00.100Z
+}
+----
+
+== Understanding What Happened
+
+1. **Events as Facts**: Each business action (create, add item, complete) generates an event that represents an immutable fact
+2. **Aggregate State**: The Order aggregate rebuilds its state by replaying events through reducers
+3. **Projections**: The OrderSummaryView creates a query-optimized representation of the data
+4. **Event Sourcing**: The complete history of changes is preserved in the event stream
+
+== Next Steps
+
+Now that you understand the basics:
+
+* Learn about xref:events-and-streams.adoc[Events and Event Streams] in detail
+* Explore xref:aggregate-roots.adoc[Aggregate Roots] patterns
+* Understand xref:commands.adoc[Commands] for handling user actions
+* Discover xref:sagas.adoc[Sagas] for complex workflows
+* Build xref:first-application.adoc[Your First Production Application]
+
+== Key Takeaways
+
+* Eventicle makes event sourcing accessible with a simple, intuitive API
+* Aggregates encapsulate business logic and emit events
+* Views provide efficient querying of event-sourced data
+* The in-memory implementation is perfect for development and testing
+* The same code can run on Kafka or PostgreSQL for production

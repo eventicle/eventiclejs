@@ -261,6 +261,114 @@ describe('Sagas', function () {
     expect(secondActiveTimers).toEqual({})
   });
 
+  it("should handle overlap between timer and event triggered workflow", async () => {
+    // Variables to track handler execution times
+    let timerStartTime: number = 0;
+    let timerEndTime: number = 0;
+    let eventStartTime: number = 0;
+    let eventEndTime: number = 0;
+    await registerSaga(
+      saga<"timeout", { payment_id: string }>("verify-me")
+        // this should impact both kafka and redis
+        .parallelEvents(20)
+        .subscribeStreams(["event-stream"])
+        .startOn("starting.event", {}, async (saga1, event) => {
+          console.log("Starting saga", event);
+          saga1.set("payment_id", event.domainId);
+          saga1.upsertTimer("timeout", {
+            isCron: false,
+            timeout: 100,
+          });
+        })
+        .onTimer("timeout", async (saga1) => {
+          console.log("Timer fired");
+          timerStartTime = Date.now();
+          await pause(2000);
+          timerEndTime = Date.now();
+          console.log("Timer complete");
+        })
+        // this will potentially overlap with the timer
+        .on(
+          "second.event",
+          {
+            matchInstance: (ev) => ({
+              instanceProperty: "payment_id",
+              value: ev.domainId,
+            }),
+          },
+          async (saga1, event) => {
+            console.log("Second event starting");
+            eventStartTime = Date.now();
+            await pause(2000);
+            eventEndTime = Date.now();
+            console.log("Second event complete");
+          },
+        ),
+    );
+
+    // start the saga up
+    await eventClient().emit(
+      [
+        {
+          id: uuid.v4(),
+          type: "starting.event",
+          domainId: "1234",
+          causedByType: "",
+          causedById: "",
+          source: "",
+          createdAt: new Date().getTime(),
+          data: {
+            some: "data",
+          },
+        },
+      ],
+      "event-stream",
+    );
+    await pause(100);
+    await eventClient().emit(
+      [
+        {
+          id: uuid.v4(),
+          type: "second.event",
+          domainId: "1234",
+          causedByType: "",
+          causedById: "",
+          source: "",
+          createdAt: new Date().getTime(),
+          data: {
+            some: "data",
+          },
+        },
+      ],
+      "event-stream",
+    );
+
+    await pause(4000);
+
+    // Check for overlap between timer and event handler
+    console.log(`Timer: ${timerStartTime} - ${timerEndTime}`);
+    console.log(`Event: ${eventStartTime} - ${eventEndTime}`);
+
+    // Two time ranges overlap if one starts before the other ends and ends after the other starts
+    const hasOverlap = timerStartTime < eventEndTime && timerEndTime > eventStartTime;
+
+    if (timerStartTime == timerEndTime) {
+      throw new Error(
+        `Timer (range ${timerStartTime}-${timerEndTime}) did not appear to fire`,
+      );
+    }
+
+    // Fail the test if there's overlap
+    if (hasOverlap) {
+      throw new Error(
+        `Timer (${timerStartTime}-${timerEndTime}) and event handler (${eventStartTime}-${eventEndTime}) time ranges overlap`,
+      );
+    }
+
+    // If we get here, there's no overlap
+    expect(hasOverlap).toBe(false);
+  });
+
   /*
   TODO, this is in flight
 

@@ -1,0 +1,350 @@
+= Events and Event Streams
+
+Events are the foundation of Eventicle. This guide explains what events are, how they're structured, and how to work with event streams effectively.
+
+== What Are Events?
+
+In Eventicle, an event represents something that has happened in your system. Events are:
+
+* **Immutable**: Once created, events cannot be changed
+* **Ordered**: Events have a sequence within their stream
+* **Timestamped**: Every event records when it occurred
+* **Causally Linked**: Events can track what caused them
+
+== Event Structure
+
+Every event in Eventicle implements the `EventicleEvent` interface:
+
+[source,typescript]
+----
+interface EventicleEvent {
+  // Event metadata
+  id: string;              // Unique event ID
+  type: string;            // Event type name
+  domainId: string;        // ID of the aggregate/entity
+  stream: string;          // Stream name
+  streamId: string;        // Unique stream instance ID
+  timestamp: number;       // Unix timestamp
+  sequence?: number;       // Position in stream
+  
+  // Causation tracking
+  causedById?: string;     // ID of event that caused this
+  causedByType?: string;   // Type of event that caused this
+  
+  // Event data
+  payload?: any;           // Event-specific data
+}
+----
+
+== Event Streams
+
+Event streams are ordered sequences of related events. They provide:
+
+* **Logical Grouping**: Related events belong to the same stream
+* **Ordering Guarantee**: Events are ordered within a stream
+* **Replay Capability**: Streams can be replayed from any point
+* **Partitioning**: Streams can be partitioned for scalability
+
+=== Stream Naming Conventions
+
+Choose meaningful stream names that reflect your domain:
+
+[source,typescript]
+----
+// Good stream names
+"orders"                  // All order-related events
+"inventory"              // Inventory management events
+"user-accounts"          // User account events
+"payments"               // Payment processing events
+
+// Stream with namespace
+"shopping.orders"        // Orders in shopping context
+"admin.users"           // Admin user events
+----
+
+=== Creating Events
+
+Events are typically created through aggregates, but can also be emitted directly:
+
+[source,typescript]
+----
+import { eventClient } from "@eventicle/eventiclejs";
+
+// Direct event emission
+await eventClient().emit([{
+  type: "UserRegistered",
+  stream: "users",
+  domainId: "user-123",
+  payload: {
+    email: "user@example.com",
+    registeredAt: new Date()
+  }
+}]);
+
+// Through an aggregate (recommended)
+class User extends AggregateRoot {
+  register(email: string) {
+    this.raiseEvent({
+      type: "UserRegistered",
+      payload: { email, registeredAt: new Date() }
+    });
+  }
+}
+----
+
+== Event Types and Payload
+
+=== Defining Event Types
+
+Use TypeScript interfaces for type-safe events:
+
+[source,typescript]
+----
+// Define event types
+interface ProductAdded {
+  type: "ProductAdded";
+  payload: {
+    productId: string;
+    name: string;
+    price: number;
+    stock: number;
+  };
+}
+
+interface PriceUpdated {
+  type: "PriceUpdated";
+  payload: {
+    productId: string;
+    oldPrice: number;
+    newPrice: number;
+    reason: string;
+  };
+}
+
+// Union type for all product events
+type ProductEvent = ProductAdded | PriceUpdated;
+----
+
+=== Event Naming Best Practices
+
+* Use past tense: `OrderCreated`, not `CreateOrder`
+* Be specific: `PaymentProcessed`, not just `Processed`
+* Include context: `InventoryItemReserved`, not just `Reserved`
+* Avoid generic names: Use `OrderShipped`, not `StatusChanged`
+
+== Working with Event Streams
+
+=== Subscribing to Streams
+
+Subscribe to receive new events as they occur:
+
+[source,typescript]
+----
+import { eventClient } from "@eventicle/eventiclejs";
+
+// Subscribe to new events only
+eventClient().subscribe({
+  stream: "orders",
+  consumerGroup: "order-processor",
+  handler: async (event) => {
+    console.log("New event:", event.type, event.payload);
+  }
+});
+----
+
+=== Replaying Streams
+
+Replay historical events for processing:
+
+[source,typescript]
+----
+// Replay all events from the beginning
+await eventClient().coldReplay({
+  stream: "orders",
+  handler: async (event) => {
+    console.log("Historical event:", event.type);
+  }
+});
+
+// Replay and continue listening
+await eventClient().hotReplay({
+  stream: "orders",
+  consumerGroup: "order-analyzer",
+  handler: async (event) => {
+    console.log("Event:", event.type);
+  }
+});
+----
+
+=== Stream Positions and Checkpoints
+
+Track processing position for reliable replay:
+
+[source,typescript]
+----
+// Subscribe from a specific position
+eventClient().subscribe({
+  stream: "orders",
+  consumerGroup: "order-processor",
+  fromPosition: lastProcessedPosition,
+  handler: async (event) => {
+    await processEvent(event);
+    await savePosition(event.sequence);
+  }
+});
+----
+
+== Event Ordering and Causation
+
+=== Event Ordering
+
+Events are ordered within their stream:
+
+[source,typescript]
+----
+// Events emitted together maintain order
+await eventClient().emit([
+  { type: "OrderCreated", stream: "orders", domainId: "order-1" },
+  { type: "ItemAdded", stream: "orders", domainId: "order-1" },
+  { type: "ItemAdded", stream: "orders", domainId: "order-1" }
+]);
+// These events will have sequential sequence numbers
+----
+
+=== Causation Tracking
+
+Track which events caused others:
+
+[source,typescript]
+----
+class OrderSaga {
+  async handleOrderCreated(event: EventicleEvent) {
+    // Emit payment request with causation
+    await eventClient().emit([{
+      type: "PaymentRequested",
+      stream: "payments",
+      domainId: event.domainId,
+      causedById: event.id,        // Track what caused this
+      causedByType: event.type,
+      payload: { amount: 100 }
+    }]);
+  }
+}
+----
+
+== Event Metadata
+
+=== System Metadata
+
+Eventicle automatically adds metadata to events:
+
+* `id`: Unique identifier (UUID)
+* `timestamp`: Unix timestamp of creation
+* `sequence`: Position in the stream
+* `stream`: Stream name from aggregate or explicit
+* `streamId`: Unique stream instance identifier
+
+=== Custom Metadata
+
+Add domain-specific metadata through the payload:
+
+[source,typescript]
+----
+this.raiseEvent({
+  type: "OrderPlaced",
+  payload: {
+    // Business data
+    items: orderItems,
+    total: calculateTotal(),
+    
+    // Custom metadata
+    metadata: {
+      userId: currentUser.id,
+      source: "web",
+      version: "2.0",
+      region: "us-east"
+    }
+  }
+});
+----
+
+== Event Storage and Retrieval
+
+=== Event Persistence
+
+Events are persisted based on your event client configuration:
+
+* **In-Memory**: Events stored in memory (development/testing)
+* **Kafka**: Events stored in Kafka topics
+* **PostgreSQL**: Events stored in database tables
+
+=== Querying Events
+
+Query events directly when needed:
+
+[source,typescript]
+----
+// Get all events for an aggregate
+const events = await eventClient().getEvents({
+  stream: "orders",
+  domainId: "order-123"
+});
+
+// Get events by type
+const createdEvents = events.filter(e => e.type === "OrderCreated");
+----
+
+== Best Practices
+
+=== Event Design
+
+1. **Keep Events Small**: Include only necessary data
+2. **Make Events Self-Contained**: Include all data needed to understand the event
+3. **Version Events**: Plan for schema evolution
+4. **Use Domain Language**: Event names should reflect business terminology
+
+=== Stream Design
+
+1. **One Stream per Aggregate Type**: Keep related events together
+2. **Consider Partitioning**: For high-volume streams
+3. **Plan for Replay**: Design with reprocessing in mind
+4. **Monitor Stream Growth**: Plan retention and archival
+
+=== Example: Well-Designed Events
+
+[source,typescript]
+----
+// Good: Specific, self-contained, business-focused
+interface InvoiceGenerated {
+  type: "InvoiceGenerated";
+  payload: {
+    invoiceId: string;
+    orderId: string;
+    customerId: string;
+    items: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+    }>;
+    totalAmount: number;
+    dueDate: Date;
+    generatedAt: Date;
+  };
+}
+
+// Avoid: Generic, missing context
+interface Updated {
+  type: "Updated";
+  payload: {
+    id: string;
+    changes: any;
+  };
+}
+----
+
+== Next Steps
+
+* Learn about xref:event-clients.adoc[Event Clients] for different storage backends
+* Understand xref:aggregate-roots.adoc[Aggregate Roots] for event generation
+* Explore xref:query.adoc[Event Views] for querying event data
+* Discover xref:event-encoding.adoc[Event Encoding] for serialization options

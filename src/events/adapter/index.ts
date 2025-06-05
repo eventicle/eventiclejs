@@ -130,15 +130,141 @@ export async function registerRawAdapter(
 }
 
 /**
- * An adapter is an observer on an event stream.
- *
- * It only operates on hot event data, and will never attempt to replay everything
+ * Defines an event adapter for real-time event processing and integration.
+ * 
+ * EventAdapter provides a hot-subscription pattern for processing live events as they
+ * occur, without replaying historical data. Unlike EventView which processes both
+ * historical and live events, adapters focus on real-time integration scenarios
+ * like external system synchronization, notifications, and live data feeds.
+ * 
+ * Key Characteristics:
+ * - **Hot Subscription Only**: Processes new events, never replays history
+ * - **External Integration**: Designed for pushing data to external systems
+ * - **Transactional**: Each event is processed within a database transaction
+ * - **Error Handling**: Built-in error recovery and monitoring
+ * - **Consumer Groups**: Supports load balancing across multiple instances
+ * 
+ * @example External system synchronization
+ * ```typescript
+ * const crmSyncAdapter: EventAdapter = {
+ *   name: 'crm-synchronizer',
+ *   consumerGroup: 'crm-sync',
+ *   streamsToSubscribe: ['users', 'contacts'],
+ *   
+ *   handleEvent: async (event) => {
+ *     switch (event.type) {
+ *       case 'UserCreated':
+ *         await crmClient.createContact({
+ *           externalId: event.domainId,
+ *           email: event.data.email,
+ *           name: event.data.name,
+ *           source: 'app'
+ *         });
+ *         break;
+ *         
+ *       case 'UserUpdated':
+ *         await crmClient.updateContact(event.domainId, {
+ *           email: event.data.email,
+ *           name: event.data.name
+ *         });
+ *         break;
+ *     }
+ *   },
+ *   
+ *   errorHandler: async (adapter, event, error) => {
+ *     await errorTracking.report({
+ *       adapter: adapter.name,
+ *       eventType: event.type,
+ *       eventId: event.id,
+ *       error: error.message,
+ *       timestamp: new Date()
+ *     });
+ *   }
+ * };
+ * 
+ * await registerAdapter(crmSyncAdapter);
+ * ```
+ * 
+ * @example Real-time notifications
+ * ```typescript
+ * const notificationAdapter: EventAdapter = {
+ *   name: 'push-notifications',
+ *   consumerGroup: 'notifications',
+ *   streamsToSubscribe: ['orders', 'payments'],
+ *   
+ *   handleEvent: async (event) => {
+ *     const userId = event.data.userId || event.data.customerId;
+ *     if (!userId) return;
+ *     
+ *     let message: string;
+ *     switch (event.type) {
+ *       case 'OrderShipped':
+ *         message = `Your order ${event.data.orderNumber} has been shipped!`;
+ *         break;
+ *       case 'PaymentFailed':
+ *         message = 'Payment failed. Please update your payment method.';
+ *         break;
+ *       default:
+ *         return;
+ *     }
+ *     
+ *     await pushNotificationService.send(userId, {
+ *       title: 'Order Update',
+ *       message,
+ *       data: { eventId: event.id, type: event.type }
+ *     });
+ *   }
+ * };
+ * ```
+ * 
+ * @see {@link registerAdapter} For adapter registration
+ * @see {@link EventView} For read-model projections with history replay
+ * @see {@link RawEventAdapter} For binary event processing
  */
 export interface EventAdapter {
+  /** 
+   * Unique adapter identifier for monitoring and debugging.
+   * 
+   * Should be descriptive of the adapter's purpose (e.g., 'crm-sync', 'email-notifications').
+   */
   name: string;
+  
+  /** 
+   * Consumer group identifier for load balancing and failure recovery.
+   * 
+   * Multiple adapter instances with the same consumer group will share event
+   * processing, enabling horizontal scaling and fault tolerance.
+   */
   consumerGroup: string;
+  
+  /** 
+   * Event processing function called for each live event.
+   * 
+   * Should be idempotent as events may be redelivered during failures.
+   * Typically integrates with external systems or triggers side effects.
+   * 
+   * @param event - The domain event to process
+   */
   handleEvent: (event: EventicleEvent) => Promise<void>;
+  
+  /** 
+   * List of event streams to monitor for live events.
+   * 
+   * Adapter will receive all new events from these streams. Use specific
+   * stream names to reduce noise and improve performance.
+   */
   streamsToSubscribe: string[];
+  
+  /** 
+   * Optional custom error handler for event processing failures.
+   * 
+   * If not provided, a default handler logs the error and continues processing.
+   * Use this for custom error reporting, retry logic, or dead letter queues.
+   * 
+   * @param adapter - The adapter that encountered the error
+   * @param event - The event that failed to process
+   * @param error - The error that occurred
+   */
   errorHandler?: (
     adapter: EventAdapter,
     event: EventicleEvent,
@@ -147,15 +273,93 @@ export interface EventAdapter {
 }
 
 /**
- * An adapter is an observer on an event stream. This receives raw, unencoded Buffers.
- *
- * It only operates on hot event data, and will never attempt to replay everything
+ * Defines an adapter for processing live events in their raw, encoded format.
+ * 
+ * RawEventAdapter enables real-time processing of events without decoding overhead,
+ * ideal for high-performance scenarios, binary forwarding, or custom encoding schemes.
+ * Like EventAdapter, it only processes live events without historical replay.
+ * 
+ * Use Cases:
+ * - **High-Throughput Processing**: Minimize latency by avoiding decode operations
+ * - **Binary Event Forwarding**: Route events to external systems without modification
+ * - **Custom Encoding**: Implement specialized decoding or transformation logic
+ * - **Performance-Critical Integrations**: Real-time data feeds with minimal overhead
+ * 
+ * @example High-performance event streaming
+ * ```typescript
+ * const streamingAdapter: RawEventAdapter = {
+ *   name: 'real-time-stream',
+ *   consumerGroup: 'streaming-service',
+ *   streamsToSubscribe: ['high-frequency-events'],
+ *   
+ *   handleEvent: async (encodedEvent) => {
+ *     // Forward raw event to WebSocket clients
+ *     await websocketServer.broadcast({
+ *       eventType: encodedEvent.headers.type,
+ *       timestamp: encodedEvent.timestamp,
+ *       data: encodedEvent.buffer
+ *     });
+ *   },
+ *   
+ *   errorHandler: async (adapter, event, error) => {
+ *     metrics.increment('streaming.errors', {
+ *       adapter: adapter.name,
+ *       eventType: event.headers.type
+ *     });
+ *   }
+ * };
+ * 
+ * await registerRawAdapter(streamingAdapter);
+ * ```
+ * 
+ * @see {@link registerRawAdapter} For adapter registration
+ * @see {@link EventAdapter} For decoded event processing
+ * @see {@link EncodedEvent} For raw event structure
  */
 export interface RawEventAdapter {
+  /** 
+   * Unique adapter identifier for monitoring and debugging.
+   * 
+   * Should be descriptive of the adapter's purpose (e.g., 'binary-forwarder', 'raw-analytics').
+   */
   name: string;
+  
+  /** 
+   * Consumer group identifier for load balancing and failure recovery.
+   * 
+   * Multiple adapter instances with the same consumer group will share event
+   * processing, enabling horizontal scaling and fault tolerance.
+   */
   consumerGroup: string;
+  
+  /** 
+   * Raw event processing function called for each live encoded event.
+   * 
+   * Receives events in their binary format without decoding. Should be idempotent
+   * as events may be redelivered during failures.
+   * 
+   * @param event - The encoded event with buffer and metadata
+   */
   handleEvent: (event: EncodedEvent) => Promise<void>;
+  
+  /** 
+   * List of event streams to monitor for live events.
+   * 
+   * Adapter will receive all new raw events from these streams. Consider the
+   * performance implications of subscribing to high-volume streams.
+   */
   streamsToSubscribe: string[];
+  
+  /** 
+   * Optional custom error handler for event processing failures.
+   * 
+   * If not provided, a default handler logs the error and continues processing.
+   * Use this for custom error reporting, retry logic, or dead letter queues.
+   * 
+   * @param adapter - The adapter that encountered the error
+   * @param event - The encoded event that failed to process
+   * @param error - The error that occurred
+   */
   errorHandler?: (
     adapter: RawEventAdapter,
     event: EncodedEvent,
