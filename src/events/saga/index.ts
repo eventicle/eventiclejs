@@ -50,19 +50,51 @@ interface NotifySub {
 }
 
 /**
- * The data for a single execution of a {@link Saga}
- *
- * Sagas are stateful concepts, and this type contains the state.
+ * Represents a single running instance of a saga workflow.
+ * 
+ * SagaInstance contains the runtime state and execution context for a specific
+ * saga execution. Each instance tracks its data, manages timers, and provides
+ * methods for saga lifecycle management.
+ * 
+ * @template TimeoutNames - Union type of timer names this saga can schedule
+ * @template T - Type of the saga's persistent data
+ * 
+ * @example
+ * ```typescript
+ * interface PaymentData {
+ *   orderId: string;
+ *   amount: number;
+ *   attempts: number;
+ * }
+ * 
+ * type PaymentTimers = 'timeout' | 'retry';
+ * 
+ * // In saga handler
+ * async function handleOrderCreated(
+ *   instance: SagaInstance<PaymentTimers, PaymentData>,
+ *   event: OrderCreatedEvent
+ * ) {
+ *   instance.set('orderId', event.data.orderId);
+ *   instance.set('amount', event.data.amount);
+ *   instance.set('attempts', 0);
+ * 
+ *   // Schedule timeout
+ *   instance.upsertTimer('timeout', {
+ *     isCron: false,
+ *     timeout: 300000 // 5 minutes
+ *   });
+ * }
+ * ```
+ * 
+ * @see {@link Saga} For the saga definition
+ * @see {@link SagaScheduler} For timer execution
  */
 export class SagaInstance<TimeoutNames, T> {
 
-  /**
-   * Private instance data
-   */
+  /** Timers pending removal in the next persistence cycle */
   readonly timersToRemove: TimeoutNames[] = []
-  /**
-   * Private instance data
-   */
+  
+  /** Timers pending addition in the next persistence cycle */
   readonly timersToAdd: {
     name: TimeoutNames, config: {
       isCron: true
@@ -77,17 +109,38 @@ export class SagaInstance<TimeoutNames, T> {
   }
 
   /**
-   * Get a piece of arbitrary data from the saga instance
-   * @param name THe key
+   * Retrieves a piece of data from the saga instance state.
+   * 
+   * @param name - The key of the data to retrieve
+   * @returns The value associated with the key
+   * 
+   * @example
+   * ```typescript
+   * const orderId = instance.get('orderId');
+   * const attempts = instance.get('attempts');
+   * ```
    */
   get<K extends keyof T>(name: K): T[K] {
     return this.internalData[name]
   }
 
   /**
-   * Set a piece of arbitrary data into the saga instance
-   * @param name The key
-   * @param value the value. Must be able to encode to JSON.
+   * Sets a piece of data in the saga instance state.
+   * 
+   * The value must be JSON-serializable as saga state is persisted.
+   * The 'id' field is protected and cannot be modified.
+   * 
+   * @param name - The key to set
+   * @param value - The value to store (must be JSON-serializable)
+   * 
+   * @throws Error if attempting to set the 'id' field
+   * 
+   * @example
+   * ```typescript
+   * instance.set('status', 'processing');
+   * instance.set('retryCount', 3);
+   * instance.set('lastError', { code: 'TIMEOUT', message: 'Request timed out' });
+   * ```
    */
   set(name: keyof T, value: any) {
     if (name == "id") throw new Error("SETTING ID IS FORBIDDEN")
@@ -149,6 +202,24 @@ export class SagaInstance<TimeoutNames, T> {
     this.timersToRemove.push(name)
   }
 
+  /**
+   * Marks the saga instance as completed and schedules it for cleanup.
+   * 
+   * Once a saga is ended, it will not receive any more events or timer
+   * callbacks. The instance data can optionally be preserved for debugging
+   * or audit purposes.
+   * 
+   * @param preserveInstanceData - Whether to keep instance data after completion
+   * 
+   * @example
+   * ```typescript
+   * // End saga and clean up data
+   * instance.endSaga();
+   * 
+   * // End saga but preserve data for audit
+   * instance.endSaga(true);
+   * ```
+   */
   endSaga(preserveInstanceData: boolean = false) {
     this.internalData.ended = true
     this.internalData.preserveInstanceData = preserveInstanceData
@@ -156,7 +227,74 @@ export class SagaInstance<TimeoutNames, T> {
 }
 
 /**
- * A saga!
+ * Defines a long-running business process that coordinates across events and time.
+ * 
+ * Sagas implement the Saga pattern for managing complex workflows that span multiple
+ * aggregates, external services, and time-based operations. They provide stateful
+ * event processing with support for timers, error handling, and process coordination.
+ * 
+ * @template TimeoutNames - Union type of timer names this saga can schedule
+ * @template InstanceData - Type of the saga's persistent state data
+ * 
+ * Key Features:
+ * - **Stateful Processing**: Maintains state across multiple events
+ * - **Timer Support**: Schedule delays and recurring operations
+ * - **Error Handling**: Custom error handling and compensation logic
+ * - **Event Correlation**: Match events to specific saga instances
+ * - **Parallel Processing**: Configurable concurrency for high throughput
+ * 
+ * @example Payment processing saga
+ * ```typescript
+ * interface PaymentData {
+ *   orderId: string;
+ *   amount: number;
+ *   attempts: number;
+ * }
+ * 
+ * type PaymentTimers = 'timeout' | 'retry';
+ * 
+ * export function paymentSaga() {
+ *   return saga<PaymentTimers, PaymentData>('PaymentSaga')
+ *     .subscribeStreams(['orders', 'payments'])
+ *     .startOn('OrderCreated', {}, async (instance, event) => {
+ *       instance.set('orderId', event.data.orderId);
+ *       instance.set('amount', event.data.amount);
+ *       instance.set('attempts', 0);
+ *       
+ *       // Process payment
+ *       await processPayment(event.data);
+ *       
+ *       // Set timeout
+ *       instance.upsertTimer('timeout', {
+ *         isCron: false,
+ *         timeout: 300000 // 5 minutes
+ *       });
+ *     })
+ *     .on('PaymentSucceeded', {
+ *       matchInstance: (event) => ({
+ *         instanceProperty: 'orderId',
+ *         value: event.data.orderId
+ *       })
+ *     }, async (instance, event) => {
+ *       instance.removeTimer('timeout');
+ *       instance.endSaga();
+ *     })
+ *     .onTimer('timeout', async (instance) => {
+ *       const attempts = instance.get('attempts');
+ *       if (attempts < 3) {
+ *         instance.set('attempts', attempts + 1);
+ *         await retryPayment(instance.get('orderId'));
+ *       } else {
+ *         await failPayment(instance.get('orderId'));
+ *         instance.endSaga();
+ *       }
+ *     });
+ * }
+ * ```
+ * 
+ * @see {@link SagaInstance} For instance state management
+ * @see {@link registerSaga} For saga registration
+ * @see {@link SagaScheduler} For advanced scheduling
  */
 export class Saga<TimeoutNames, InstanceData> {
 
@@ -212,6 +350,28 @@ export class Saga<TimeoutNames, InstanceData> {
     return this
   }
 
+  /**
+   * Registers an event handler that can start new saga instances.
+   * 
+   * When the specified event type is received and no existing saga instance
+   * matches, a new saga instance will be created and the handler called.
+   * Only one startOn handler per event type is allowed.
+   * 
+   * @param eventName - The event type that can start new saga instances
+   * @param config - Configuration for instance creation
+   * @param handler - The function to execute when starting a new instance
+   * 
+   * @example
+   * ```typescript
+   * saga.startOn('OrderCreated', {
+   *   matches: async (event) => event.data.requiresPayment,
+   *   withLock: (instance, event) => `payment-${event.data.orderId}`
+   * }, async (instance, event) => {
+   *   instance.set('orderId', event.data.orderId);
+   *   await initiatePayment(event.data);
+   * });
+   * ```
+   */
   startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     if (this.starts.has(eventName)) {
       throw new Error(`Event has been double registered in Saga startsOn ${this.name}: ${eventName}`)
@@ -220,6 +380,33 @@ export class Saga<TimeoutNames, InstanceData> {
     return this
   }
 
+  /**
+   * Registers an event handler for existing saga instances.
+   * 
+   * When the specified event type is received, the handler will be called
+   * on any existing saga instances that match the event based on the
+   * matchInstance configuration.
+   * 
+   * @param eventName - The event type to handle
+   * @param config - Configuration for instance matching and locking
+   * @param handler - The function to execute for matching instances
+   * 
+   * @example
+   * ```typescript
+   * saga.on('PaymentCompleted', {
+   *   matchInstance: (event) => ({
+   *     instanceProperty: 'orderId',
+   *     value: event.data.orderId
+   *   }),
+   *   withLock: (instance, event) => `payment-${event.data.orderId}`
+   * }, async (instance, event) => {
+   *   instance.set('paymentId', event.data.paymentId);
+   *   instance.removeTimer('timeout');
+   *   await completeOrder(instance.get('orderId'));
+   *   instance.endSaga();
+   * });
+   * ```
+   */
   on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData> {
     if (this.eventHandler.has(eventName)) {
       throw new Error(`Event has been double registered in Saga.on ${this.name}: ${eventName}`)

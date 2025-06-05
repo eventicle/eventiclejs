@@ -1,0 +1,235 @@
+= Installation & Setup
+
+This guide will help you get started with Eventicle by setting up your development environment and installing the necessary dependencies.
+
+== Prerequisites
+
+Before installing Eventicle, ensure you have:
+
+* Node.js 14+ and npm/yarn installed
+* TypeScript 4.0+ (for TypeScript projects)
+* For production use, one of:
+  ** Apache Kafka 2.0+ (recommended for production)
+  ** PostgreSQL 12+ (for datastore-backed event client)
+  ** Redis 6+ (for distributed locking and BullMQ scheduling)
+
+== Installation
+
+Install Eventicle using your preferred package manager:
+
+.npm
+[source,bash]
+----
+npm install @eventicle/eventiclejs
+----
+
+.yarn
+[source,bash]
+----
+yarn add @eventicle/eventiclejs
+----
+
+.pnpm
+[source,bash]
+----
+pnpm add @eventicle/eventiclejs
+----
+
+== TypeScript Configuration
+
+Eventicle is written in TypeScript and provides full type definitions. For TypeScript projects, ensure your `tsconfig.json` includes:
+
+[source,json]
+----
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  }
+}
+----
+
+== Basic Project Structure
+
+A typical Eventicle project structure:
+
+[source]
+----
+my-eventicle-app/
+├── src/
+│   ├── aggregates/       # Aggregate root implementations
+│   ├── commands/         # Command handlers
+│   ├── events/          # Event type definitions
+│   ├── sagas/           # Saga workflows
+│   ├── views/           # Event views/projections
+│   ├── config/          # Configuration files
+│   └── index.ts         # Application entry point
+├── test/                # Test files
+├── package.json
+├── tsconfig.json
+└── README.md
+----
+
+== Environment Setup
+
+=== Development Environment
+
+For development, you can use the in-memory event client which requires no external dependencies:
+
+[source,typescript]
+----
+import { setEventClient, eventClientInMemory } from "@eventicle/eventiclejs";
+
+// Configure in-memory event client for development
+setEventClient(eventClientInMemory());
+----
+
+=== Kafka Setup
+
+For production or integration testing with Kafka:
+
+1. Install Kafka locally or use a cloud provider
+2. Configure the Kafka event client:
+
+[source,typescript]
+----
+import { setEventClient, eventClientOnKafka } from "@eventicle/eventiclejs";
+
+setEventClient(eventClientOnKafka({
+  brokers: ["localhost:9092"],
+  clientId: "my-app",
+  groupId: "my-app-group"
+}));
+----
+
+=== PostgreSQL Setup
+
+For PostgreSQL-backed event storage:
+
+1. Install PostgreSQL 12+
+2. Create a database for your application
+3. Configure the datastore event client:
+
+[source,typescript]
+----
+import { setEventClient, eventClientOnDatastore, setDataStore } from "@eventicle/eventiclejs";
+import { PostgresDatastore } from "./datastore/postgres";
+
+// Configure PostgreSQL datastore
+const datastore = new PostgresDatastore({
+  host: "localhost",
+  port: 5432,
+  database: "myapp",
+  user: "myuser",
+  password: "mypassword"
+});
+
+setDataStore(datastore);
+setEventClient(eventClientOnDatastore());
+----
+
+== Optional Dependencies
+
+=== Redis (for distributed locking)
+
+If using distributed sagas or aggregates:
+
+[source,bash]
+----
+npm install ioredis
+----
+
+=== BullMQ (for scheduled jobs)
+
+If using scheduled sagas or timers:
+
+[source,bash]
+----
+npm install bullmq
+----
+
+=== Monitoring
+
+For APM integration:
+
+[source,bash]
+----
+npm install elastic-apm-node  # For Elastic APM
+# or
+npm install @opentelemetry/api @opentelemetry/sdk-node  # For OpenTelemetry
+----
+
+== Verifying Installation
+
+Create a simple test file to verify your installation:
+
+[source,typescript]
+----
+// test-installation.ts
+import { 
+  setEventClient, 
+  eventClientInMemory, 
+  eventClient,
+  AggregateRoot 
+} from "@eventicle/eventiclejs";
+
+// Configure in-memory client
+setEventClient(eventClientInMemory());
+
+// Create a simple aggregate
+class Counter extends AggregateRoot {
+  count: number = 0;
+
+  constructor() {
+    super("counter", []);
+    
+    this.reducers = {
+      incremented: (event) => {
+        this.count += 1;
+      }
+    };
+  }
+  
+  increment() {
+    this.raiseEvent({
+      type: "incremented",
+      payload: { timestamp: new Date() }
+    });
+  }
+}
+
+// Test the setup
+async function test() {
+  const counter = new Counter();
+  counter.increment();
+  
+  console.log("Counter value:", counter.count);
+  console.log("Installation verified! ✓");
+}
+
+test().catch(console.error);
+----
+
+Run the test:
+
+[source,bash]
+----
+npx ts-node test-installation.ts
+----
+
+If you see "Installation verified! ✓", your setup is complete!
+
+== Next Steps
+
+* Continue with the xref:quickstart.adoc[Quick Start Tutorial]
+* Learn about xref:events-and-streams.adoc[Events and Event Streams]
+* Build xref:first-application.adoc[Your First Eventicle Application]

@@ -1,41 +1,1010 @@
 
-== Testing Eventicle Components and Systems
+= Testing Event-Driven Code
 
-Testing event systems is essential, as their interactions are asynchronous and oftentimes with an implicit, or "choreographed" behaviour.
+Testing event-driven applications requires different strategies than traditional synchronous code. This guide covers comprehensive testing approaches for aggregates, commands, sagas, views, and entire workflows.
 
-Eventicle is designed to be easy to test, and each type of component has an idiomatic approach for testing it.
+== Testing Philosophy
 
+Event-driven testing focuses on:
 
+* **Behavior Verification**: Testing what events are emitted, not internal state
+* **Workflow Testing**: Verifying complete business processes
+* **Integration Testing**: Ensuring components work together correctly
+* **Isolation**: Testing components independently when possible
+* **Time Handling**: Managing asynchronous operations and timers
 
-=== consumeFullEventLog - Check event stream consistency
+== Test Environment Setup
 
-A common requirement when building event log based systems is to ensure that once an operation or workflow has completed,
-that the log is in an expected consistent state.
+=== Basic Test Configuration
 
-This can be verified in testing using the `consumeFullEventLog` function.
-
-[source, typescript]
+[source,typescript]
 ----
-// ... perform an operation/ workflow that emit events
-let events = await consumeFullEventLog("user")
+import {
+  setEventClient,
+  eventClientInMemory,
+  setDataStore,
+  InMemoryDatastore,
+  setScheduler,
+  LocalScheduleJobRunner,
+  clearEventHistory,
+  consumeFullEventLog
+} from "@eventicle/eventiclejs";
 
-// verify that the event types we expect are in the log, in the right order, and there aren't any extra events
-// or duplicates present, here with Jest expectations. Insert assertion library of your choice.
+// Global test setup
+beforeEach(async () => {
+  // Use in-memory implementations
+  setEventClient(eventClientInMemory());
+  setDataStore(new InMemoryDatastore());
+  setScheduler(new LocalScheduleJobRunner());
+  
+  // Clear any previous state
+  clearEventHistory();
+  
+  // Clear all registered sagas/views if needed
+  await removeAllSagas();
+  await removeAllViews();
+});
 
-expect(events.map(value => value.type)).toStrictEqual([
-  "user.created",
-  "user.password_set",
-  "user.approved",
-  "user.account_locked",
-]);
+afterEach(async () => {
+  // Clean up after each test
+  await clearDataStores();
+});
 ----
 
+=== Jest Configuration
 
+[source,json]
+----
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "setupFilesAfterEnv": ["<rootDir>/test/setup.ts"],
+  "testMatch": ["**/__tests__/**/*.test.ts"],
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/**/*.d.ts",
+    "!src/test/**"
+  ],
+  "coverageThreshold": {
+    "global": {
+      "branches": 80,
+      "functions": 80,
+      "lines": 80,
+      "statements": 80
+    }
+  }
+}
+----
 
-=== Unit Tests: Commands
+== Testing Aggregates
 
-=== Unit Tests: Aggregate Roots
+=== Unit Testing Aggregate Behavior
 
-=== Unit Tests: Sagas
+[source,typescript]
+----
+import { BankAccount } from "../src/aggregates/bank-account";
 
-=== Integration Tests
+describe("BankAccount Aggregate", () => {
+  describe("Account Creation", () => {
+    it("should create account with initial deposit", () => {
+      const account = BankAccount.open("acc-123", "customer-456", 1000, "checking");
+      
+      expect(account.id).toBe("acc-123");
+      expect(account.balance).toBe(1000);
+      expect(account.status).toBe("active");
+      
+      // Verify events
+      expect(account.newEvents).toHaveLength(1);
+      expect(account.newEvents[0].type).toBe("AccountOpened");
+      expect(account.newEvents[0].payload).toMatchObject({
+        accountId: "acc-123",
+        customerId: "customer-456",
+        initialDeposit: 1000,
+        accountType: "checking"
+      });
+    });
+    
+    it("should reject negative initial deposit", () => {
+      expect(() => {
+        BankAccount.open("acc-123", "customer-456", -100, "checking");
+      }).toThrow("Initial deposit cannot be negative");
+    });
+  });
+  
+  describe("Deposits", () => {
+    let account: BankAccount;
+    
+    beforeEach(() => {
+      account = BankAccount.open("acc-123", "customer-456", 1000, "checking");
+      account.clearEvents(); // Clear creation events for focused testing
+    });
+    
+    it("should allow valid deposits", () => {
+      account.deposit(500, "Salary deposit");
+      
+      expect(account.balance).toBe(1500);
+      expect(account.newEvents).toHaveLength(1);
+      expect(account.newEvents[0].type).toBe("MoneyDeposited");
+      expect(account.newEvents[0].payload.amount).toBe(500);
+      expect(account.newEvents[0].payload.description).toBe("Salary deposit");
+    });
+    
+    it("should reject zero or negative deposits", () => {
+      expect(() => account.deposit(0)).toThrow("Amount must be positive");
+      expect(() => account.deposit(-100)).toThrow("Amount must be positive");
+      
+      // No events should be generated
+      expect(account.newEvents).toHaveLength(0);
+      expect(account.balance).toBe(1000); // Unchanged
+    });
+    
+    it("should reject deposits to frozen account", () => {
+      account.freeze("Suspicious activity");
+      account.clearEvents();
+      
+      expect(() => account.deposit(100)).toThrow("Cannot deposit to frozen account");
+      expect(account.newEvents).toHaveLength(0);
+    });
+  });
+  
+  describe("Event Sourcing", () => {
+    it("should rebuild state from events", () => {
+      // Create and modify account
+      const originalAccount = BankAccount.open("acc-123", "customer-456", 1000, "checking");
+      originalAccount.deposit(500);
+      originalAccount.withdraw(200);
+      
+      const events = originalAccount.newEvents;
+      
+      // Rebuild from events
+      const rebuiltAccount = new BankAccount();
+      events.forEach(event => rebuiltAccount.applyEvent(event));
+      
+      expect(rebuiltAccount.id).toBe(originalAccount.id);
+      expect(rebuiltAccount.balance).toBe(originalAccount.balance);
+      expect(rebuiltAccount.status).toBe(originalAccount.status);
+    });
+  });
+});
+----
+
+=== Testing Complex Aggregate Workflows
+
+[source,typescript]
+----
+describe("Order Aggregate Workflow", () => {
+  it("should handle complete order lifecycle", () => {
+    // Create order
+    const order = Order.create("customer-123", [
+      { productId: "prod-1", quantity: 2, price: 29.99 },
+      { productId: "prod-2", quantity: 1, price: 49.99 }
+    ]);
+    
+    expect(order.status).toBe("created");
+    expect(order.total).toBe(109.97);
+    
+    // Validate order
+    order.validate();
+    expect(order.status).toBe("validated");
+    
+    // Process payment
+    order.recordPayment("payment-456", 109.97);
+    expect(order.status).toBe("paid");
+    
+    // Ship order
+    order.ship("shipment-789");
+    expect(order.status).toBe("shipped");
+    
+    // Verify event sequence
+    const eventTypes = order.newEvents.map(e => e.type);
+    expect(eventTypes).toEqual([
+      "OrderCreated",
+      "OrderValidated", 
+      "PaymentRecorded",
+      "OrderShipped"
+    ]);
+  });
+});
+----
+
+== Testing Commands
+
+=== Command Success Scenarios
+
+[source,typescript]
+----
+import { AccountCommands } from "../src/commands/account-commands";
+
+describe("AccountCommands", () => {
+  describe("openAccount", () => {
+    it("should successfully create new account", async () => {
+      const result = await AccountCommands.openAccount({
+        accountId: "acc-123",
+        customerId: "customer-456",
+        initialDeposit: 1000,
+        accountType: "checking"
+      });
+      
+      // Verify response
+      expect(result.response).toMatchObject({
+        accountId: "acc-123",
+        balance: 1000,
+        status: "active"
+      });
+      
+      // Verify events were emitted
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0].type).toBe("AccountOpened");
+      expect(result.events[0].stream).toBe("accounts");
+    });
+    
+    it("should reject duplicate account creation", async () => {
+      // Create first account
+      await AccountCommands.openAccount({
+        accountId: "acc-123",
+        customerId: "customer-456",
+        initialDeposit: 1000,
+        accountType: "checking"
+      });
+      
+      // Wait for events to be processed
+      await consumeFullEventLog();
+      
+      // Attempt duplicate creation
+      await expect(
+        AccountCommands.openAccount({
+          accountId: "acc-123", // Same ID
+          customerId: "customer-789",
+          initialDeposit: 500,
+          accountType: "savings"
+        })
+      ).rejects.toThrow("Account already exists");
+    });
+  });
+  
+  describe("transfer", () => {
+    beforeEach(async () => {
+      // Set up test accounts
+      await AccountCommands.openAccount({
+        accountId: "acc-source",
+        customerId: "customer-1",
+        initialDeposit: 1000,
+        accountType: "checking"
+      });
+      
+      await AccountCommands.openAccount({
+        accountId: "acc-dest", 
+        customerId: "customer-2",
+        initialDeposit: 500,
+        accountType: "savings"
+      });
+      
+      await consumeFullEventLog();
+    });
+    
+    it("should transfer money between accounts", async () => {
+      const result = await AccountCommands.transfer({
+        fromAccountId: "acc-source",
+        toAccountId: "acc-dest",
+        amount: 200,
+        description: "Test transfer"
+      });
+      
+      expect(result.response.fromAccountBalance).toBe(800);
+      expect(result.response.toAccountBalance).toBe(700);
+      expect(result.events).toHaveLength(2); // One for each account
+    });
+    
+    it("should reject transfer with insufficient funds", async () => {
+      await expect(
+        AccountCommands.transfer({
+          fromAccountId: "acc-source",
+          toAccountId: "acc-dest", 
+          amount: 2000 // More than available
+        })
+      ).rejects.toThrow("Insufficient funds");
+    });
+  });
+});
+----
+
+=== Testing Command Validation
+
+[source,typescript]
+----
+describe("Command Validation", () => {
+  it("should validate input parameters", async () => {
+    await expect(
+      AccountCommands.openAccount({
+        accountId: "",
+        customerId: "customer-456",
+        initialDeposit: 1000,
+        accountType: "checking"
+      })
+    ).rejects.toThrow("Account ID is required");
+    
+    await expect(
+      AccountCommands.openAccount({
+        accountId: "acc-123",
+        customerId: "customer-456",
+        initialDeposit: -100,
+        accountType: "checking"
+      })
+    ).rejects.toThrow("Initial deposit cannot be negative");
+  });
+});
+----
+
+== Testing Sagas
+
+=== Basic Saga Testing
+
+[source,typescript]
+----
+import { notificationSaga } from "../src/sagas/notification-saga";
+import { mockSagasExceptFor, allSagaInstances } from "@eventicle/eventiclejs";
+
+describe("NotificationSaga", () => {
+  beforeEach(async () => {
+    // Mock all sagas except the one being tested
+    await mockSagasExceptFor(["NotificationSaga"]);
+    registerSaga(notificationSaga());
+  });
+  
+  it("should send notification on order creation", async () => {
+    const sendEmailSpy = jest.spyOn(emailService, 'sendEmail');
+    
+    // Emit order created event
+    await eventClient().emit([{
+      type: "OrderCreated",
+      stream: "orders",
+      domainId: "order-123",
+      payload: {
+        orderId: "order-123",
+        customerId: "customer-456",
+        customerEmail: "test@example.com",
+        items: [{ productId: "prod-1", quantity: 2 }]
+      }
+    }]);
+    
+    // Wait for saga processing
+    await consumeFullEventLog();
+    
+    // Verify notification was sent
+    expect(sendEmailSpy).toHaveBeenCalledWith(
+      "test@example.com",
+      expect.objectContaining({
+        subject: "Order Confirmation",
+        template: "order-confirmation",
+        data: { orderId: "order-123" }
+      })
+    );
+  });
+});
+----
+
+=== Testing Stateful Sagas
+
+[source,typescript]
+----
+describe("PaymentProcessingSaga", () => {
+  beforeEach(async () => {
+    await mockSagasExceptFor(["PaymentProcessingSaga"]);
+    registerSaga(paymentProcessingSaga());
+  });
+  
+  it("should handle complete payment workflow", async () => {
+    // Start payment process
+    await eventClient().emit([{
+      type: "OrderCreated",
+      stream: "orders", 
+      domainId: "order-123",
+      payload: {
+        orderId: "order-123",
+        totalAmount: 100,
+        customerId: "customer-456",
+        paymentMethod: "credit-card"
+      }
+    }]);
+    
+    await consumeFullEventLog();
+    
+    // Verify saga instance created
+    const instances = await allSagaInstances();
+    const paymentSaga = instances.find(i => 
+      i.sagaName === "PaymentProcessingSaga" && 
+      i.data.orderId === "order-123"
+    );
+    
+    expect(paymentSaga).toBeDefined();
+    expect(paymentSaga.data.status).toBe("processing");
+    
+    // Complete payment
+    await eventClient().emit([{
+      type: "PaymentSucceeded",
+      stream: "payments",
+      domainId: "order-123", 
+      payload: {
+        orderId: "order-123",
+        transactionId: "txn-789"
+      }
+    }]);
+    
+    await consumeFullEventLog();
+    
+    // Verify saga completed
+    const updatedInstances = await allSagaInstances();
+    const completedSaga = updatedInstances.find(i => 
+      i.sagaName === "PaymentProcessingSaga" && 
+      i.data.orderId === "order-123"
+    );
+    
+    expect(completedSaga).toBeUndefined(); // Should be completed and removed
+  });
+  
+  it("should retry failed payments", async () => {
+    // Start payment
+    await eventClient().emit([{
+      type: "OrderCreated",
+      stream: "orders",
+      domainId: "order-123", 
+      payload: {
+        orderId: "order-123",
+        totalAmount: 100,
+        customerId: "customer-456",
+        paymentMethod: "credit-card"
+      }
+    }]);
+    
+    await consumeFullEventLog();
+    
+    // Fail payment
+    await eventClient().emit([{
+      type: "PaymentFailed",
+      stream: "payments",
+      domainId: "order-123",
+      payload: {
+        orderId: "order-123",
+        errorCode: "CARD_DECLINED"
+      }
+    }]);
+    
+    await consumeFullEventLog();
+    
+    // Check saga state
+    const instances = await allSagaInstances();
+    const paymentSaga = instances.find(i => 
+      i.sagaName === "PaymentProcessingSaga" && 
+      i.data.orderId === "order-123"
+    );
+    
+    expect(paymentSaga.data.attempts).toBe(1);
+    expect(paymentSaga.data.status).toBe("retrying");
+  });
+});
+----
+
+=== Testing Saga Timers
+
+[source,typescript]
+----
+describe("Saga Timers", () => {
+  let mockScheduler: jest.Mocked<LocalScheduleJobRunner>;
+  
+  beforeEach(() => {
+    mockScheduler = {
+      schedule: jest.fn(),
+      cancel: jest.fn(),
+      startup: jest.fn(),
+      shutdown: jest.fn()
+    } as any;
+    
+    setScheduler(mockScheduler);
+  });
+  
+  it("should schedule timeout timer", async () => {
+    await eventClient().emit([{
+      type: "OrderCreated",
+      stream: "orders",
+      domainId: "order-123",
+      payload: { orderId: "order-123", totalAmount: 100 }
+    }]);
+    
+    await consumeFullEventLog();
+    
+    expect(mockScheduler.schedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timerName: "paymentTimeout",
+        delay: 5 * 60 * 1000, // 5 minutes
+        sagaName: "PaymentProcessingSaga"
+      })
+    );
+  });
+  
+  it("should handle timer execution", async () => {
+    const saga = paymentProcessingSaga();
+    const instance = new SagaInstance(saga, "instance-123");
+    instance.data = { orderId: "order-123", status: "processing" };
+    
+    // Simulate timer firing
+    await saga.onTimer("paymentTimeout", instance);
+    
+    expect(instance.data.status).toBe("failed");
+  });
+});
+----
+
+== Testing Event Views
+
+=== Basic View Testing
+
+[source,typescript]
+----
+import { ProductCatalogView } from "../src/views/product-catalog-view";
+
+describe("ProductCatalogView", () => {
+  let view: ProductCatalogView;
+  
+  beforeEach(() => {
+    view = new ProductCatalogView();
+  });
+  
+  it("should create product on ProductCreated event", async () => {
+    const event = {
+      id: "event-1",
+      type: "ProductCreated",
+      stream: "products",
+      domainId: "product-123",
+      timestamp: Date.now(),
+      payload: {
+        productId: "product-123",
+        name: "Test Product",
+        price: 29.99,
+        category: "Electronics",
+        createdAt: new Date()
+      }
+    };
+    
+    await view.handleEvent(event);
+    
+    const product = await view.getProduct("product-123");
+    expect(product).toMatchObject({
+      productId: "product-123",
+      name: "Test Product",
+      price: 29.99,
+      category: "Electronics",
+      status: "active"
+    });
+  });
+  
+  it("should update product price", async () => {
+    // First create product
+    await view.handleEvent({
+      id: "event-1",
+      type: "ProductCreated",
+      stream: "products", 
+      domainId: "product-123",
+      timestamp: Date.now(),
+      payload: {
+        productId: "product-123",
+        name: "Test Product",
+        price: 29.99,
+        category: "Electronics"
+      }
+    });
+    
+    // Then update price
+    await view.handleEvent({
+      id: "event-2", 
+      type: "ProductPriceUpdated",
+      stream: "products",
+      domainId: "product-123", 
+      timestamp: Date.now(),
+      payload: {
+        productId: "product-123",
+        newPrice: 24.99,
+        updatedAt: new Date()
+      }
+    });
+    
+    const product = await view.getProduct("product-123");
+    expect(product.price).toBe(24.99);
+  });
+  
+  it("should handle missing product gracefully", async () => {
+    await view.handleEvent({
+      id: "event-1",
+      type: "ProductPriceUpdated", 
+      stream: "products",
+      domainId: "nonexistent-product",
+      timestamp: Date.now(),
+      payload: {
+        productId: "nonexistent-product",
+        newPrice: 24.99
+      }
+    });
+    
+    // Should not throw error
+    const product = await view.getProduct("nonexistent-product");
+    expect(product).toBeNull();
+  });
+});
+----
+
+=== Testing View Queries
+
+[source,typescript]
+----
+describe("ProductCatalogView Queries", () => {
+  let view: ProductCatalogView;
+  
+  beforeEach(async () => {
+    view = new ProductCatalogView();
+    
+    // Set up test data
+    const products = [
+      { id: "prod-1", name: "Laptop", category: "Electronics", price: 999.99, stock: 5 },
+      { id: "prod-2", name: "Mouse", category: "Electronics", price: 29.99, stock: 0 },
+      { id: "prod-3", name: "Book", category: "Books", price: 19.99, stock: 10 }
+    ];
+    
+    for (const product of products) {
+      await view.handleEvent({
+        id: `event-${product.id}`,
+        type: "ProductCreated",
+        stream: "products",
+        domainId: product.id,
+        timestamp: Date.now(),
+        payload: product
+      });
+    }
+  });
+  
+  it("should filter products by category", async () => {
+    const electronics = await view.getProductsByCategory("Electronics");
+    expect(electronics).toHaveLength(2);
+    expect(electronics.map(p => p.name)).toEqual(["Laptop", "Mouse"]);
+  });
+  
+  it("should find low stock products", async () => {
+    const lowStock = await view.getLowStockProducts(5);
+    expect(lowStock).toHaveLength(1);
+    expect(lowStock[0].name).toBe("Mouse");
+  });
+  
+  it("should search products by name", async () => {
+    const laptops = await view.searchProducts("Laptop");
+    expect(laptops).toHaveLength(1);
+    expect(laptops[0].name).toBe("Laptop");
+  });
+});
+----
+
+== Event Stream Consistency Testing
+
+A common requirement is ensuring that once an operation or workflow has completed, the event log is in an expected consistent state.
+
+[source,typescript]
+----
+describe("Event Stream Consistency", () => {
+  it("should have correct event sequence after user registration", async () => {
+    // Perform user registration workflow
+    await UserCommands.registerUser({
+      email: "test@example.com",
+      password: "password123"
+    });
+    
+    await UserCommands.approveUser("user-123");
+    await UserCommands.lockAccount("user-123", "Suspicious activity");
+    
+    // Check event stream consistency
+    const events = await consumeFullEventLog("users");
+    
+    // Verify event types in correct order
+    expect(events.map(e => e.type)).toStrictEqual([
+      "UserRegistered",
+      "PasswordSet", 
+      "UserApproved",
+      "AccountLocked"
+    ]);
+    
+    // Verify no duplicate events
+    const userIds = events.map(e => e.domainId);
+    expect(new Set(userIds).size).toBe(userIds.length);
+  });
+});
+----
+
+== Integration Testing
+
+=== End-to-End Workflow Testing
+
+[source,typescript]
+----
+describe("Order Processing Workflow", () => {
+  beforeEach(async () => {
+    // Register all components
+    registerView(new ProductCatalogView());
+    registerView(new OrderSummaryView());
+    registerSaga(notificationSaga());
+    registerSaga(paymentProcessingSaga());
+  });
+  
+  it("should handle complete order workflow", async () => {
+    // 1. Create product
+    await ProductCommands.createProduct({
+      productId: "prod-123",
+      name: "Test Product",
+      price: 49.99,
+      category: "Electronics",
+      stock: 10
+    });
+    
+    await consumeFullEventLog();
+    
+    // 2. Create order
+    const orderResult = await OrderCommands.createOrder({
+      customerId: "customer-456",
+      items: [
+        { productId: "prod-123", quantity: 2, price: 49.99 }
+      ]
+    });
+    
+    await consumeFullEventLog();
+    
+    // 3. Verify order was created
+    const orderView = getView(OrderSummaryView);
+    const order = await orderView.getOrder(orderResult.response.orderId);
+    
+    expect(order).toMatchObject({
+      customerId: "customer-456",
+      itemCount: 1,
+      totalAmount: 99.98,
+      status: "pending"
+    });
+    
+    // 4. Verify payment saga started
+    const sagaInstances = await allSagaInstances();
+    const paymentSaga = sagaInstances.find(s => 
+      s.sagaName === "PaymentProcessingSaga"
+    );
+    expect(paymentSaga).toBeDefined();
+    
+    // 5. Complete payment
+    await eventClient().emit([{
+      type: "PaymentSucceeded",
+      stream: "payments",
+      domainId: orderResult.response.orderId,
+      payload: {
+        orderId: orderResult.response.orderId,
+        transactionId: "txn-789"
+      }
+    }]);
+    
+    await consumeFullEventLog();
+    
+    // 6. Verify order completed
+    const completedOrder = await orderView.getOrder(orderResult.response.orderId);
+    expect(completedOrder.status).toBe("completed");
+  });
+});
+----
+
+=== Testing with External Dependencies
+
+[source,typescript]
+----
+describe("Payment Integration", () => {
+  let mockPaymentGateway: jest.Mocked<PaymentGateway>;
+  
+  beforeEach(() => {
+    mockPaymentGateway = {
+      processPayment: jest.fn(),
+      refundPayment: jest.fn()
+    };
+    
+    // Inject mock
+    PaymentService.setGateway(mockPaymentGateway);
+  });
+  
+  it("should handle successful payment", async () => {
+    mockPaymentGateway.processPayment.mockResolvedValue({
+      success: true,
+      transactionId: "txn-123"
+    });
+    
+    const result = await PaymentCommands.processPayment({
+      orderId: "order-123",
+      amount: 100,
+      paymentMethod: "credit-card",
+      customerId: "customer-456"
+    });
+    
+    expect(result.response.status).toBe("succeeded");
+    expect(mockPaymentGateway.processPayment).toHaveBeenCalledWith({
+      amount: 100,
+      paymentMethod: "credit-card"
+    });
+  });
+  
+  it("should handle payment gateway failure", async () => {
+    mockPaymentGateway.processPayment.mockRejectedValue(
+      new Error("Gateway unavailable")
+    );
+    
+    const result = await PaymentCommands.processPayment({
+      orderId: "order-123",
+      amount: 100, 
+      paymentMethod: "credit-card",
+      customerId: "customer-456"
+    });
+    
+    expect(result.response.status).toBe("failed");
+    expect(result.response.errorCode).toBe("GATEWAY_ERROR");
+  });
+});
+----
+
+== Performance Testing
+
+=== Load Testing Event Processing
+
+[source,typescript]
+----
+describe("Performance Tests", () => {
+  it("should handle high volume of events", async () => {
+    const startTime = Date.now();
+    const eventCount = 1000;
+    
+    // Generate many events
+    const events = Array.from({ length: eventCount }, (_, i) => ({
+      type: "OrderCreated",
+      stream: "orders",
+      domainId: `order-${i}`,
+      timestamp: Date.now(),
+      payload: {
+        orderId: `order-${i}`,
+        customerId: `customer-${i % 100}`,
+        amount: Math.random() * 1000
+      }
+    }));
+    
+    // Emit all events
+    await eventClient().emit(events);
+    await consumeFullEventLog();
+    
+    const duration = Date.now() - startTime;
+    console.log(`Processed ${eventCount} events in ${duration}ms`);
+    
+    // Verify all events were processed
+    const orderView = getView(OrderSummaryView);
+    const allOrders = await orderView.getAllOrders();
+    expect(allOrders).toHaveLength(eventCount);
+    
+    // Performance assertion (adjust based on requirements)
+    expect(duration).toBeLessThan(5000); // Should complete in 5 seconds
+  });
+  
+  it("should handle concurrent command execution", async () => {
+    const concurrentCommands = 50;
+    
+    // Execute many commands concurrently
+    const promises = Array.from({ length: concurrentCommands }, (_, i) =>
+      AccountCommands.openAccount({
+        accountId: `acc-${i}`,
+        customerId: `customer-${i}`,
+        initialDeposit: 1000,
+        accountType: "checking"
+      })
+    );
+    
+    const results = await Promise.all(promises);
+    
+    expect(results).toHaveLength(concurrentCommands);
+    results.forEach((result, i) => {
+      expect(result.response.accountId).toBe(`acc-${i}`);
+    });
+  });
+});
+----
+
+== Test Utilities
+
+=== Custom Test Helpers
+
+[source,typescript]
+----
+// test/helpers/event-helpers.ts
+export class EventTestHelpers {
+  static createOrderEvent(orderId: string, overrides: any = {}) {
+    return {
+      id: `event-${orderId}`,
+      type: "OrderCreated",
+      stream: "orders",
+      domainId: orderId,
+      timestamp: Date.now(),
+      payload: {
+        orderId,
+        customerId: "customer-123",
+        items: [{ productId: "prod-1", quantity: 1, price: 29.99 }],
+        ...overrides
+      }
+    };
+  }
+  
+  static async waitForSagaCompletion(sagaName: string, instanceId: string, timeout = 5000) {
+    const start = Date.now();
+    
+    while (Date.now() - start < timeout) {
+      const instances = await allSagaInstances();
+      const saga = instances.find(s => 
+        s.sagaName === sagaName && s.instanceId === instanceId
+      );
+      
+      if (!saga) {
+        return; // Saga completed
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error(`Saga ${sagaName}:${instanceId} did not complete within ${timeout}ms`);
+  }
+  
+  static async expectEventsEmitted(expectedEvents: string[]) {
+    await consumeFullEventLog();
+    
+    const eventHistory = getEventHistory();
+    const emittedTypes = eventHistory.map(e => e.type);
+    
+    expect(emittedTypes).toEqual(expect.arrayContaining(expectedEvents));
+  }
+}
+
+// test/helpers/aggregate-helpers.ts
+export class AggregateTestHelpers {
+  static createAccountWithHistory(transactions: any[]) {
+    const account = BankAccount.open("acc-123", "customer-456", 1000, "checking");
+    
+    transactions.forEach(txn => {
+      if (txn.type === "deposit") {
+        account.deposit(txn.amount, txn.description);
+      } else if (txn.type === "withdraw") {
+        account.withdraw(txn.amount, txn.description);
+      }
+    });
+    
+    return account;
+  }
+  
+  static verifyEventSequence(aggregate: AggregateRoot, expectedTypes: string[]) {
+    const actualTypes = aggregate.newEvents.map(e => e.type);
+    expect(actualTypes).toEqual(expectedTypes);
+  }
+}
+----
+
+== Testing Best Practices
+
+1. **Test Behavior, Not Implementation**: Focus on what events are emitted and how state changes
+
+2. **Use Deterministic Data**: Avoid random values in tests; use fixed timestamps and IDs
+
+3. **Test Error Scenarios**: Verify error handling and edge cases
+
+4. **Isolate Tests**: Each test should be independent and not rely on others
+
+5. **Use Meaningful Assertions**: Verify specific values, not just existence
+
+6. **Test at Multiple Levels**: Unit tests for components, integration tests for workflows
+
+7. **Mock External Dependencies**: Use mocks for payment gateways, email services, etc.
+
+8. **Performance Considerations**: Include performance tests for high-volume scenarios
+
+== Next Steps
+
+* Learn about xref:observability.adoc[Observability and Monitoring] for production testing
+* Explore xref:deployment.adoc[Deployment Strategies] for testing in different environments
+* Understand xref:performance-optimization.adoc[Performance Optimization] techniques
+* See xref:troubleshooting.adoc[Troubleshooting] common testing issues

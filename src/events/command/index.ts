@@ -6,41 +6,133 @@ import { dataStore } from "../../index";
 import {TransactionOptions} from "@eventicle/eventicle-utilities/dist/datastore";
 
 /**
- * A CommandIntent is a message instructing Eventicle to perform an action that
- * may emit events that should be sent externally using the {@link EventClient}
+ * Represents a request to execute a command with typed payload data.
+ * 
+ * CommandIntent provides a standardized way to request command execution in Eventicle's
+ * CQRS architecture. It decouples command requests from their implementations, enabling
+ * features like remote command execution, load balancing, and message-based architectures.
+ * 
+ * @template T - The type of the command payload data
+ * 
+ * @example
+ * ```typescript
+ * const createUserIntent: CommandIntent<{email: string, name: string}> = {
+ *   type: 'CreateUser',
+ *   data: {
+ *     email: 'john@example.com',
+ *     name: 'John Doe'
+ *   }
+ * };
+ * 
+ * await dispatchCommand(createUserIntent);
+ * ```
+ * 
+ * @see {@link Command} For the command implementation
+ * @see {@link dispatchCommand} For command execution
+ * @see {@link dispatchDirectCommand} For simplified inline commands
  */
 export interface CommandIntent<T> {
-  /**
-   * The command type
-   * @see Command#type
+  /** 
+   * Unique identifier for the command type (e.g., 'CreateUser', 'ProcessPayment').
+   * 
+   * Must match a registered command's type for successful dispatch.
    */
   type: string;
-  /**
-   * The data that will be used when calling the Command instance.
+  /** 
+   * Strongly-typed payload data passed to the command handler.
+   * 
+   * Contains all information needed to execute the command business logic.
    */
   data: T;
 }
 
 /**
- * A Command.
- *
- * It is generally preferred {@link dispatchDirectCommand} where the command
- * definition is implicit, and more fully type checked.
- *
- * This, along with {@link dispatchCommand} is available if you wish to separate
- * your code more fully, or introduce a remote capable message based command bus.
+ * Defines a command handler in Eventicle's CQRS architecture.
+ * 
+ * Commands encapsulate business operations that change system state and emit domain events.
+ * They provide the "C" in CQRS, handling write operations while maintaining strong consistency
+ * and business rule enforcement.
+ * 
+ * @template I - Input data type for the command
+ * @template O - Output/response type from the command
+ * 
+ * Key Features:
+ * - **Business Logic**: Encapsulates domain operations and invariants
+ * - **Event Generation**: Produces events representing state changes
+ * - **Type Safety**: Strongly-typed input/output contracts
+ * - **Transactional**: Atomic execution with event emission
+ * - **Scalable**: Can be distributed across multiple instances
+ * 
+ * @example User management command
+ * ```typescript
+ * const createUserCommand: Command<{email: string, name: string}, {userId: string}> = {
+ *   type: 'CreateUser',
+ *   streamToEmit: 'users',
+ *   execute: async (data) => {
+ *     // Validate business rules
+ *     await validateUniqueEmail(data.email);
+ *     
+ *     // Create aggregate and apply business logic
+ *     const user = User.create(data.email, data.name);
+ *     
+ *     // Persist and get generated events
+ *     const events = await aggregates.persist(user);
+ *     
+ *     return {
+ *       response: { userId: user.id },
+ *       events
+ *     };
+ *   }
+ * };
+ * ```
+ * 
+ * @example Order processing with error handling
+ * ```typescript
+ * const processOrderCommand: Command<OrderData, {orderId: string}> = {
+ *   type: 'ProcessOrder',
+ *   streamToEmit: 'orders',
+ *   execute: async (data) => {
+ *     try {
+ *       const order = await aggregates.load(Order, data.orderId);
+ *       order.process(data.items);
+ *       
+ *       return {
+ *         response: { orderId: order.id },
+ *         events: await aggregates.persist(order)
+ *       };
+ *     } catch (error) {
+ *       // Emit failure event and propagate error
+ *       return {
+ *         events: [{
+ *           type: 'OrderProcessingFailed',
+ *           domainId: data.orderId,
+ *           data: { error: error.message }
+ *         }],
+ *         webError: new Error('Order processing failed')
+ *       };
+ *     }
+ *   }
+ * };
+ * ```
+ * 
+ * @see {@link CommandIntent} For command requests
+ * @see {@link CommandReturn} For command results
+ * @see {@link dispatchCommand} For command execution
+ * @see {@link registerCommand} For command registration
  */
 export interface Command<I, O> {
-  /**
-   * The name of the Command. This is used to look it up
-   * when the user calls {@link dispatchCommand}
+  /** 
+   * Unique command type identifier used for registration and dispatch.
+   * 
+   * Should be descriptive and follow consistent naming conventions
+   * (e.g., 'CreateUser', 'ProcessPayment', 'CancelOrder').
    */
   type: string;
-  /**
-   * The event stream that any events in the CommandReturn should be emitted on
-   *
-   * @see EventClient
-   * @see CommandReturn#events
+  /** 
+   * Target event stream for publishing generated events.
+   * 
+   * All events returned by the command execution will be published to this stream,
+   * making them available to event views, sagas, and other subscribers.
    */
   streamToEmit: string;
   /**
@@ -94,36 +186,64 @@ export interface Command<I, O> {
 }
 
 /**
- * The global return type for {@link Command}, whether the command is explicit, as in
- * {@link dispatchCommand}, or implicit, as in {@link dispatchDirectCommand}.
- *
- * This return type is passed to the caller, but before that happens, it will
- * be processed by the dispatcher to capture any events that need to be emitted.
+ * Standard return type for all command executions in Eventicle.
+ * 
+ * CommandReturn provides a consistent interface for command results, separating
+ * the response data (returned to caller) from domain events (published to streams).
+ * This enables clean separation between synchronous API responses and asynchronous
+ * event-driven side effects.
+ * 
+ * @template T - Type of the response data returned to the caller
+ * 
+ * @example Successful command with response
+ * ```typescript
+ * const result: CommandReturn<{userId: string}> = {
+ *   response: { userId: 'user-123' },
+ *   events: [{
+ *     type: 'UserCreated',
+ *     domainId: 'user-123',
+ *     data: { email: 'john@example.com', name: 'John Doe' }
+ *   }]
+ * };
+ * ```
+ * 
+ * @example Command with business error
+ * ```typescript
+ * const result: CommandReturn<void> = {
+ *   events: [{
+ *     type: 'PaymentFailed',
+ *     domainId: 'payment-456',
+ *     data: { reason: 'Insufficient funds' }
+ *   }],
+ *   webError: new Error('Payment processing failed')
+ * };
+ * ```
+ * 
+ * @see {@link Command} For command definitions
+ * @see {@link EventicleEvent} For event structure
  */
 export interface CommandReturn<T> {
-  /**
-   * An optional response object.
-   * This will be ignored by the command dispatcher, and passed through
-   * to the calling code.  Most commonly used to pass IDs that have been generated
-   * during command execution.
+  /** 
+   * Optional response data returned to the command caller.
+   * 
+   * Typically contains generated IDs, confirmation data, or other information
+   * needed by the synchronous caller. This data is NOT published as events.
    */
   response?: T;
-  /**
-   * Any events that have been generated during command execution that should be
-   * emitted externally onto the configured topic.
-   * By the time the calling code receives the return, the events have already been
-   * passed to {@link EventClient#emit}, and cannot be altered.
+  /** 
+   * Domain events generated during command execution.
+   * 
+   * These events are automatically published to the command's configured stream
+   * and become part of the permanent event history. Events represent facts about
+   * what happened and drive all downstream processing.
    */
   events: EventicleEvent[];
-  /**
-   * Optional error property.
-   *
-   * Used by some implementations to indicate that the Command finished in an Error,
-   * which should now be thrown.
-   *
-   * This is performed so that the command can emit events (describing the error),
-   * and also instruct the calling code (which is normally a synchronous API) to
-   * subsequently throw the given Error back to the user.
+  /** 
+   * Optional error to throw after event emission.
+   * 
+   * Allows commands to emit failure events while still signaling errors to callers.
+   * The events are published first, then this error is thrown to the caller,
+   * enabling both event-driven error handling and traditional exception handling.
    */
   webError?: Error;
 }
