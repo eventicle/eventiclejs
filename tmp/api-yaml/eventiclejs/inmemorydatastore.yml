@@ -1,0 +1,294 @@
+### YamlMime:TSType
+name: InMemoryDatastore
+uid: '@eventicle/eventiclejs!InMemoryDatastore:class'
+package: '@eventicle/eventiclejs!'
+fullName: InMemoryDatastore
+summary: |-
+  In memory Datastore implementation.
+
+  This is suitable for testing and single instance demonstration purposes.
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: class
+properties:
+  - name: events
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#events:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: events
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'events: EventEmitter;'
+      return:
+        type: EventEmitter
+methods:
+  - name: 'createEntity(workspaceId, type, item)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#createEntity:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'createEntity(workspaceId, type, item)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'createEntity(workspaceId: string, type: string, item: any): Promise<any>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: Entity type or "table" name
+          type: string
+        - id: item
+          description: ''
+          type: any
+      return:
+        type: Promise&lt;any&gt;
+        description: ''
+  - name: 'deleteEntity(workspaceId, type, id)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#deleteEntity:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'deleteEntity(workspaceId, type, id)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'deleteEntity(workspaceId: string, type: string, id: string): Promise<void>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: ''
+          type: string
+        - id: id
+          description: ''
+          type: string
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: 'deleteMany(workspaceId, type, query)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#deleteMany:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'deleteMany(workspaceId, type, query)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'deleteMany(workspaceId: string, type: string, query: Query): Promise<void>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: ''
+          type: string
+        - id: query
+          description: ''
+          type: '<xref uid="@eventicle/eventicle-utilities!Query:type" />'
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: 'findEntity(workspaceId, type, query, sorting)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#findEntity:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'findEntity(workspaceId, type, query, sorting)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'findEntity(workspaceId: string, type: any, query: Query, sorting?: DataSorting): Promise<Record[]>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: Entity type or "table" name
+          type: any
+        - id: query
+          description: Json object to match fields
+          type: '<xref uid="@eventicle/eventicle-utilities!Query:type" />'
+        - id: sorting
+          description: ''
+          type: '<xref uid="@eventicle/eventicle-utilities!~DataSorting:interface" />'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~Record:interface" />[]&gt;'
+        description: ''
+  - name: 'findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#findEntityPaginated:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        findEntityPaginated(workspaceId: string, type: string, query: Query, sorting: DataSorting, page: number,
+        pageSize: number): Promise<PagedRecords>;
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: Entity type or "table" name
+          type: string
+        - id: query
+          description: Json object to match fields
+          type: '<xref uid="@eventicle/eventicle-utilities!Query:type" />'
+        - id: sorting
+          description: ''
+          type: '<xref uid="@eventicle/eventicle-utilities!~DataSorting:interface" />'
+        - id: page
+          description: page count
+          type: number
+        - id: pageSize
+          description: page size
+          type: number
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~PagedRecords:interface" />&gt;'
+        description: ''
+  - name: 'getEntity(workspaceId, type, id)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#getEntity:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'getEntity(workspaceId, type, id)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'getEntity(workspaceId: string, type: any, id: string): Promise<Record>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: Entity type or "table" name
+          type: any
+        - id: id
+          description: ''
+          type: string
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~Record:interface" />&gt;'
+        description: ''
+  - name: getTransactionData()
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#getTransactionData:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: getTransactionData()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'getTransactionData(): TransactionData;'
+      return:
+        type: '<xref uid="@eventicle/eventicle-utilities!~TransactionData:interface" />'
+        description: ''
+  - name: hasTransactionData()
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#hasTransactionData:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: hasTransactionData()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'hasTransactionData(): boolean;'
+      return:
+        type: boolean
+        description: ''
+  - name: 'on(event, listener)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#on:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'on(event, listener)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        on(event: "transaction.start" | "transaction.commit", listener: (name: string, data: TransactionData) => void):
+        this;
+      parameters:
+        - id: event
+          description: ''
+          type: '"transaction.start" | "transaction.commit"'
+        - id: listener
+          description: ''
+          type: '(name: string, data: <xref uid="@eventicle/eventicle-utilities!~TransactionData:interface" />) =&gt; void'
+      return:
+        type: this
+        description: ''
+  - name: purge()
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#purge:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: purge()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'purge(): Promise<void>;'
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: 'saveEntity(workspaceId, type, item)'
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#saveEntity:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'saveEntity(workspaceId, type, item)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'saveEntity(workspaceId: string, type: string, item: Record): Promise<Record>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+        - id: type
+          description: ''
+          type: string
+        - id: item
+          description: ''
+          type: '<xref uid="@eventicle/eventicle-utilities!~Record:interface" />'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~Record:interface" />&gt;'
+        description: ''
+  - name: transaction(exec)
+    uid: '@eventicle/eventiclejs!InMemoryDatastore#transaction:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: transaction(exec)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'transaction<T>(exec: () => Promise<T>): Promise<T>;'
+      parameters:
+        - id: exec
+          description: ''
+          type: () =&gt; Promise&lt;T&gt;
+      return:
+        type: Promise&lt;T&gt;
+        description: ''

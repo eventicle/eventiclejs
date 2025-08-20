@@ -18,6 +18,8 @@ import {logger} from "@eventicle/eventicle-utilities";
 import {BullMQScheduleJobRunner} from "../../src/bullmq-schedule-job-runner";
 import {setScheduler} from "../../src";
 import {scheduler} from "../../api/eventiclejs";
+import {SagaScheduler, DefaultSagaScheduler} from "../../src/events/saga/saga-scheduler";
+import {setSagaScheduler} from "../../src/events/saga";
 
 describe('Sagas', function () {
 
@@ -367,6 +369,103 @@ describe('Sagas', function () {
 
     // If we get here, there's no overlap
     expect(hasOverlap).toBe(false);
+  });
+
+  it('should handle errors thrown in custom saga scheduler', async function () {
+    class ErrorThrowingSagaScheduler implements SagaScheduler {
+      private eventCallCount = 0;
+      private timerCallCount = 0;
+      
+      async sagaHandleEvent(saga: Saga<any, any>, event: EventicleEvent, instanceId: string): Promise<void> {
+        this.eventCallCount++;
+        throw new Error(`Custom scheduler error on event ${event.type} for instance ${instanceId}`);
+      }
+      
+      async handleTimer(saga: Saga<any, any>, name: string, data: { instanceId: string }): Promise<void> {
+        this.timerCallCount++;
+        throw new Error(`Custom scheduler error on timer ${name} for instance ${data.instanceId}`);
+      }
+      
+      getCallCounts() {
+        return { events: this.eventCallCount, timers: this.timerCallCount };
+      }
+    }
+    
+    const errorScheduler = new ErrorThrowingSagaScheduler();
+    const originalScheduler = new DefaultSagaScheduler();
+    
+    let errorHandlerCalled = false;
+    let capturedError: Error | null = null;
+    let capturedEvent: EventicleEvent | null = null;
+    
+    const testSaga = saga<"errorTimer", { domainId: string }>("ErrorHandlingSaga")
+      .subscribeStreams(["test-stream"])
+      .startOn("TestEvent", {}, async (instance, event) => {
+        instance.set("domainId", event.domainId);
+        instance.upsertTimer("errorTimer", {
+          isCron: false,
+          timeout: 100
+        });
+      })
+      .on("SecondEvent", {
+        matchInstance: ev => ({
+          instanceProperty: "domainId",
+          value: ev.domainId
+        })
+      }, async (instance, event) => {
+        instance.set("secondEventReceived", true);
+      })
+      .onTimer("errorTimer", async (instance) => {
+        instance.set("timerFired", true);
+      })
+      .onError(async (saga, event, error) => {
+        errorHandlerCalled = true;
+        capturedError = error;
+        capturedEvent = event;
+      });
+    
+    setSagaScheduler(errorScheduler);
+    
+    try {
+      await registerSaga(testSaga);
+      
+      const testId = uuid.v4();
+      
+      await eventClient().emit([{
+        id: uuid.v4(),
+        type: "TestEvent",
+        domainId: testId,
+        data: { test: true }
+      }], "test-stream");
+      
+      await pause(200);
+      
+      await eventClient().emit([{
+        id: uuid.v4(),
+        type: "SecondEvent",
+        domainId: testId,
+        data: { test: true }
+      }], "test-stream");
+      
+      await pause(500);
+      
+      expect(errorHandlerCalled).toBe(true);
+      expect(capturedError).not.toBeNull();
+      expect(capturedError?.message).toContain("Custom scheduler error");
+      expect(capturedEvent).not.toBeNull();
+      
+      const callCounts = errorScheduler.getCallCounts();
+      expect(callCounts.events).toBeGreaterThan(0);
+      
+      const instances = await allSagaInstances();
+      const sagaInstance = instances.find(i => i.get("domainId") === testId);
+      expect(sagaInstance).toBeDefined();
+      expect(sagaInstance?.get("secondEventReceived")).toBeUndefined();
+      expect(sagaInstance?.get("timerFired")).toBeUndefined();
+      
+    } finally {
+      setSagaScheduler(originalScheduler);
+    }
   });
 
   /*

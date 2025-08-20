@@ -1,0 +1,212 @@
+### YamlMime:TSType
+name: LocalScheduleJobRunner
+uid: '@eventicle/eventiclejs!LocalScheduleJobRunner:class'
+package: '@eventicle/eventiclejs!'
+fullName: LocalScheduleJobRunner
+summary: >-
+  A Scheduled Job Runner that uses node-cron, setTimeout and runs as a single node.
+
+
+  Persists and loads schedules on process stop/ start in the datastore with the types `lock-manager-timer` and
+  `lock-manager-cron`
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: class
+constructors:
+  - name: (constructor)()
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner:constructor(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: (constructor)()
+    summary: Constructs a new instance of the `LocalScheduleJobRunner` class
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: constructor();
+properties:
+  - name: crons
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#crons:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: crons
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'crons: Map<string, nodeCron.ScheduledTask>;'
+      return:
+        type: 'Map&lt;string, nodeCron.<xref uid="@types/node-cron!ScheduledTask:interface" />&gt;'
+  - name: events
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#events:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: events
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'events: EventEmitter;'
+      return:
+        type: EventEmitter
+  - name: timers
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#timers:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: timers
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'timers: Map<string, NodeJS.Timeout>;'
+      return:
+        type: 'Map&lt;string, NodeJS.Timeout&gt;'
+methods:
+  - name: 'addScheduledTask(component, name, id, config, data)'
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#addScheduledTask:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'addScheduledTask(component, name, id, config, data)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        addScheduledTask(component: string, name: string, id: string, config: {
+                isCron: true;
+                crontab: string;
+            } | {
+                isCron: false;
+                timeout: number;
+            }, data: any): Promise<void>;
+      parameters:
+        - id: component
+          description: ''
+          type: string
+        - id: name
+          description: ''
+          type: string
+        - id: id
+          description: ''
+          type: string
+        - id: config
+          description: ''
+          type: |-
+            {
+                    isCron: true;
+                    crontab: string;
+                } | {
+                    isCron: false;
+                    timeout: number;
+                }
+        - id: data
+          description: ''
+          type: any
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: 'addScheduleTaskListener(component, exec)'
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#addScheduleTaskListener:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'addScheduleTaskListener(component, exec)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        addScheduleTaskListener(component: string, exec: (name: string, id: string, data: any) => Promise<void>):
+        Promise<void>;
+      parameters:
+        - id: component
+          description: ''
+          type: string
+        - id: exec
+          description: ''
+          type: '(name: string, id: string, data: any) =&gt; Promise&lt;void&gt;'
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: clearAllTimers()
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#clearAllTimers:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: clearAllTimers()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'clearAllTimers(): void;'
+      return:
+        type: void
+        description: ''
+  - name: 'hasSchedule(component, name, id)'
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#hasSchedule:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'hasSchedule(component, name, id)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'hasSchedule(component: string, name: string, id: string): Promise<boolean>;'
+      parameters:
+        - id: component
+          description: ''
+          type: string
+        - id: name
+          description: ''
+          type: string
+        - id: id
+          description: ''
+          type: string
+      return:
+        type: Promise&lt;boolean&gt;
+        description: ''
+  - name: 'removeSchedule(component, name, id)'
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#removeSchedule:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'removeSchedule(component, name, id)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'removeSchedule(component: string, name: string, id: string): Promise<void>;'
+      parameters:
+        - id: component
+          description: ''
+          type: string
+        - id: name
+          description: ''
+          type: string
+        - id: id
+          description: ''
+          type: string
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: startup()
+    uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#startup:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: startup()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'startup(): Promise<void>;'
+      return:
+        type: Promise&lt;void&gt;
+        description: ''

@@ -1,0 +1,71 @@
+### YamlMime:TSType
+name: CommandReturn
+uid: '@eventicle/eventiclejs!CommandReturn:interface'
+package: '@eventicle/eventiclejs!'
+fullName: CommandReturn
+summary: >-
+  The global return type for [Command](xref:@eventicle/eventiclejs!Command:interface)<!-- -->, whether the command is
+  explicit, as in [dispatchCommand()](xref:@eventicle/eventiclejs!dispatchCommand:function(1))<!-- -->, or implicit, as
+  in [dispatchDirectCommand()](xref:@eventicle/eventiclejs!dispatchDirectCommand:function(1))<!-- -->.
+
+
+  This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture
+  any events that need to be emitted.
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: events
+    uid: '@eventicle/eventiclejs!CommandReturn#events:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: events
+    summary: >-
+      Any events that have been generated during command execution that should be emitted externally onto the configured
+      topic. By the time the calling code receives the return, the events have already been passed to , and cannot be
+      altered.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'events: EventicleEvent[];'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+  - name: response
+    uid: '@eventicle/eventiclejs!CommandReturn#response:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: response
+    summary: >-
+      An optional response object. This will be ignored by the command dispatcher, and passed through to the calling
+      code. Most commonly used to pass IDs that have been generated during command execution.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'response?: T;'
+      return:
+        type: T
+  - name: webError
+    uid: '@eventicle/eventiclejs!CommandReturn#webError:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: webError
+    summary: >-
+      Optional error property.
+
+
+      Used by some implementations to indicate that the Command finished in an Error, which should now be thrown.
+
+
+      This is performed so that the command can emit events (describing the error), and also instruct the calling code
+      (which is normally a synchronous API) to subsequently throw the given Error back to the user.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'webError?: Error;'
+      return:
+        type: Error

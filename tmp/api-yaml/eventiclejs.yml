@@ -1,0 +1,672 @@
+### YamlMime:TSPackage
+uid: '@eventicle/eventiclejs!'
+name: '@eventicle/eventiclejs'
+type: package
+summary: ''
+classes:
+  - '@eventicle/eventiclejs!AggregateRoot:class'
+  - '@eventicle/eventiclejs!InMemoryDatastore:class'
+  - '@eventicle/eventiclejs!LocalScheduleJobRunner:class'
+  - '@eventicle/eventiclejs!Saga:class'
+  - '@eventicle/eventiclejs!SagaInstance:class'
+  - '@eventicle/eventiclejs!XStateAggregate:class'
+interfaces:
+  - '@eventicle/eventiclejs!Command:interface'
+  - '@eventicle/eventiclejs!CommandIntent:interface'
+  - '@eventicle/eventiclejs!CommandReturn:interface'
+  - '@eventicle/eventiclejs!EncodedEvent:interface'
+  - '@eventicle/eventiclejs!EventAdapter:interface'
+  - '@eventicle/eventiclejs!EventClient:interface'
+  - '@eventicle/eventiclejs!EventClientCodec:interface'
+  - '@eventicle/eventiclejs!EventicleEvent:interface'
+  - '@eventicle/eventiclejs!EventView:interface'
+  - '@eventicle/eventiclejs!RawEventView:interface'
+functions:
+  - name: 'aggregateObserver(aggregateType, id, timeout, exec)'
+    uid: '@eventicle/eventiclejs!aggregateObserver:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: >-
+      Block for an asynchronous, event based, workflow to occur.
+
+
+      Reads streams and allows short lived observers to be notified if a particular AggregateRoot instance has been
+      modified. This is picked out based on the `domainId` of the event.
+
+
+      This allows a synchronous API to block and wait for asynchronous changes to finish occurring before continuing
+      processing
+
+
+      For example, given a `User` [AggregateRoot](xref:@eventicle/eventiclejs!AggregateRoot:class)<!-- -->, you can wait
+      for a Saga (or other operational component) to approve a user account, by blocking until the given `User` has
+      raised the `user.approved` event.
+
+
+      ```
+
+      export class UserAggregate extends AggregateRoot {
+        approved: boolean = false
+
+        constructor() {
+           super("User")
+
+           this.reducers = []
+           // persist the approval in the current aggregate state.
+           // This avoids any potential race conditions between performing the action that requires
+           // approval and the observer starting to monitor. See below.
+           this.reducers["user.approved"] = (ev) => {
+             this.approved = true
+           }
+        }
+
+        approve() {
+          this.raiseEvent({
+            type: "user.approved",
+            data: {}
+            // other event fields
+          })
+        }
+      }
+
+      ```
+
+      First register the observer. This will open a new event subscription, with a dynamically generated consumer group.
+      All events on the topic will be received by this instances, so be mindful of doing this on topics with large
+      volumes of data.
+
+
+      ```
+        await registerAdapter(createAggregateObservationAdapter([AnAggregate]));
+      ```
+
+      In your synchronous API (eg, HTTP/ REST, GQL).
+
+
+      ```
+
+      // The userId is the domainId of the UserAggregate instance we want to observe
+
+      export doActionThatRequiresApproval(userId: string) {
+
+        // perform some action that triggers async workflows
+
+        // now wait for the User to be approved
+        const user = await aggregateObserver(
+                                  UserAggregate,
+                                  userId,  // the UserAggregate domainId
+                                  10000,   // max time to wait for the User instance to come into the required state
+                                  (ar, ev) => {
+                // this is called once straight away with just the current state of the User aggregate (ev is null)
+                // then, every time an event is observed for the UserAggregate with the domainId == userId
+                // check the current state of the aggregate is what you want to see, or the event being received
+                // is the one you are waiting for.  Or, ideally, both of those things
+                // doing both will avoid any race conditions.
+           return ev && ev.type == "user.approved" || ar.approved
+        });
+
+        // user is now approved, or an Error has been thrown
+        // perform any ops on the user as required.
+
+      }
+
+      ```
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        export declare function aggregateObserver<AR extends AggregateRoot>(aggregateType: {
+            new (...params: any[]): AR;
+        }, id: string, timeout: number, exec: (ar: AR, event?: EventicleEvent) => boolean): Promise<AR>;
+      parameters:
+        - id: aggregateType
+          description: ''
+          type: |-
+            {
+                new (...params: any[]): AR;
+            }
+        - id: id
+          description: ''
+          type: string
+        - id: timeout
+          description: ''
+          type: number
+        - id: exec
+          description: ''
+          type: '(ar: AR, event?: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; boolean'
+      return:
+        type: Promise&lt;AR&gt;
+        description: ''
+  - name: allSagaInstances(workspaceId)
+    uid: '@eventicle/eventiclejs!allSagaInstances:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function allSagaInstances(workspaceId?: string): Promise<SagaInstance<any, any>[]>;'
+      parameters:
+        - id: workspaceId
+          description: ''
+          type: string
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;any, any&gt;[]&gt;'
+        description: ''
+  - name: allSagas()
+    uid: '@eventicle/eventiclejs!allSagas:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function allSagas(): Promise<Saga<any, any>[]>;'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;any, any&gt;[]&gt;'
+        description: ''
+  - name: 'apm.apmJoinEvent(event, name, type, subtype)'
+    uid: '@eventicle/eventiclejs!apm.apmJoinEvent:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: |-
+      Will join the APM transaction that is stamped in the event header - `apmTrace`
+
+      This will generate a new span within the APM transaction.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function apmJoinEvent(event: EventicleEvent, name: string, type: string, subtype: string): void;'
+      parameters:
+        - id: event
+          description: the event to join the APM trace on
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+        - id: name
+          description: The name of the APM transaction
+          type: string
+        - id: type
+          description: the APM type
+          type: string
+        - id: subtype
+          description: the APM subtype
+          type: string
+      return:
+        type: void
+        description: ''
+  - name: connectBroker(config)
+    uid: '@eventicle/eventiclejs!connectBroker:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function connectBroker(config: KafkaConfig): Promise<void>;'
+      parameters:
+        - id: config
+          description: ''
+          type: '<xref uid="kafkajs!KafkaConfig:interface" />'
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: consumeFullEventLog(stream)
+    uid: '@eventicle/eventiclejs!consumeFullEventLog:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: |-
+      Will cold replay the entire event stream into a list.
+
+      Mostly useful for testing, use against long running event streams/ Kafka will blow your local memory!
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function consumeFullEventLog(stream: string): Promise<EventicleEvent[]>;'
+      parameters:
+        - id: stream
+          description: The event stream to cold replay
+          type: string
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]&gt;'
+        description: ''
+  - name: createAggregateObservationAdapter(aggregates)
+    uid: '@eventicle/eventiclejs!createAggregateObservationAdapter:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: >-
+      Create a new EventAdapter with a dynamic Consumer group id that will subscribe to the topics for the given
+      AggregateRoots
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        export declare function createAggregateObservationAdapter<AR extends AggregateRoot>(aggregates: {
+            new (): AR;
+        }[]): AggregateObservationAdapter;
+      parameters:
+        - id: aggregates
+          description: the list of aggregate roots to observe. Their topic names will be extracted.
+          type: |-
+            {
+                new (): AR;
+            }[]
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!~AggregateObservationAdapter:class" />'
+        description: ''
+  - name: dispatchCommand(commandIntent)
+    uid: '@eventicle/eventiclejs!dispatchCommand:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: >-
+      This will lookup a pre-registered [Command](xref:@eventicle/eventiclejs!Command:interface) from the , then execute
+      the command with the given payload.
+
+
+      It is generally preferred [dispatchDirectCommand()](xref:@eventicle/eventiclejs!dispatchDirectCommand:function(1))
+      where the command definition is implicit, and more fully type checked.
+
+
+      This, along with [dispatchCommand()](xref:@eventicle/eventiclejs!dispatchCommand:function(1)) is available if you
+      wish to separate your code more fully, or introduce a remote capable message based command bus.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Promise<CommandReturn<T>>;'
+      parameters:
+        - id: commandIntent
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!CommandIntent:interface" />&lt;T&gt;'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;T&gt;&gt;'
+        description: ''
+  - name: 'dispatchDirectCommand(command, streamToEmit)'
+    uid: '@eventicle/eventiclejs!dispatchDirectCommand:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: |-
+      Dispatch a command directly, without a CommandIntent message in between.
+
+      Cannot be distributed or load balanced, but requires less boilerplate.
+    remarks: ''
+    example:
+      - |-
+        Note that no registration of the Command is necessary. This is functionally the same as in 
+
+        ```
+         await dispatchDirectCommand(() => {
+              const user = await aggregates.load(UserAggregate, data.userId);
+              user.approve();
+              return {
+                // aggregates returns all the events that were generated after the
+                // aggregate was loaded, after it has persisted.
+                events: await aggregates.persist(user);
+              }
+         }, "user")
+        ```
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit:
+        string): Promise<T>;
+      parameters:
+        - id: command
+          description: ''
+          type: '() =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;T&gt;&gt;'
+        - id: streamToEmit
+          description: ''
+          type: string
+      return:
+        type: Promise&lt;T&gt;
+        description: ''
+  - name: eventClient()
+    uid: '@eventicle/eventiclejs!eventClient:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function eventClient(): EventClient;'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventClient:interface" />'
+        description: ''
+  - name: eventClientCodec()
+    uid: '@eventicle/eventiclejs!eventClientCodec:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function eventClientCodec(): EventClientCodec;'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventClientCodec:interface" />'
+        description: ''
+  - name: eventClientOnDatastore()
+    uid: '@eventicle/eventiclejs!eventClientOnDatastore:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: |-
+      This is a test capable event client.
+
+      It fully implements the event client semantics, and persists its events into the given data store.
+
+      Good to pair with the InMemDataStore for testing and local dev usage.
+
+      Not recommended for production (really!), as you disable any possibility of distribution
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function eventClientOnDatastore(): EventClient;'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventClient:interface" />'
+        description: ''
+  - name: 'eventClientOnKafka(config, consumerConfig)'
+    uid: '@eventicle/eventiclejs!eventClientOnKafka:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory):
+        Promise<EventClient>;
+      parameters:
+        - id: config
+          description: ''
+          type: '<xref uid="kafkajs!KafkaConfig:interface" />'
+        - id: consumerConfig
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!ConsumerConfigFactory:interface" />'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventClient:interface" />&gt;'
+        description: ''
+  - name: eventSourceName()
+    uid: '@eventicle/eventiclejs!eventSourceName:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function eventSourceName(): string;'
+      return:
+        type: string
+        description: ''
+  - name: metrics()
+    uid: '@eventicle/eventiclejs!metrics:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        export declare function metrics(): {
+            "view-latency": any;
+            "adapter-latency": any;
+            "saga-latency": any;
+        };
+      return:
+        type: |-
+          {
+              "view-latency": any;
+              "adapter-latency": any;
+              "saga-latency": any;
+          }
+        description: ''
+  - name: registerAdapter(adapter)
+    uid: '@eventicle/eventiclejs!registerAdapter:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: >-
+      This will connect the given EventAdapter to event streams.
+
+
+      An EventAdapter is a `hot` subscription, and will receive events emitted after it first connects.
+
+
+      If it is offline for a period, the backing event store (eg, Kafka) will allow the adapter to reconnect and pick up
+      from where it had previous processed up to.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function registerAdapter(adapter: EventAdapter): Promise<EventSubscriptionControl>;'
+      parameters:
+        - id: adapter
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventAdapter:interface" />'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        description: ''
+  - name: registerCommand(command)
+    uid: '@eventicle/eventiclejs!registerCommand:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function registerCommand<I, O>(command: Command<I, O>): void;'
+      parameters:
+        - id: command
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!Command:interface" />&lt;I, O&gt;'
+      return:
+        type: void
+        description: ''
+  - name: registerRawView(view)
+    uid: '@eventicle/eventiclejs!registerRawView:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: >-
+      Will register a raw event view
+
+
+      This subscribes it to the appropriate event streams. For every event received, handeEvent will be called.
+
+
+      Events are not processed through the
+      [EventClientCodec](xref:@eventicle/eventiclejs!EventClientCodec:interface)<!-- -->, and so are observed encoded as
+      an [EncodedEvent](xref:@eventicle/eventiclejs!EncodedEvent:interface)
+
+
+      This can be useful if you want to persist the event in a raw form, as a binary encoded stream.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function registerRawView(view: RawEventView): Promise<EventSubscriptionControl>;'
+      parameters:
+        - id: view
+          description: The View to subscribe to event streams
+          type: '<xref uid="@eventicle/eventiclejs!RawEventView:interface" />'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        description: ''
+  - name: registerSaga(saga)
+    uid: '@eventicle/eventiclejs!registerSaga:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        export declare function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>):
+        Promise<EventSubscriptionControl>;
+      parameters:
+        - id: saga
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, Y&gt;'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        description: ''
+  - name: registerView(view)
+    uid: '@eventicle/eventiclejs!registerView:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function registerView(view: EventView): Promise<EventSubscriptionControl>;'
+      parameters:
+        - id: view
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventView:interface" />'
+      return:
+        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        description: ''
+  - name: removeAllSagas()
+    uid: '@eventicle/eventiclejs!removeAllSagas:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function removeAllSagas(): Promise<void>;'
+      return:
+        type: Promise&lt;void&gt;
+        description: ''
+  - name: removeXstateEvents(events)
+    uid: '@eventicle/eventiclejs!removeXstateEvents:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: >-
+      This function removes any internal xstate-status events from the given list. Use inside a
+      [Command](xref:@eventicle/eventiclejs!Command:interface) in conjunction with an
+      [XStateAggregate](xref:@eventicle/eventiclejs!XStateAggregate:class) to filter out any XState internal status
+      events and not emit them to the event bus.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];'
+      parameters:
+        - id: events
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+        description: ''
+  - name: saga(name)
+    uid: '@eventicle/eventiclejs!saga:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        export declare function saga<TimeoutNames, SagaInstanceData>(name: string): Saga<TimeoutNames,
+        SagaInstanceData>;
+      parameters:
+        - id: name
+          description: ''
+          type: string
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, SagaInstanceData&gt;'
+        description: ''
+  - name: scheduler()
+    uid: '@eventicle/eventiclejs!scheduler:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function scheduler(): ScheduleJobRunner;'
+      return:
+        type: '<xref uid="@eventicle/eventicle-utilities!ScheduleJobRunner:interface" />'
+        description: ''
+  - name: setEventClient(cl)
+    uid: '@eventicle/eventiclejs!setEventClient:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function setEventClient(cl: EventClient): void;'
+      parameters:
+        - id: cl
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventClient:interface" />'
+      return:
+        type: void
+        description: ''
+  - name: setEventClientCodec(cl)
+    uid: '@eventicle/eventiclejs!setEventClientCodec:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function setEventClientCodec(cl: EventClientCodec): void;'
+      parameters:
+        - id: cl
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventClientCodec:interface" />'
+      return:
+        type: void
+        description: ''
+  - name: setEventSourceName(name)
+    uid: '@eventicle/eventiclejs!setEventSourceName:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function setEventSourceName(name: string): void;'
+      parameters:
+        - id: name
+          description: ''
+          type: string
+      return:
+        type: void
+        description: ''
+  - name: setScheduler(scheduler)
+    uid: '@eventicle/eventiclejs!setScheduler:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'export declare function setScheduler(scheduler: ScheduleJobRunner): void;'
+      parameters:
+        - id: scheduler
+          description: ''
+          type: '<xref uid="@eventicle/eventicle-utilities!ScheduleJobRunner:interface" />'
+      return:
+        type: void
+        description: ''

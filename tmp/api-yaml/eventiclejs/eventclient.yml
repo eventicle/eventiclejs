@@ -1,0 +1,156 @@
+### YamlMime:TSType
+name: EventClient
+uid: '@eventicle/eventiclejs!EventClient:interface'
+package: '@eventicle/eventiclejs!'
+fullName: EventClient
+summary: ''
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: coldHotStream
+    uid: '@eventicle/eventiclejs!EventClient#coldHotStream:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: coldHotStream
+    summary: Play from persisted storage the continue from in memory
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        coldHotStream: (config: {
+                rawEvents: true;
+                stream: string | string[];
+                groupId?: string;
+                handler: (event: EncodedEvent) => Promise<void>;
+                onError: (error: any) => void;
+            } | {
+                rawEvents: false;
+                stream: string | string[];
+                groupId?: string;
+                handler: (event: EventicleEvent) => Promise<void>;
+                onError: (error: any) => void;
+            } | {
+                stream: string | string[];
+                groupId?: string;
+                handler: (event: EventicleEvent) => Promise<void>;
+                onError: (error: any) => void;
+            }) => Promise<EventSubscriptionControl>;
+      return:
+        type: |-
+          (config: {
+                  rawEvents: true;
+                  stream: string | string[];
+                  groupId?: string;
+                  handler: (event: <xref uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;void&gt;;
+                  onError: (error: any) =&gt; void;
+              } | {
+                  rawEvents: false;
+                  stream: string | string[];
+                  groupId?: string;
+                  handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
+                  onError: (error: any) =&gt; void;
+              } | {
+                  stream: string | string[];
+                  groupId?: string;
+                  handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
+                  onError: (error: any) =&gt; void;
+              }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+  - name: coldStream
+    uid: '@eventicle/eventiclejs!EventClient#coldStream:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: coldStream
+    summary: Play from persisted storage
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        coldStream: (stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void,
+        onDone: () => void) => Promise<EventSubscriptionControl>;
+      return:
+        type: >-
+          (stream: string, handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt;
+          Promise&lt;void&gt;, onError: (error: any) =&gt; void, onDone: () =&gt; void) =&gt; Promise&lt;<xref
+          uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+  - name: emit
+    uid: '@eventicle/eventiclejs!EventClient#emit:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: emit
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>;'
+      return:
+        type: >-
+          (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[] | <xref
+          uid="@eventicle/eventiclejs!EncodedEvent:interface" />[], stream: string) =&gt; Promise&lt;void&gt;
+  - name: hotRawStream
+    uid: '@eventicle/eventiclejs!EventClient#hotRawStream:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: hotRawStream
+    summary: Only play hot data.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        hotRawStream: (stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>,
+        onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+      return:
+        type: >-
+          (stream: string | string[], consumerName: string, handler: (event: <xref
+          uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;void&gt;, onError: (error: any) =&gt;
+          void) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+  - name: hotStream
+    uid: '@eventicle/eventiclejs!EventClient#hotStream:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: hotStream
+    summary: Only play hot data.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        hotStream: (stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>,
+        onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+      return:
+        type: >-
+          (stream: string | string[], consumerName: string, handler: (event: <xref
+          uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;, onError: (error: any)
+          =&gt; void) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+  - name: isConnected
+    uid: '@eventicle/eventiclejs!EventClient#isConnected:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: isConnected
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'isConnected: () => boolean;'
+      return:
+        type: () =&gt; boolean
+  - name: shutdown
+    uid: '@eventicle/eventiclejs!EventClient#shutdown:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: shutdown
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'shutdown: () => Promise<void>;'
+      return:
+        type: () =&gt; Promise&lt;void&gt;

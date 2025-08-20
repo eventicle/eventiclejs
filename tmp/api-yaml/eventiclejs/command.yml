@@ -1,0 +1,92 @@
+### YamlMime:TSType
+name: Command
+uid: '@eventicle/eventiclejs!Command:interface'
+package: '@eventicle/eventiclejs!'
+fullName: Command
+summary: >-
+  A Command.
+
+
+  It is generally preferred [dispatchDirectCommand()](xref:@eventicle/eventiclejs!dispatchDirectCommand:function(1))
+  where the command definition is implicit, and more fully type checked.
+
+
+  This, along with [dispatchCommand()](xref:@eventicle/eventiclejs!dispatchCommand:function(1)) is available if you wish
+  to separate your code more fully, or introduce a remote capable message based command bus.
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: execute
+    uid: '@eventicle/eventiclejs!Command#execute:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: execute
+    summary: |-
+      The command handler function. The data will be received from the CommandIntent
+
+      This may be called concurrently.
+
+      This should attempt to modify the system and then emit events to represent the change.
+    remarks: ''
+    example:
+      - |-
+        the most command pattern is to use an AggregateRoot to generate the events
+
+        ```
+         const myCommand = {
+           type: "approve-user",
+           streamToEmit: "user",
+           execute: async (data) => {
+              const user = await aggregates.load(UserAggregate, data.userId);
+              user.approve();
+              return {
+                // aggregates returns all the events that were generated after the
+                // aggregate was loaded, after it has persisted.
+                events: await aggregates.persist(user);
+              }
+           }
+         }
+        ```
+        this can be called like so
+
+        \`\`\` async function example() { // other setup await registerCommand(myCommand);
+
+        await dispatchCommand(<!-- -->{ type: "something", data: { userId: "theuser" } }<!-- -->); }
+
+        example(); \`\`\`
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'execute: (data: I) => Promise<CommandReturn<O>>;'
+      return:
+        type: '(data: I) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;O&gt;&gt;'
+  - name: streamToEmit
+    uid: '@eventicle/eventiclejs!Command#streamToEmit:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: streamToEmit
+    summary: The event stream that any events in the CommandReturn should be emitted on
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'streamToEmit: string;'
+      return:
+        type: string
+  - name: type
+    uid: '@eventicle/eventiclejs!Command#type:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: type
+    summary: >-
+      The name of the Command. This is used to look it up when the user calls
+      [dispatchCommand()](xref:@eventicle/eventiclejs!dispatchCommand:function(1))
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'type: string;'
+      return:
+        type: string

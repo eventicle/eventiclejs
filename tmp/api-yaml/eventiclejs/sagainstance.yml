@@ -1,0 +1,262 @@
+### YamlMime:TSType
+name: SagaInstance
+uid: '@eventicle/eventiclejs!SagaInstance:class'
+package: '@eventicle/eventiclejs!'
+fullName: SagaInstance
+summary: |-
+  The data for a single execution of a [Saga](xref:@eventicle/eventiclejs!Saga:class)
+
+  Sagas are stateful concepts, and this type contains the state.
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: class
+constructors:
+  - name: '(constructor)(internalData, record)'
+    uid: '@eventicle/eventiclejs!SagaInstance:constructor(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: '(constructor)(internalData, record)'
+    summary: Constructs a new instance of the `SagaInstance` class
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'constructor(internalData: any, record?: Record);'
+      parameters:
+        - id: internalData
+          description: ''
+          type: any
+        - id: record
+          description: ''
+          type: '<xref uid="@eventicle/eventicle-utilities!~Record:interface" />'
+properties:
+  - name: internalData
+    uid: '@eventicle/eventiclejs!SagaInstance#internalData:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: internalData
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'readonly internalData: any;'
+      return:
+        type: any
+  - name: record
+    uid: '@eventicle/eventiclejs!SagaInstance#record:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: record
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'readonly record?: Record;'
+      return:
+        type: '<xref uid="@eventicle/eventicle-utilities!~Record:interface" />'
+  - name: timersToAdd
+    uid: '@eventicle/eventiclejs!SagaInstance#timersToAdd:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: timersToAdd
+    summary: Private instance data
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        readonly timersToAdd: {
+                name: TimeoutNames;
+                config: {
+                    isCron: true;
+                    crontab: string;
+                } | {
+                    isCron: false;
+                    timeout: number;
+                };
+            }[];
+      return:
+        type: |-
+          {
+                  name: TimeoutNames;
+                  config: {
+                      isCron: true;
+                      crontab: string;
+                  } | {
+                      isCron: false;
+                      timeout: number;
+                  };
+              }[]
+  - name: timersToRemove
+    uid: '@eventicle/eventiclejs!SagaInstance#timersToRemove:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: timersToRemove
+    summary: Private instance data
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'readonly timersToRemove: TimeoutNames[];'
+      return:
+        type: 'TimeoutNames[]'
+methods:
+  - name: endSaga(preserveInstanceData)
+    uid: '@eventicle/eventiclejs!SagaInstance#endSaga:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: endSaga(preserveInstanceData)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'endSaga(preserveInstanceData?: boolean): void;'
+      parameters:
+        - id: preserveInstanceData
+          description: ''
+          type: boolean
+      return:
+        type: void
+        description: ''
+  - name: get(name)
+    uid: '@eventicle/eventiclejs!SagaInstance#get:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: get(name)
+    summary: Get a piece of arbitrary data from the saga instance
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'get(name: keyof T): any;'
+      parameters:
+        - id: name
+          description: THe key
+          type: keyof T
+      return:
+        type: any
+        description: ''
+  - name: lastEvent()
+    uid: '@eventicle/eventiclejs!SagaInstance#lastEvent:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: lastEvent()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'lastEvent(): EventicleEvent;'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+        description: ''
+  - name: removeTimer(name)
+    uid: '@eventicle/eventiclejs!SagaInstance#removeTimer:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: removeTimer(name)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'removeTimer(name: TimeoutNames): void;'
+      parameters:
+        - id: name
+          description: ''
+          type: TimeoutNames
+      return:
+        type: void
+        description: ''
+  - name: 'set(name, value)'
+    uid: '@eventicle/eventiclejs!SagaInstance#set:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'set(name, value)'
+    summary: Set a piece of arbitrary data into the saga instance
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'set(name: keyof T, value: any): void;'
+      parameters:
+        - id: name
+          description: The key
+          type: keyof T
+        - id: value
+          description: the value. Must be able to encode to JSON.
+          type: any
+      return:
+        type: void
+        description: ''
+  - name: 'upsertTimer(name, config)'
+    uid: '@eventicle/eventiclejs!SagaInstance#upsertTimer:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'upsertTimer(name, config)'
+    summary: |-
+      Create (or overwrite) a timer to call. Can be either a simple timer (millis to wait), or a cron timer.
+
+      If the timer is no longer wanted, it must be removed by calling
+    remarks: ''
+    example:
+      - |-
+        ```
+
+        export function sagaWithTimeouts() {
+          return saga<"ShortTimeout" | "PollEveryDay", never>(
+            "sagaWithTimeouts"
+          )
+            .subscribeStreams(["payments"])
+            .startOn("payment.created", {}, async (instance, event) => {
+              instance.upsertTimer("ShortTimeout", {
+                isCron: false,
+                timeout: 5000,    // wait for 5s and then call.
+              });
+              instance.upsertTimer("PollEveryDay", {
+                isCron: true,
+                crontab: "0 4 * * *" // will run every day at 4am
+              });
+            })
+            .onTimer("ShortTimeout", async (instance) => {
+              // this will fire 5000ms after the auction created event arrives
+              instance.endSaga();
+            });
+            .onTimer("PollEveryDay", async (instance) => {
+              // this will fire every day at 4am
+              console.log("Running at 4am ... ")
+            });
+        }
+        ```
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        upsertTimer(name: TimeoutNames, config: {
+                isCron: true;
+                crontab: string;
+            } | {
+                isCron: false;
+                timeout: number;
+            }): void;
+      parameters:
+        - id: name
+          description: The timer to call
+          type: TimeoutNames
+        - id: config
+          description: ''
+          type: |-
+            {
+                    isCron: true;
+                    crontab: string;
+                } | {
+                    isCron: false;
+                    timeout: number;
+                }
+      return:
+        type: void
+        description: ''

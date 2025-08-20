@@ -1,0 +1,266 @@
+### YamlMime:TSType
+name: Saga
+uid: '@eventicle/eventiclejs!Saga:class'
+package: '@eventicle/eventiclejs!'
+fullName: Saga
+summary: A saga!
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: class
+constructors:
+  - name: (constructor)(name)
+    uid: '@eventicle/eventiclejs!Saga:constructor(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: (constructor)(name)
+    summary: Constructs a new instance of the `Saga` class
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'constructor(name: string);'
+      parameters:
+        - id: name
+          description: ''
+          type: string
+properties:
+  - name: errorHandler
+    uid: '@eventicle/eventiclejs!Saga#errorHandler:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: errorHandler
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'errorHandler: (saga: any, event: EventicleEvent, error: Error) => Promise<void>;'
+      return:
+        type: >-
+          (saga: any, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />, error: Error) =&gt;
+          Promise&lt;void&gt;
+  - name: eventHandler
+    uid: '@eventicle/eventiclejs!Saga#eventHandler:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: eventHandler
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        eventHandler: Map<string, {
+                config: HandlerConfig<any, InstanceData, TimeoutNames>;
+                handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>;
+            }>;
+      return:
+        type: |-
+          Map&lt;string, {
+                  config: <xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;any, InstanceData, TimeoutNames&gt;;
+                  handle: (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
+              }&gt;
+  - name: name
+    uid: '@eventicle/eventiclejs!Saga#name:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: name
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'readonly name: string;'
+      return:
+        type: string
+  - name: starts
+    uid: '@eventicle/eventiclejs!Saga#starts:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: starts
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        starts: Map<string, {
+                config: StartHandlerConfig<any, InstanceData, TimeoutNames>;
+                handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>;
+            }>;
+      return:
+        type: |-
+          Map&lt;string, {
+                  config: <xref uid="@eventicle/eventiclejs!~StartHandlerConfig:interface" />&lt;any, InstanceData, TimeoutNames&gt;;
+                  handle: (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
+              }&gt;
+  - name: streams
+    uid: '@eventicle/eventiclejs!Saga#streams:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: streams
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'streams: string[];'
+      return:
+        type: 'string[]'
+  - name: streamSubs
+    uid: '@eventicle/eventiclejs!Saga#streamSubs:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: streamSubs
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'streamSubs: EventSubscriptionControl[];'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />[]'
+  - name: timerHandler
+    uid: '@eventicle/eventiclejs!Saga#timerHandler:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: timerHandler
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        timerHandler: Map<TimeoutNames, {
+                handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>;
+            }>;
+      return:
+        type: |-
+          Map&lt;TimeoutNames, {
+                  handle: (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;) =&gt; Promise&lt;void&gt;;
+              }&gt;
+methods:
+  - name: 'on(eventName, config, handler)'
+    uid: '@eventicle/eventiclejs!Saga#on:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'on(eventName, config, handler)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler:
+        (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+      parameters:
+        - id: eventName
+          description: ''
+          type: string
+        - id: config
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;'
+        - id: handler
+          description: ''
+          type: >-
+            (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: T)
+            =&gt; Promise&lt;void&gt;
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''
+  - name: onError(handler)
+    uid: '@eventicle/eventiclejs!Saga#onError:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: onError(handler)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        onError(handler: (saga: any, event: EventicleEvent, error: Error) => Promise<void>): Saga<TimeoutNames,
+        InstanceData>;
+      parameters:
+        - id: handler
+          description: ''
+          type: >-
+            (saga: any, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />, error: Error) =&gt;
+            Promise&lt;void&gt;
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''
+  - name: 'onTimer(name, handle)'
+    uid: '@eventicle/eventiclejs!Saga#onTimer:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'onTimer(name, handle)'
+    summary: Register a handler for a timer triggered saga step.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>):
+        Saga<TimeoutNames, InstanceData>;
+      parameters:
+        - id: name
+          description: The name of the timer
+          type: TimeoutNames
+        - id: handle
+          description: the
+          type: >-
+            (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;) =&gt;
+            Promise&lt;void&gt;
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''
+  - name: 'startOn(eventName, config, handler)'
+    uid: '@eventicle/eventiclejs!Saga#startOn:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: 'startOn(eventName, config, handler)'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>,
+        handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames,
+        InstanceData>;
+      parameters:
+        - id: eventName
+          description: ''
+          type: string
+        - id: config
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!~StartHandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;'
+        - id: handler
+          description: ''
+          type: >-
+            (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: T)
+            =&gt; Promise&lt;void&gt;
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''
+  - name: subscribeStreams(streams)
+    uid: '@eventicle/eventiclejs!Saga#subscribeStreams:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: subscribeStreams(streams)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData>;'
+      parameters:
+        - id: streams
+          description: ''
+          type: 'string[]'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''

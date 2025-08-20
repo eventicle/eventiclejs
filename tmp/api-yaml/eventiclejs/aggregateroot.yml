@@ -1,0 +1,170 @@
+### YamlMime:TSType
+name: AggregateRoot
+uid: '@eventicle/eventiclejs!AggregateRoot:class'
+package: '@eventicle/eventiclejs!'
+fullName: AggregateRoot
+summary: ''
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: class
+constructors:
+  - name: (constructor)(type)
+    uid: '@eventicle/eventiclejs!AggregateRoot:constructor(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: (constructor)(type)
+    summary: Constructs a new instance of the `AggregateRoot` class
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'constructor(type: string | AggregateConfig);'
+      parameters:
+        - id: type
+          description: ''
+          type: 'string | <xref uid="@eventicle/eventiclejs!AggregateConfig:interface" />'
+properties:
+  - name: config
+    uid: '@eventicle/eventiclejs!AggregateRoot#config:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: config
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'readonly config: AggregateConfig;'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!AggregateConfig:interface" />'
+  - name: history
+    uid: '@eventicle/eventiclejs!AggregateRoot#history:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: history
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'history: EventicleEvent[];'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+  - name: id
+    uid: '@eventicle/eventiclejs!AggregateRoot#id:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: id
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'id: string;'
+      return:
+        type: string
+  - name: newEvents
+    uid: '@eventicle/eventiclejs!AggregateRoot#newEvents:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: newEvents
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'newEvents: EventicleEvent[];'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+  - name: reducers
+    uid: '@eventicle/eventiclejs!AggregateRoot#reducers:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: reducers
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'reducers: any;'
+      return:
+        type: any
+  - name: replaying
+    uid: '@eventicle/eventiclejs!AggregateRoot#replaying:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: replaying
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'replaying: boolean;'
+      return:
+        type: boolean
+  - name: type
+    uid: '@eventicle/eventiclejs!AggregateRoot#type:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: type
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'get type(): string;'
+      return:
+        type: string
+methods:
+  - name: currentCheckpoint()
+    uid: '@eventicle/eventiclejs!AggregateRoot#currentCheckpoint:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: currentCheckpoint()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'currentCheckpoint(): object;'
+      return:
+        type: object
+        description: ''
+  - name: handleEvent(event)
+    uid: '@eventicle/eventiclejs!AggregateRoot#handleEvent:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: handleEvent(event)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'handleEvent(event: EventicleEvent): void;'
+      parameters:
+        - id: event
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+      return:
+        type: void
+        description: ''
+  - name: raiseEvent(event)
+    uid: '@eventicle/eventiclejs!AggregateRoot#raiseEvent:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: raiseEvent(event)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'raiseEvent(event: EventicleEvent): EventicleEvent;'
+      parameters:
+        - id: event
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+        description: ''

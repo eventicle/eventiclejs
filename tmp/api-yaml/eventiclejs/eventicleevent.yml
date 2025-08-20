@@ -1,0 +1,129 @@
+### YamlMime:TSType
+name: EventicleEvent
+uid: '@eventicle/eventiclejs!EventicleEvent:interface'
+package: '@eventicle/eventiclejs!'
+fullName: EventicleEvent
+summary: ''
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: causedById
+    uid: '@eventicle/eventiclejs!EventicleEvent#causedById:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: causedById
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'causedById?: string;'
+      return:
+        type: string
+  - name: causedByType
+    uid: '@eventicle/eventiclejs!EventicleEvent#causedByType:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: causedByType
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'causedByType?: string;'
+      return:
+        type: string
+  - name: createdAt
+    uid: '@eventicle/eventiclejs!EventicleEvent#createdAt:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: createdAt
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'createdAt?: number;'
+      return:
+        type: number
+  - name: data
+    uid: '@eventicle/eventiclejs!EventicleEvent#data:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: data
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'data: any;'
+      return:
+        type: any
+  - name: domainId
+    uid: '@eventicle/eventiclejs!EventicleEvent#domainId:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: domainId
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'domainId?: string;'
+      return:
+        type: string
+  - name: id
+    uid: '@eventicle/eventiclejs!EventicleEvent#id:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: id
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'id?: string;'
+      return:
+        type: string
+  - name: source
+    uid: '@eventicle/eventiclejs!EventicleEvent#source:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: source
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'source?: string;'
+      return:
+        type: string
+  - name: stream
+    uid: '@eventicle/eventiclejs!EventicleEvent#stream:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: stream
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'stream?: string;'
+      return:
+        type: string
+  - name: type
+    uid: '@eventicle/eventiclejs!EventicleEvent#type:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: type
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'type: string;'
+      return:
+        type: string

@@ -1,0 +1,40 @@
+### YamlMime:TSType
+name: CommandIntent
+uid: '@eventicle/eventiclejs!CommandIntent:interface'
+package: '@eventicle/eventiclejs!'
+fullName: CommandIntent
+summary: >-
+  A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent
+  externally using the [EventClient](xref:@eventicle/eventiclejs!EventClient:interface)
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: data
+    uid: '@eventicle/eventiclejs!CommandIntent#data:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: data
+    summary: The data that will be used when calling the Command instance.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'data: T;'
+      return:
+        type: T
+  - name: type
+    uid: '@eventicle/eventiclejs!CommandIntent#type:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: type
+    summary: The command type
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'type: string;'
+      return:
+        type: string

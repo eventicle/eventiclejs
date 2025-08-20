@@ -1,0 +1,82 @@
+### YamlMime:TSType
+name: EventAdapter
+uid: '@eventicle/eventiclejs!EventAdapter:interface'
+package: '@eventicle/eventiclejs!'
+fullName: EventAdapter
+summary: |-
+  An adapter is an observer on an event stream.
+
+  It only operates on hot event data, and will never attempt to replay everything
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: consumerGroup
+    uid: '@eventicle/eventiclejs!EventAdapter#consumerGroup:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: consumerGroup
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'consumerGroup: string;'
+      return:
+        type: string
+  - name: errorHandler
+    uid: '@eventicle/eventiclejs!EventAdapter#errorHandler:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: errorHandler
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'errorHandler?: (adapter: EventAdapter, event: EventicleEvent, error: Error) => Promise<void>;'
+      return:
+        type: >-
+          (adapter: <xref uid="@eventicle/eventiclejs!EventAdapter:interface" />, event: <xref
+          uid="@eventicle/eventiclejs!EventicleEvent:interface" />, error: Error) =&gt; Promise&lt;void&gt;
+  - name: handleEvent
+    uid: '@eventicle/eventiclejs!EventAdapter#handleEvent:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: handleEvent
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'handleEvent: (event: EventicleEvent) => Promise<void>;'
+      return:
+        type: '(event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;'
+  - name: name
+    uid: '@eventicle/eventiclejs!EventAdapter#name:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: name
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'name: string;'
+      return:
+        type: string
+  - name: streamsToSubscribe
+    uid: '@eventicle/eventiclejs!EventAdapter#streamsToSubscribe:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: streamsToSubscribe
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'streamsToSubscribe: string[];'
+      return:
+        type: 'string[]'

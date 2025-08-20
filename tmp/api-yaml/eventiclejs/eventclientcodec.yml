@@ -1,0 +1,50 @@
+### YamlMime:TSType
+name: EventClientCodec
+uid: '@eventicle/eventiclejs!EventClientCodec:interface'
+package: '@eventicle/eventiclejs!'
+fullName: EventClientCodec
+summary: >-
+  Convert [EventicleEvent](xref:@eventicle/eventiclejs!EventicleEvent:interface) to/ from
+  [EncodedEvent](xref:@eventicle/eventiclejs!EncodedEvent:interface)<!-- -->.
+
+
+  EncodedEvent is suitable for the [EventClient](xref:@eventicle/eventiclejs!EventClient:interface) implementations to
+  send on the wire, as it is a Buffer and a set of message headers.
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: decode
+    uid: '@eventicle/eventiclejs!EventClientCodec#decode:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: decode
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;'
+      return:
+        type: >-
+          (encoded: <xref uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;<xref
+          uid="@eventicle/eventiclejs!EventicleEvent:interface" />&gt;
+  - name: encode
+    uid: '@eventicle/eventiclejs!EventClientCodec#encode:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: encode
+    summary: >-
+      Convert a raw event binary (as a [EncodedEvent](xref:@eventicle/eventiclejs!EncodedEvent:interface)<!-- -->) into
+      a [EventicleEvent](xref:@eventicle/eventiclejs!EventicleEvent:interface)
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'encode: (event: EventicleEvent) => Promise<EncodedEvent>;'
+      return:
+        type: >-
+          (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;<xref
+          uid="@eventicle/eventiclejs!EncodedEvent:interface" />&gt;

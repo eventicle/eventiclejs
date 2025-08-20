@@ -1,0 +1,51 @@
+### YamlMime:TSType
+name: EventView
+uid: '@eventicle/eventiclejs!EventView:interface'
+package: '@eventicle/eventiclejs!'
+fullName: EventView
+summary: ''
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: consumerGroup
+    uid: '@eventicle/eventiclejs!EventView#consumerGroup:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: consumerGroup
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'consumerGroup: string;'
+      return:
+        type: string
+  - name: handleEvent
+    uid: '@eventicle/eventiclejs!EventView#handleEvent:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: handleEvent
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'handleEvent: (event: EventicleEvent) => Promise<void>;'
+      return:
+        type: '(event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;'
+  - name: streamsToSubscribe
+    uid: '@eventicle/eventiclejs!EventView#streamsToSubscribe:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: streamsToSubscribe
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'streamsToSubscribe: string[];'
+      return:
+        type: 'string[]'

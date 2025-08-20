@@ -1,0 +1,39 @@
+items:
+  - name: SharePoint Framework reference
+    href: ~/overview/sharepoint.md
+    items:
+      - name: eventiclejs
+        uid: '@eventicle/eventiclejs!'
+        items:
+          - name: AggregateRoot
+            uid: '@eventicle/eventiclejs!AggregateRoot:class'
+          - name: Command
+            uid: '@eventicle/eventiclejs!Command:interface'
+          - name: CommandIntent
+            uid: '@eventicle/eventiclejs!CommandIntent:interface'
+          - name: CommandReturn
+            uid: '@eventicle/eventiclejs!CommandReturn:interface'
+          - name: EncodedEvent
+            uid: '@eventicle/eventiclejs!EncodedEvent:interface'
+          - name: EventAdapter
+            uid: '@eventicle/eventiclejs!EventAdapter:interface'
+          - name: EventClient
+            uid: '@eventicle/eventiclejs!EventClient:interface'
+          - name: EventClientCodec
+            uid: '@eventicle/eventiclejs!EventClientCodec:interface'
+          - name: EventicleEvent
+            uid: '@eventicle/eventiclejs!EventicleEvent:interface'
+          - name: EventView
+            uid: '@eventicle/eventiclejs!EventView:interface'
+          - name: InMemoryDatastore
+            uid: '@eventicle/eventiclejs!InMemoryDatastore:class'
+          - name: LocalScheduleJobRunner
+            uid: '@eventicle/eventiclejs!LocalScheduleJobRunner:class'
+          - name: RawEventView
+            uid: '@eventicle/eventiclejs!RawEventView:interface'
+          - name: Saga
+            uid: '@eventicle/eventiclejs!Saga:class'
+          - name: SagaInstance
+            uid: '@eventicle/eventiclejs!SagaInstance:class'
+          - name: XStateAggregate
+            uid: '@eventicle/eventiclejs!XStateAggregate:class'

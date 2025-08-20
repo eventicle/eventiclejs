@@ -1,0 +1,154 @@
+### YamlMime:TSType
+name: XStateAggregate
+uid: '@eventicle/eventiclejs!XStateAggregate:class'
+package: '@eventicle/eventiclejs!'
+fullName: XStateAggregate
+summary: An Eventicle Aggregate that uses the XState statechart to manage its internal state.
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: class
+constructors:
+  - name: '(constructor)(type, machineFactory)'
+    uid: '@eventicle/eventiclejs!XStateAggregate:constructor(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: '(constructor)(type, machineFactory)'
+    summary: Constructor
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'constructor(type: string, machineFactory: (_this: any) => any);'
+      parameters:
+        - id: type
+          description: the name of the aggregate (e.g. "complaints")
+          type: string
+        - id: machineFactory
+          description: a function that returns a XState StateMachine (from a XState createMachine() function call)
+          type: '(_this: any) =&gt; any'
+properties:
+  - name: machineFactory
+    uid: '@eventicle/eventiclejs!XStateAggregate#machineFactory:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: machineFactory
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'readonly machineFactory: (_this: any) => any;'
+      return:
+        type: '(_this: any) =&gt; any'
+  - name: service
+    uid: '@eventicle/eventiclejs!XStateAggregate#service:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: service
+    summary: XState State chart service for this aggregate instance
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        service: Interpreter<DefaultContext, any, EventObject, {
+                value: any;
+                context: DefaultContext;
+            }, TypegenDisabled>;
+      return:
+        type: >-
+          <xref uid="xstate!Interpreter:class" />&lt;<xref uid="xstate!DefaultContext:type" />, any, <xref
+          uid="xstate!EventObject:interface" />, {
+                  value: any;
+                  context: <xref uid="xstate!DefaultContext:type" />;
+              }, <xref uid="xstate!TypegenDisabled:interface" />&gt;
+methods:
+  - name: handleEvent(event)
+    uid: '@eventicle/eventiclejs!XStateAggregate#handleEvent:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: handleEvent(event)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'handleEvent(event: EventicleEvent): void;'
+      parameters:
+        - id: event
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+      return:
+        type: void
+        description: ''
+  - name: initStateMachineService(initialState)
+    uid: '@eventicle/eventiclejs!XStateAggregate#initStateMachineService:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: initStateMachineService(initialState)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'protected initStateMachineService(initialState?: any): void;'
+      parameters:
+        - id: initialState
+          description: ''
+          type: any
+      return:
+        type: void
+        description: ''
+  - name: raiseEvent(event)
+    uid: '@eventicle/eventiclejs!XStateAggregate#raiseEvent:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: raiseEvent(event)
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'raiseEvent(event: EventicleEvent): EventicleEvent;'
+      parameters:
+        - id: event
+          description: ''
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+        description: ''
+  - name: shutdown()
+    uid: '@eventicle/eventiclejs!XStateAggregate#shutdown:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: shutdown()
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'shutdown(): void;'
+      return:
+        type: void
+        description: ''
+  - name: xsend(msg)
+    uid: '@eventicle/eventiclejs!XStateAggregate#xsend:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: xsend(msg)
+    summary: Sends a XState Event into the interpreted XState machine
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'protected xsend(msg: any): void;'
+      parameters:
+        - id: msg
+          description: ''
+          type: any
+      return:
+        type: void
+        description: ''
+extends: '<xref uid="@eventicle/eventiclejs!AggregateRoot:class" />'

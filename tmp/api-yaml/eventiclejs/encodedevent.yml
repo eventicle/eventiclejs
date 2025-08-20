@@ -1,0 +1,70 @@
+### YamlMime:TSType
+name: EncodedEvent
+uid: '@eventicle/eventiclejs!EncodedEvent:interface'
+package: '@eventicle/eventiclejs!'
+fullName: EncodedEvent
+summary: ''
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: buffer
+    uid: '@eventicle/eventiclejs!EncodedEvent#buffer:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: buffer
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'buffer: Buffer;'
+      return:
+        type: Buffer
+  - name: headers
+    uid: '@eventicle/eventiclejs!EncodedEvent#headers:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: headers
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: |-
+        headers: {
+                [key: string]: any;
+            };
+      return:
+        type: |-
+          {
+                  [key: string]: any;
+              }
+  - name: key
+    uid: '@eventicle/eventiclejs!EncodedEvent#key:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: key
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'key: string;'
+      return:
+        type: string
+  - name: timestamp
+    uid: '@eventicle/eventiclejs!EncodedEvent#timestamp:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: timestamp
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'timestamp: number;'
+      return:
+        type: number

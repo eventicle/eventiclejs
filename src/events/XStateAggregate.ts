@@ -8,7 +8,7 @@ import {
 } from "xstate";
 import {EventicleEvent} from "./core/event-client";
 import {logger} from "@eventicle/eventicle-utilities";
-import {AggregateRoot} from "./aggregate-root";
+import {AggregateRoot, AggregateConfig} from "./aggregate-root";
 
 export class XStateWorkflowError extends Error {}
 
@@ -49,11 +49,16 @@ export class XStateAggregate<MACHINE> extends AggregateRoot {
   /**
    * Constructor
    *
-   * @param type the name of the aggregate (e.g. "complaints")
+   * @param typeOrConfig either a string aggregate type name (e.g. "complaints") or an AggregateConfig object
    * @param machineFactory a function that returns a XState StateMachine (from a XState createMachine() function call)
    */
-  constructor(type: string, readonly machineFactory: (_this: any) => any) {
-    super({ type, storeCheckpoint: true });
+  constructor(typeOrConfig: string | AggregateConfig, readonly machineFactory: (_this: any) => any) {
+    // If a string is passed, convert it to a config object with storeCheckpoint: true by default
+    const config = typeof typeOrConfig === 'string' 
+      ? { type: typeOrConfig, storeCheckpoint: true }
+      : typeOrConfig;
+    
+    super(config);
 
     this.initStateMachineService();
   }

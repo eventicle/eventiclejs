@@ -1,17 +1,16 @@
 {
     "transform": {
-        "^.+\\.ts?$": "ts-jest"
-    },
-    "globals": {
-        "ts-jest": {
+        "^.+\\.ts?$": ["ts-jest", {
             "tsconfig": {
                 "sourceMap": true,
                 "inlineSourceMap": true
             }
-        }
+        }]
     },
     "clearMocks": true,
-    "timers": "real",
+    "fakeTimers": {
+        "enableGlobally": false
+    },
     "preset": "ts-jest",
     "testEnvironment": "node",
     "testRegex": "/test/.*\\.(test|integration)?\\.(ts|tsx)$",
