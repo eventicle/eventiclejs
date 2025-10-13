@@ -183,7 +183,9 @@ describe('Schedule Job Runner on LockManager', function () {
     let dataAfterFire = await dataStore().findEntity("system", "lock-manager-cron", {})
 
     expect(listener2Data.length).toBe(0)
-    expect(listener1Data.length).toBe(1)
+    // Cron runs every second, may fire 1-2 times in 1000ms depending on timing
+    expect(listener1Data.length).toBeGreaterThanOrEqual(1)
+    expect(listener1Data.length).toBeLessThanOrEqual(2)
 
     expect(dataBeforeFire.length).toBe(1)
     expect(dataAfterFire.length).toBe(1)
