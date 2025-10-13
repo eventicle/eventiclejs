@@ -54,16 +54,16 @@ afterEach(async () => {
 test("hot stream receives events", async function () {
   let myevents = [] as EventicleEvent[];
 
-  let consumer = await eventClient().hotStream(
-    "mystream",
-    "me",
-    async (event) => {
+  let consumer = await eventClient().hotStream({
+    stream: "mystream",
+    groupId: "me",
+    handler: async (event) => {
       myevents.push(event);
     },
-    (error) => {
+    onError: (error) => {
       logger.error("BORKED", error);
     }
-  );
+  });
 
   await eventClient().emit(
     [
@@ -147,16 +147,16 @@ test("cold stream fully replays historical", async function (done) {
 
   await new Promise((resolve) => {
     eventClient()
-      .coldStream(
-        "thestream",
-        async (event) => {
+      .coldStream({
+        stream: "thestream",
+        handler: async (event) => {
           myevents.push(event);
         },
-        (done) => console.log("ERROR"),
-        () => {
+        onError: (done) => console.log("ERROR"),
+        onDone: () => {
           resolve(null);
         }
-      )
+      })
       .catch((reason) => logger.error("Failed cold stream", reason));
   });
 
@@ -191,6 +191,7 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
 
   let control = await eventClient().coldHotStream({
     stream: "last-stream",
+    groupId: "test-group",
     handler: async (event) => {
       myevents.push(event);
     },
