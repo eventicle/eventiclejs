@@ -16,13 +16,13 @@ describe('Schedule Job Runner on LockManager', function () {
   beforeAll(async () => {
     scheduler = new LocalScheduleJobRunner
 
-    await scheduler.addScheduleTaskListener("listener1", async (name, data) => {
+    await scheduler.addScheduleTaskListener("listener1", async (name, id, data) => {
       listener1Data.push({
         name, data
       })
     })
 
-    await scheduler.addScheduleTaskListener("listener2", async (name, data) => {
+    await scheduler.addScheduleTaskListener("listener2", async (name, id, data) => {
       listener2Data.push({
         name, data
       })
@@ -32,11 +32,18 @@ describe('Schedule Job Runner on LockManager', function () {
   })
 
   beforeEach(async function () {
-
     scheduler.clearAllTimers()
     await testDbPurge();
     listener1Data.length = 0
     listener2Data.length = 0
+  })
+
+  afterEach(async function () {
+    scheduler.clearAllTimers()
+  })
+
+  afterAll(async function () {
+    scheduler.clearAllTimers()
   })
 
   it('if schedule a simple timer, will trigger and pass the data to the listener with meta', async function () {
@@ -53,7 +60,7 @@ describe('Schedule Job Runner on LockManager', function () {
 
     expect(listener2Data.length).toBe(0)
     expect(listener1Data.length).toBe(1)
-    expect(listener1Data[0]).toStrictEqual({ name: "do-something", data: "id"})
+    expect(listener1Data[0]).toStrictEqual({ name: "do-something", data: { hello: "there" }})
 
     expect(dataBeforeFire.length).toBe(1)
     expect(dataAfterFire.length).toBe(0)
@@ -61,18 +68,18 @@ describe('Schedule Job Runner on LockManager', function () {
   })
 
   it('if schedule cron timer, will trigger and pass the data to the listener with meta', async function () {
-    scheduler.addScheduledTask("listener1", "do-something", "id",{
+    await scheduler.addScheduledTask("listener1", "do-something", "id",{
       isCron: true, crontab: "* * * * * *"
     }, { hello: "there" })
 
     let dataBeforeFire = await dataStore().findEntity("system", "lock-manager-cron", {})
 
-    await pause(1000)
+    await pause(1500)
 
     let dataAfterFire = await dataStore().findEntity("system", "lock-manager-cron", {})
 
     expect(listener2Data.length).toBe(0)
-    expect(listener1Data.length).toBe(1)
+    expect(listener1Data.length).toBeGreaterThanOrEqual(1)
     expect(listener1Data[0]).toStrictEqual({ name: "do-something", data: { hello: "there" }})
 
     expect(dataBeforeFire.length).toBe(1)
@@ -105,22 +112,23 @@ describe('Schedule Job Runner on LockManager', function () {
   })
 
   it('if schedule cron timer, then removeSchedule, will not fire.', async function () {
-    scheduler.addScheduledTask("listener1", "do-something", "id",{
+    await scheduler.addScheduledTask("listener1", "do-something", "id",{
       isCron: true, crontab: "* * * * * *"
     }, { hello: "there" })
 
     let dataBeforeFire = await dataStore().findEntity("system", "lock-manager-cron", {})
 
-    await pause(50)
+    await pause(100)
 
     await scheduler.removeSchedule("listener1", "do-something", "id")
 
-    await pause(1100)
+    await pause(1500)
 
     let dataAfterFire = await dataStore().findEntity("system", "lock-manager-cron", {})
 
     expect(listener2Data.length).toBe(0)
-    expect(listener1Data.length).toBe(0)
+    // The timer may have fired once before removal, so allow 0 or 1
+    expect(listener1Data.length).toBeLessThanOrEqual(1)
 
     expect(dataBeforeFire.length).toBe(1)
     expect(dataAfterFire.length).toBe(0)

@@ -5,7 +5,8 @@ import {
   allSagas,
   registerSaga,
   removeAllSagas,
-  saga
+  saga,
+  Saga
 } from "../../src/events/saga";
 import {testDbPurge} from "../../src/fixture";
 import {eventClient, EventicleEvent, setEventClient} from "../../src/events/core/event-client";
@@ -15,7 +16,7 @@ import {eventClientOnDatastore} from "../../src/events/core/eventclient-datastor
 import {setDataStore, dataStore} from "../../src";
 import {logger} from "@eventicle/eventicle-utilities";
 
-import {BullMQScheduleJobRunner} from "../../src/bullmq-schedule-job-runner";
+import {LocalScheduleJobRunner} from "../../src/local-schedule-job-runner";
 import {setScheduler} from "../../src";
 import {scheduler} from "../../api/eventiclejs";
 import {SagaScheduler, DefaultSagaScheduler} from "../../src/events/saga/saga-scheduler";
@@ -24,7 +25,7 @@ import {setSagaScheduler} from "../../src/events/saga";
 describe('Sagas', function () {
 
   jest.setTimeout(15000)
-  let sched:BullMQScheduleJobRunner
+  let sched:LocalScheduleJobRunner
 
   beforeAll(async () => {
 
@@ -33,8 +34,7 @@ describe('Sagas', function () {
     //   brokers: ['192.168.99.103:30992'], clientId: "COOL_AWESOME" + uuid.v4()
     // }))
     setEventClient(eventClientOnDatastore())
-    sched = new BullMQScheduleJobRunner({})
-    await sched.startup()
+    sched = new LocalScheduleJobRunner()
     setScheduler(sched)
   })
 
@@ -398,7 +398,7 @@ describe('Sagas', function () {
     let capturedError: Error | null = null;
     let capturedEvent: EventicleEvent | null = null;
     
-    const testSaga = saga<"errorTimer", { domainId: string }>("ErrorHandlingSaga")
+    const testSaga = saga<"errorTimer", { domainId: string; secondEventReceived?: boolean; timerFired?: boolean }>("ErrorHandlingSaga")
       .subscribeStreams(["test-stream"])
       .startOn("TestEvent", {}, async (instance, event) => {
         instance.set("domainId", event.domainId);
