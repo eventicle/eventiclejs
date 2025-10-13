@@ -1,9 +1,17 @@
 {
   "name": "@eventicle/eventiclejs",
   "version": "1.1.2",
-  "description": "",
+  "description": "A powerful TypeScript framework for building event-driven, domain-driven applications with Event Sourcing and CQRS patterns",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eventicle/eventiclejs.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build-ts": "tsc",
     "watch-ts": "tsc -w",

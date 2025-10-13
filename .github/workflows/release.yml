@@ -74,7 +74,7 @@ jobs:
           git push origin "v${{ steps.version.outputs.new_version }}"
 
       - name: Publish to npm
-        run: yarn publish --access public
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
