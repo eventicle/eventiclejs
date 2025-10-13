@@ -4,21 +4,16 @@
 
 ```ts
 
-/// <reference types="node" />
-
 import { ConsumerConfig } from 'kafkajs';
 import { ConsumerRunConfig } from 'kafkajs';
 import { DataQuery } from '@eventicle/eventicle-utilities/dist/datastore';
 import { DataSorting } from '@eventicle/eventicle-utilities/dist/datastore';
 import { DataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { dataStore } from '@eventicle/eventicle-utilities/dist/datastore';
-import { DefaultContext } from 'xstate';
 import { EventEmitter } from 'events';
-import { EventObject } from 'xstate';
-import { Interpreter } from 'xstate';
 import { KafkaConfig } from 'kafkajs';
+import { LockManager } from '@eventicle/eventicle-utilities';
 import { lockManager } from '@eventicle/eventicle-utilities';
-import { LockManager as LockManager_2 } from '@eventicle/eventicle-utilities';
 import { LogApi } from '@eventicle/eventicle-utilities';
 import * as nodeCron from 'node-cron';
 import { PagedRecords } from '@eventicle/eventicle-utilities/dist/datastore';
@@ -31,7 +26,6 @@ import { setLogApi } from '@eventicle/eventicle-utilities';
 import { TransactionData } from '@eventicle/eventicle-utilities/dist/datastore';
 import { TransactionListener } from '@eventicle/eventicle-utilities/dist/datastore';
 import { TransactionOptions } from '@eventicle/eventicle-utilities/dist/datastore';
-import { TypegenDisabled } from 'xstate';
 
 // Warning: (ae-forgotten-export) The symbol "AggregateObservationAdapter" needs to be exported by the entry point index.d.ts
 //
@@ -43,28 +37,18 @@ export function aggregateObserver<AR extends AggregateRoot>(aggregateType: {
     new (...params: any[]): AR;
 }, id: string, timeout: number, exec: (ar: AR, event?: EventicleEvent) => boolean): Promise<AR>;
 
-// @public (undocumented)
+// @public
 export abstract class AggregateRoot {
     constructor(type: string | AggregateConfig);
     // Warning: (ae-forgotten-export) The symbol "AggregateConfig" needs to be exported by the entry point index.d.ts
-    //
-    // (undocumented)
     readonly config: AggregateConfig;
-    // (undocumented)
     currentCheckpoint(): object;
-    // (undocumented)
     handleEvent(event: EventicleEvent): void;
-    // (undocumented)
     history: EventicleEvent[];
-    // (undocumented)
     id: string;
-    // (undocumented)
     newEvents: EventicleEvent[];
-    // (undocumented)
-    raiseEvent(event: EventicleEvent): EventicleEvent;
-    // (undocumented)
+    raiseEvent(event: EventicleEvent): EventicleEvent<any>;
     reducers: any;
-    // (undocumented)
     replaying: boolean;
     // (undocumented)
     get type(): string;
@@ -134,62 +118,73 @@ export { dataStore }
 export function dispatchCommand<T>(commandIntent: CommandIntent<T>): Promise<CommandReturn<T>>;
 
 // @public
-export function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string): Promise<T>;
+export function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string, transactionControl?: TransactionOptions): Promise<T>;
 
-// @public (undocumented)
+// @public
 export interface EncodedEvent {
-    // (undocumented)
     buffer: Buffer;
-    // (undocumented)
     headers: {
         [key: string]: any;
     };
-    // (undocumented)
     key: string;
-    // (undocumented)
     timestamp: number;
 }
 
 // @public
 export interface EventAdapter {
-    // (undocumented)
     consumerGroup: string;
-    // (undocumented)
     errorHandler?: (adapter: EventAdapter, event: EventicleEvent, error: Error) => Promise<void>;
-    // (undocumented)
     handleEvent: (event: EventicleEvent) => Promise<void>;
-    // (undocumented)
     name: string;
-    // (undocumented)
     streamsToSubscribe: string[];
 }
 
-// @public (undocumented)
+// @public
 export interface EventClient {
     coldHotStream: (config: {
+        parallelEventCount?: number;
         rawEvents: true;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
+        parallelEventCount?: number;
         rawEvents: false;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     } | {
+        parallelEventCount?: number;
         stream: string | string[];
-        groupId?: string;
+        groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
     }) => Promise<EventSubscriptionControl>;
     // Warning: (ae-forgotten-export) The symbol "EventSubscriptionControl" needs to be exported by the entry point index.d.ts
-    coldStream: (stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void, onDone: () => void) => Promise<EventSubscriptionControl>;
-    // (undocumented)
+    coldStream: (config: {
+        stream: string;
+        parallelEventCount?: number;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+        onDone: () => void;
+    }) => Promise<EventSubscriptionControl>;
     emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>;
-    hotRawStream: (stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
-    hotStream: (stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+    hotRawStream: (config: {
+        parallelEventCount?: number;
+        stream: string | string[];
+        groupId: string;
+        handler: (event: EncodedEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
+    hotStream: (config: {
+        parallelEventCount?: number;
+        stream: string | string[];
+        groupId: string;
+        handler: (event: EventicleEvent) => Promise<void>;
+        onError: (error: any) => void;
+    }) => Promise<EventSubscriptionControl>;
     // (undocumented)
     isConnected: () => boolean;
     // (undocumented)
@@ -201,7 +196,6 @@ export function eventClient(): EventClient;
 
 // @public
 export interface EventClientCodec {
-    // (undocumented)
     decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;
     encode: (event: EventicleEvent) => Promise<EncodedEvent>;
 }
@@ -213,42 +207,32 @@ export function eventClientCodec(): EventClientCodec;
 export function eventClientOnDatastore(): EventClient;
 
 // Warning: (ae-forgotten-export) The symbol "ConsumerConfigFactory" needs to be exported by the entry point index.d.ts
+// Warning: (ae-forgotten-export) The symbol "TopicFailureConfiguration" needs to be exported by the entry point index.d.ts
 //
-// @public (undocumented)
-export function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory): Promise<EventClient>;
+// @public
+export function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
 
-// @public (undocumented)
-export interface EventicleEvent {
-    // (undocumented)
+// @public
+export interface EventicleEvent<T = any> {
     causedById?: string;
-    // (undocumented)
     causedByType?: string;
-    // (undocumented)
     createdAt?: number;
-    // (undocumented)
-    data: any;
-    // (undocumented)
+    data: T;
     domainId?: string;
-    // (undocumented)
     id?: string;
-    // (undocumented)
     source?: string;
-    // (undocumented)
     stream?: string;
-    // (undocumented)
     type: string;
 }
 
 // @public (undocumented)
 export function eventSourceName(): string;
 
-// @public (undocumented)
+// @public
 export interface EventView {
-    // (undocumented)
     consumerGroup: string;
-    // (undocumented)
     handleEvent: (event: EventicleEvent) => Promise<void>;
-    // (undocumented)
+    parallelEventCount?: number;
     streamsToSubscribe: string[];
 }
 
@@ -261,7 +245,7 @@ export class implements DataStore {
     // (undocumented)
     deleteMany(workspaceId: string, type: string, query: Query): Promise<void>;
     // (undocumented)
-    events: EventEmitter;
+    events: EventEmitter<[never]>;
     // (undocumented)
     findEntity(workspaceId: string, type: any, query: Query, sorting?: DataSorting): Promise<Record_2[]>;
     // (undocumented)
@@ -300,7 +284,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     // (undocumented)
     crons: Map<string, nodeCron.ScheduledTask>;
     // (undocumented)
-    events: EventEmitter;
+    events: EventEmitter<[never]>;
     // (undocumented)
     hasSchedule(component: string, name: string, id: string): Promise<boolean>;
     // (undocumented)
@@ -311,9 +295,9 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     timers: Map<string, NodeJS.Timeout>;
 }
 
-export { lockManager }
+export { LockManager }
 
-export { LockManager_2 as LockManager }
+export { lockManager }
 
 export { LogApi }
 
@@ -326,13 +310,10 @@ export function metrics(): {
 
 export { PagedRecords }
 
-// @public (undocumented)
+// @public
 export interface RawEventView {
-    // (undocumented)
     consumerGroup: string;
-    // (undocumented)
     handleEvent: (event: EncodedEvent) => Promise<void>;
-    // (undocumented)
     streamsToSubscribe: string[];
 }
 
@@ -357,9 +338,6 @@ export function registerView(view: EventView): Promise<EventSubscriptionControl>
 export function removeAllSagas(): Promise<void>;
 
 // @public
-export function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];
-
-// @public
 export class Saga<TimeoutNames, InstanceData> {
     constructor(name: string);
     // (undocumented)
@@ -371,12 +349,14 @@ export class Saga<TimeoutNames, InstanceData> {
     }>;
     // (undocumented)
     readonly name: string;
-    // (undocumented)
     on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     // (undocumented)
     onError(handler: (saga: any, event: EventicleEvent, error: Error) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     // (undocumented)
+    parallelEventCount: number;
+    // (undocumented)
+    parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
     startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     // (undocumented)
     starts: Map<string, {
@@ -401,9 +381,8 @@ export function saga<TimeoutNames, SagaInstanceData>(name: string): Saga<Timeout
 // @public
 export class SagaInstance<TimeoutNames, T> {
     constructor(internalData: any, record?: Record_2);
-    // (undocumented)
     endSaga(preserveInstanceData?: boolean): void;
-    get(name: keyof T): any;
+    get<K extends keyof T>(name: K): T[K];
     // (undocumented)
     readonly internalData: any;
     // (undocumented)
@@ -460,30 +439,10 @@ export { TransactionListener }
 
 export { TransactionOptions }
 
-// @public
-export class XStateAggregate<MACHINE> extends AggregateRoot {
-    constructor(type: string, machineFactory: (_this: any) => any);
-    // (undocumented)
-    handleEvent(event: EventicleEvent): void;
-    // (undocumented)
-    protected initStateMachineService(initialState?: any): void;
-    // (undocumented)
-    readonly machineFactory: (_this: any) => any;
-    // (undocumented)
-    raiseEvent(event: EventicleEvent): EventicleEvent;
-    service: Interpreter<DefaultContext, any, EventObject, {
-        value: any;
-        context: DefaultContext;
-    }, TypegenDisabled>;
-    // (undocumented)
-    shutdown(): void;
-    protected xsend(msg: any): void;
-}
-
 // Warnings were encountered during analysis:
 //
-// src/events/saga/index.ts:180:25 - (ae-forgotten-export) The symbol "StartHandlerConfig" needs to be exported by the entry point index.d.ts
-// src/events/saga/index.ts:181:31 - (ae-forgotten-export) The symbol "HandlerConfig" needs to be exported by the entry point index.d.ts
+// src/events/saga/index.ts:307:5 - (ae-forgotten-export) The symbol "StartHandlerConfig" needs to be exported by the entry point index.d.ts
+// src/events/saga/index.ts:311:5 - (ae-forgotten-export) The symbol "HandlerConfig" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

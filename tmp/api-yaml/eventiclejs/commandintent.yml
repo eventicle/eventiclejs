@@ -4,10 +4,28 @@ uid: '@eventicle/eventiclejs!CommandIntent:interface'
 package: '@eventicle/eventiclejs!'
 fullName: CommandIntent
 summary: >-
-  A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent
-  externally using the [EventClient](xref:@eventicle/eventiclejs!EventClient:interface)
+  Represents a request to execute a command with typed payload data.
+
+
+  CommandIntent provides a standardized way to request command execution in Eventicle's CQRS architecture. It decouples
+  command requests from their implementations, enabling features like remote command execution, load balancing, and
+  message-based architectures.
+
+   T - The type of the command payload data
 remarks: ''
-example: []
+example:
+  - |-
+    ```typescript
+    const createUserIntent: CommandIntent<{email: string, name: string}> = {
+      type: 'CreateUser',
+      data: {
+        email: 'john@example.com',
+        name: 'John Doe'
+      }
+    };
+
+    await dispatchCommand(createUserIntent);
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -16,7 +34,10 @@ properties:
     uid: '@eventicle/eventiclejs!CommandIntent#data:member'
     package: '@eventicle/eventiclejs!'
     fullName: data
-    summary: The data that will be used when calling the Command instance.
+    summary: |-
+      Strongly-typed payload data passed to the command handler.
+
+      Contains all information needed to execute the command business logic.
     remarks: ''
     example: []
     isPreview: false
@@ -29,7 +50,10 @@ properties:
     uid: '@eventicle/eventiclejs!CommandIntent#type:member'
     package: '@eventicle/eventiclejs!'
     fullName: type
-    summary: The command type
+    summary: |-
+      Unique identifier for the command type (e.g., 'CreateUser', 'ProcessPayment').
+
+      Must match a registered command's type for successful dispatch.
     remarks: ''
     example: []
     isPreview: false

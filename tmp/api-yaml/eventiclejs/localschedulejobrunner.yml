@@ -39,7 +39,7 @@ properties:
     syntax:
       content: 'crons: Map<string, nodeCron.ScheduledTask>;'
       return:
-        type: 'Map&lt;string, nodeCron.<xref uid="@types/node-cron!ScheduledTask:interface" />&gt;'
+        type: Map&lt;string, <xref uid="@types/node-cron!ScheduledTask:interface" />&gt;
   - name: events
     uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#events:member'
     package: '@eventicle/eventiclejs!'
@@ -50,9 +50,9 @@ properties:
     isPreview: false
     isDeprecated: false
     syntax:
-      content: 'events: EventEmitter;'
+      content: 'events: EventEmitter<[never]>;'
       return:
-        type: EventEmitter
+        type: '@eventicle/eventiclejs!~EventEmitter&lt;[never]&gt;'
   - name: timers
     uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#timers:member'
     package: '@eventicle/eventiclejs!'
@@ -65,12 +65,12 @@ properties:
     syntax:
       content: 'timers: Map<string, NodeJS.Timeout>;'
       return:
-        type: 'Map&lt;string, NodeJS.Timeout&gt;'
+        type: Map&lt;string, NodeJS.Timeout&gt;
 methods:
-  - name: 'addScheduledTask(component, name, id, config, data)'
+  - name: addScheduledTask(component, name, id, config, data)
     uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#addScheduledTask:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'addScheduledTask(component, name, id, config, data)'
+    fullName: addScheduledTask(component, name, id, config, data)
     summary: ''
     remarks: ''
     example: []
@@ -111,10 +111,10 @@ methods:
       return:
         type: Promise&lt;void&gt;
         description: ''
-  - name: 'addScheduleTaskListener(component, exec)'
+  - name: addScheduleTaskListener(component, exec)
     uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#addScheduleTaskListener:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'addScheduleTaskListener(component, exec)'
+    fullName: addScheduleTaskListener(component, exec)
     summary: ''
     remarks: ''
     example: []
@@ -148,10 +148,10 @@ methods:
       return:
         type: void
         description: ''
-  - name: 'hasSchedule(component, name, id)'
+  - name: hasSchedule(component, name, id)
     uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#hasSchedule:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'hasSchedule(component, name, id)'
+    fullName: hasSchedule(component, name, id)
     summary: ''
     remarks: ''
     example: []
@@ -172,10 +172,10 @@ methods:
       return:
         type: Promise&lt;boolean&gt;
         description: ''
-  - name: 'removeSchedule(component, name, id)'
+  - name: removeSchedule(component, name, id)
     uid: '@eventicle/eventiclejs!LocalScheduleJobRunner#removeSchedule:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'removeSchedule(component, name, id)'
+    fullName: removeSchedule(component, name, id)
     summary: ''
     remarks: ''
     example: []

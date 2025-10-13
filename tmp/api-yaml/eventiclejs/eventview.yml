@@ -3,9 +3,84 @@ name: EventView
 uid: '@eventicle/eventiclejs!EventView:interface'
 package: '@eventicle/eventiclejs!'
 fullName: EventView
-summary: ''
+summary: >-
+  Defines an event view for building read-side projections in CQRS architectures.
+
+
+  EventView implements the "Q" (Query) side of CQRS, processing domain events to build optimized read models,
+  projections, and materialized views. Views enable efficient querying by maintaining denormalized data structures
+  tailored for specific read patterns.
+
+
+  Key Features: - \*\*Event Processing\*\*: Handles events from multiple streams - \*\*Consumer Groups\*\*: Enables load
+  balancing across multiple instances - \*\*Parallel Processing\*\*: Configurable concurrency for high throughput -
+  \*\*Cold/Hot Replay\*\*: Processes historical events then continues with live events - \*\*Error Handling\*\*:
+  Built-in error recovery and monitoring
 remarks: ''
-example: []
+example:
+  - |-
+    User profile projection
+
+    ```typescript
+    const userProfileView: EventView = {
+      consumerGroup: 'user-profile-projection',
+      parallelEventCount: 10,
+      streamsToSubscribe: ['users', 'preferences'],
+
+      handleEvent: async (event) => {
+        switch (event.type) {
+          case 'UserCreated':
+            await db.userProfiles.create({
+              userId: event.domainId,
+              email: event.data.email,
+              name: event.data.name,
+              createdAt: new Date(event.createdAt)
+            });
+            break;
+
+          case 'UserProfileUpdated':
+            await db.userProfiles.update(
+              { userId: event.domainId },
+              { name: event.data.name }
+            );
+            break;
+
+          case 'PreferenceSet':
+            await db.userProfiles.update(
+              { userId: event.data.userId },
+              { preferences: event.data.preferences }
+            );
+            break;
+        }
+      }
+    };
+
+    await registerView(userProfileView);
+    ```
+  - |-
+    Analytics aggregation
+
+    ```typescript
+    const analyticsView: EventView = {
+      consumerGroup: 'analytics-aggregator',
+      parallelEventCount: 20,
+      streamsToSubscribe: ['orders', 'payments', 'shipments'],
+
+      handleEvent: async (event) => {
+        switch (event.type) {
+          case 'OrderCreated':
+            await updateDailyMetrics('orders_created', event.createdAt);
+            await updateCustomerMetrics(event.data.customerId, 'order_count');
+            break;
+
+          case 'PaymentProcessed':
+            await updateDailyMetrics('revenue', event.createdAt, event.data.amount);
+            await updateCustomerMetrics(event.data.customerId, 'total_spent', event.data.amount);
+            break;
+        }
+      }
+    };
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -14,7 +89,12 @@ properties:
     uid: '@eventicle/eventiclejs!EventView#consumerGroup:member'
     package: '@eventicle/eventiclejs!'
     fullName: consumerGroup
-    summary: ''
+    summary: >-
+      Unique consumer group identifier for load balancing.
+
+
+      Multiple view instances with the same consumer group will share event processing, enabling horizontal scaling and
+      fault tolerance.
     remarks: ''
     example: []
     isPreview: false
@@ -27,7 +107,12 @@ properties:
     uid: '@eventicle/eventiclejs!EventView#handleEvent:member'
     package: '@eventicle/eventiclejs!'
     fullName: handleEvent
-    summary: ''
+    summary: >-
+      Event processing function called for each received event.
+
+
+      Should be idempotent as events may be redelivered during failures. Typically updates read models, projections, or
+      external systems.
     remarks: ''
     example: []
     isPreview: false
@@ -36,11 +121,34 @@ properties:
       content: 'handleEvent: (event: EventicleEvent) => Promise<void>;'
       return:
         type: '(event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;'
+  - name: parallelEventCount
+    uid: '@eventicle/eventiclejs!EventView#parallelEventCount:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: parallelEventCount
+    summary: >-
+      Number of events to process concurrently (default varies by implementation).
+
+
+      Higher values increase throughput but may impact memory usage and database connection pools. Tune based on your
+      processing requirements.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'parallelEventCount?: number;'
+      return:
+        type: number
   - name: streamsToSubscribe
     uid: '@eventicle/eventiclejs!EventView#streamsToSubscribe:member'
     package: '@eventicle/eventiclejs!'
     fullName: streamsToSubscribe
-    summary: ''
+    summary: >-
+      List of event streams to subscribe to.
+
+
+      View will receive all events from these streams. Use specific stream names to reduce processing overhead and
+      improve performance.
     remarks: ''
     example: []
     isPreview: false
@@ -48,4 +156,4 @@ properties:
     syntax:
       content: 'streamsToSubscribe: string[];'
       return:
-        type: 'string[]'
+        type: string[]

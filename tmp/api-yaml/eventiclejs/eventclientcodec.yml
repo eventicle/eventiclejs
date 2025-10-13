@@ -4,14 +4,35 @@ uid: '@eventicle/eventiclejs!EventClientCodec:interface'
 package: '@eventicle/eventiclejs!'
 fullName: EventClientCodec
 summary: >-
-  Convert [EventicleEvent](xref:@eventicle/eventiclejs!EventicleEvent:interface) to/ from
-  [EncodedEvent](xref:@eventicle/eventiclejs!EncodedEvent:interface)<!-- -->.
+  Codec interface for converting between domain events and wire format.
 
 
-  EncodedEvent is suitable for the [EventClient](xref:@eventicle/eventiclejs!EventClient:interface) implementations to
-  send on the wire, as it is a Buffer and a set of message headers.
+  EventClientCodec provides the serialization/deserialization layer between EventicleEvent (domain representation) and
+  EncodedEvent (wire representation). Different implementations can provide JSON, Avro, Protocol Buffers, or custom
+  encoding schemes.
+
+
+  The codec is responsible for: - Serializing event payloads and metadata - Handling distributed tracing headers -
+  Version compatibility and schema evolution - Compression and encryption (if needed)
 remarks: ''
-example: []
+example:
+  - |-
+    ```typescript
+    class CustomCodec implements EventClientCodec {
+      async encode(event: EventicleEvent): Promise<EncodedEvent> {
+        return {
+          buffer: Buffer.from(JSON.stringify(event)),
+          key: event.domainId,
+          timestamp: event.createdAt,
+          headers: { type: event.type, version: '1.0' }
+        };
+      }
+
+      async decode(encoded: EncodedEvent): Promise<EventicleEvent> {
+        return JSON.parse(encoded.buffer.toString());
+      }
+    }
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -20,7 +41,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventClientCodec#decode:member'
     package: '@eventicle/eventiclejs!'
     fullName: decode
-    summary: ''
+    summary: Converts an encoded event back into its domain representation.
     remarks: ''
     example: []
     isPreview: false
@@ -35,9 +56,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventClientCodec#encode:member'
     package: '@eventicle/eventiclejs!'
     fullName: encode
-    summary: >-
-      Convert a raw event binary (as a [EncodedEvent](xref:@eventicle/eventiclejs!EncodedEvent:interface)<!-- -->) into
-      a [EventicleEvent](xref:@eventicle/eventiclejs!EventicleEvent:interface)
+    summary: Converts a domain event into its wire-ready encoded format.
     remarks: ''
     example: []
     isPreview: false

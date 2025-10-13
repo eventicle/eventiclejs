@@ -3,9 +3,29 @@ name: EncodedEvent
 uid: '@eventicle/eventiclejs!EncodedEvent:interface'
 package: '@eventicle/eventiclejs!'
 fullName: EncodedEvent
-summary: ''
+summary: >-
+  Represents an event in its encoded, wire-ready format.
+
+
+  EncodedEvent is the transport representation of an EventicleEvent, containing the serialized event data as a buffer
+  along with metadata headers. This format is used by EventClient implementations for efficient network transmission and
+  storage.
 remarks: ''
-example: []
+example:
+  - |-
+    ```typescript
+    const encodedEvent: EncodedEvent = {
+      buffer: Buffer.from(JSON.stringify(eventData)),
+      key: 'user-123',
+      timestamp: Date.now(),
+      headers: {
+        type: 'UserCreated',
+        domainId: 'user-123',
+        id: 'event-456',
+        source: 'user-service'
+      }
+    };
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -14,7 +34,7 @@ properties:
     uid: '@eventicle/eventiclejs!EncodedEvent#buffer:member'
     package: '@eventicle/eventiclejs!'
     fullName: buffer
-    summary: ''
+    summary: Serialized event data as binary buffer
     remarks: ''
     example: []
     isPreview: false
@@ -27,7 +47,7 @@ properties:
     uid: '@eventicle/eventiclejs!EncodedEvent#headers:member'
     package: '@eventicle/eventiclejs!'
     fullName: headers
-    summary: ''
+    summary: Event metadata headers for routing and processing
     remarks: ''
     example: []
     isPreview: false
@@ -46,7 +66,7 @@ properties:
     uid: '@eventicle/eventiclejs!EncodedEvent#key:member'
     package: '@eventicle/eventiclejs!'
     fullName: key
-    summary: ''
+    summary: Partitioning key for event streaming (typically domainId)
     remarks: ''
     example: []
     isPreview: false
@@ -59,7 +79,7 @@ properties:
     uid: '@eventicle/eventiclejs!EncodedEvent#timestamp:member'
     package: '@eventicle/eventiclejs!'
     fullName: timestamp
-    summary: ''
+    summary: Event creation timestamp in milliseconds
     remarks: ''
     example: []
     isPreview: false

@@ -1,8 +1,8 @@
 {
   "metadata": {
     "toolPackage": "@microsoft/api-extractor",
-    "toolVersion": "7.29.5",
-    "schemaVersion": 1009,
+    "toolVersion": "7.53.1",
+    "schemaVersion": 1011,
     "oldestForwardsCompatibleVersion": 1001,
     "tsdocConfig": {
       "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
@@ -173,17 +173,13 @@
       "preserveMemberOrder": false,
       "members": [
         {
-          "kind": "Variable",
-          "canonicalReference": "@eventicle/eventiclejs!aggregateObservationAdapter:var",
+          "kind": "Function",
+          "canonicalReference": "@eventicle/eventiclejs!aggregateObservationAdapter:function(1)",
           "docComment": "",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "aggregateObservationAdapter: "
-            },
-            {
-              "kind": "Content",
-              "text": "() => "
+              "text": "aggregateObservationAdapter: () => "
             },
             {
               "kind": "Reference",
@@ -191,13 +187,15 @@
               "canonicalReference": "@eventicle/eventiclejs!~AggregateObservationAdapter:class"
             }
           ],
-          "isReadonly": true,
-          "releaseTag": "Public",
-          "name": "aggregateObservationAdapter",
-          "variableTypeTokenRange": {
+          "fileUrlPath": "src/events/adapter/AggregateObservationAdapter.ts",
+          "returnTypeTokenRange": {
             "startIndex": 1,
-            "endIndex": 3
-          }
+            "endIndex": 2
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [],
+          "name": "aggregateObservationAdapter"
         },
         {
           "kind": "Function",
@@ -272,6 +270,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/adapter/AggregateObservationAdapter.ts",
           "returnTypeTokenRange": {
             "startIndex": 13,
             "endIndex": 15
@@ -330,14 +329,16 @@
         {
           "kind": "Class",
           "canonicalReference": "@eventicle/eventiclejs!AggregateRoot:class",
-          "docComment": "",
+          "docComment": "/**\n * Base class for implementing event-sourced aggregate roots.\n *\n * Aggregate roots are the core building blocks of domain-driven design and event sourcing. They encapsulate business logic, maintain consistency boundaries, and generate events that represent state changes. The aggregate's current state is rebuilt by replaying its historical events through reducer functions.\n *\n * Key Features: - **Event Sourcing**: State is derived from events, not stored directly - **Business Logic**: Encapsulates domain rules and invariants - **Event Generation**: Emits events when state changes occur - **Immutable History**: Complete audit trail of all changes - **Checkpointing**: Optional performance optimization for large event histories\n *\n * @example\n *\n * Basic aggregate\n * ```typescript\n * class BankAccount extends AggregateRoot {\n *   balance: number = 0;\n *   status: 'active' | 'frozen' = 'active';\n *\n *   constructor() {\n *     super('bank-accounts');\n *\n *     this.reducers = {\n *       AccountOpened: (event) => {\n *         this.id = event.data.accountId;\n *         this.balance = event.data.initialDeposit;\n *       },\n *       MoneyDeposited: (event) => {\n *         this.balance += event.data.amount;\n *       },\n *       MoneyWithdrawn: (event) => {\n *         this.balance -= event.data.amount;\n *       }\n *     };\n *   }\n *\n *   static open(accountId: string, initialDeposit: number): BankAccount {\n *     const account = new BankAccount();\n *     account.raiseEvent({\n *       type: 'AccountOpened',\n *       data: { accountId, initialDeposit }\n *     });\n *     return account;\n *   }\n *\n *   deposit(amount: number) {\n *     if (this.status !== 'active') {\n *       throw new Error('Account is not active');\n *     }\n *     this.raiseEvent({\n *       type: 'MoneyDeposited',\n *       data: { amount, timestamp: new Date() }\n *     });\n *   }\n * }\n * ```\n *\n * @example\n *\n * With checkpointing\n * ```typescript\n * class HighVolumeAggregate extends AggregateRoot {\n *   constructor() {\n *     super({ type: 'high-volume', storeCheckpoint: true });\n *   }\n *\n *   currentCheckpoint() {\n *     return {\n *       balance: this.balance,\n *       transactionCount: this.transactionCount\n *     };\n *   }\n * }\n * ```\n *\n * @see\n *\n * {@link AggregateRepository} For persistence operations\n *\n * @see\n *\n * {@link XStateAggregate} For state machine-based aggregates\n *\n * @see\n *\n * {@link TenantAggregateRoot} For multi-tenant scenarios\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export declare abstract class AggregateRoot "
             }
           ],
+          "fileUrlPath": "src/events/aggregate-root.ts",
           "releaseTag": "Public",
+          "isAbstract": true,
           "name": "AggregateRoot",
           "preserveMemberOrder": false,
           "members": [
@@ -357,7 +358,7 @@
                 {
                   "kind": "Reference",
                   "text": "AggregateConfig",
-                  "canonicalReference": "@eventicle/eventiclejs!AggregateConfig:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~AggregateConfig:interface"
                 },
                 {
                   "kind": "Content",
@@ -381,7 +382,7 @@
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#config:member",
-              "docComment": "",
+              "docComment": "/**\n * Aggregate configuration settings\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -390,7 +391,7 @@
                 {
                   "kind": "Reference",
                   "text": "AggregateConfig",
-                  "canonicalReference": "@eventicle/eventiclejs!AggregateConfig:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~AggregateConfig:interface"
                 },
                 {
                   "kind": "Content",
@@ -406,12 +407,13 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#currentCheckpoint:member(1)",
-              "docComment": "",
+              "docComment": "/**\n * Returns the current state as a checkpoint for performance optimization.\n *\n * Checkpoints allow aggregates with long event histories to snapshot their current state, reducing the time needed to rebuild from events. This method should be implemented when `storeCheckpoint` is enabled in the config.\n *\n * @returns Object representing the current aggregate state\n *\n * @example\n * ```typescript\n * currentCheckpoint() {\n *   return {\n *     balance: this.balance,\n *     status: this.status,\n *     lastTransactionDate: this.lastTransactionDate\n *   };\n * }\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -436,12 +438,13 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "currentCheckpoint"
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#handleEvent:member(1)",
-              "docComment": "",
+              "docComment": "/**\n * Applies an event to the aggregate state using the appropriate reducer.\n *\n * This method is called automatically by `raiseEvent` and during event replay. It looks up the reducer function for the event type and applies the event to update the aggregate's state.\n *\n * @param event - The event to apply to the aggregate state\n *\n * @example\n *\n * Reducer function\n * ```typescript\n * this.reducers = {\n *   MoneyDeposited: (event) => {\n *     this.balance += event.data.amount;\n *     this.lastActivity = event.data.timestamp;\n *   }\n * };\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -484,12 +487,13 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "handleEvent"
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#history:member",
-              "docComment": "",
+              "docComment": "/**\n * Complete event history for this aggregate instance\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -518,12 +522,13 @@
                 "endIndex": 3
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#id:member",
-              "docComment": "",
+              "docComment": "/**\n * Unique identifier for this aggregate instance\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -547,12 +552,13 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#newEvents:member",
-              "docComment": "",
+              "docComment": "/**\n * Events raised since last persistence (pending events)\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -581,12 +587,13 @@
                 "endIndex": 3
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#raiseEvent:member(1)",
-              "docComment": "",
+              "docComment": "/**\n * Raises a new domain event and applies it to the aggregate state.\n *\n * This is the primary method for recording state changes in event-sourced aggregates. The event is automatically assigned metadata (ID, timestamp, source) and applied through the appropriate reducer function.\n *\n * @param event - The domain event to raise\n *\n * @returns The event with populated metadata\n *\n * @example\n * ```typescript\n * deposit(amount: number) {\n *   // Validate business rules first\n *   if (amount <= 0) {\n *     throw new Error('Amount must be positive');\n *   }\n *\n *   // Raise the event\n *   this.raiseEvent({\n *     type: 'MoneyDeposited',\n *     data: { amount, timestamp: new Date() }\n *   });\n * }\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -608,13 +615,17 @@
                 },
                 {
                   "kind": "Content",
+                  "text": "<any>"
+                },
+                {
+                  "kind": "Content",
                   "text": ";"
                 }
               ],
               "isStatic": false,
               "returnTypeTokenRange": {
                 "startIndex": 3,
-                "endIndex": 4
+                "endIndex": 5
               },
               "releaseTag": "Public",
               "isProtected": false,
@@ -630,12 +641,13 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "raiseEvent"
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#reducers:member",
-              "docComment": "",
+              "docComment": "/**\n * Event reducer functions mapping event types to state update logic\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -659,12 +671,13 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!AggregateRoot#replaying:member",
-              "docComment": "",
+              "docComment": "/**\n * Flag indicating if aggregate is currently replaying historical events\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -688,7 +701,8 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
@@ -717,7 +731,8 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             }
           ],
           "implementsTokenRanges": []
@@ -734,9 +749,10 @@
             {
               "kind": "Reference",
               "text": "AggregateRepository",
-              "canonicalReference": "@eventicle/eventiclejs!AggregateRepository:interface"
+              "canonicalReference": "@eventicle/eventiclejs!~AggregateRepository:interface"
             }
           ],
+          "fileUrlPath": "src/events/aggregate-root.ts",
           "isReadonly": true,
           "releaseTag": "Public",
           "name": "aggregates",
@@ -785,6 +801,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 7
@@ -835,6 +852,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 5
@@ -849,6 +867,7 @@
           "canonicalReference": "@eventicle/eventiclejs!apm:namespace",
           "docComment": "",
           "excerptTokens": [],
+          "fileUrlPath": "src/index.ts",
           "releaseTag": "None",
           "name": "apm",
           "preserveMemberOrder": false,
@@ -904,6 +923,7 @@
                   "text": ";"
                 }
               ],
+              "fileUrlPath": "src/apm.ts",
               "returnTypeTokenRange": {
                 "startIndex": 9,
                 "endIndex": 10
@@ -951,13 +971,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!Command:interface",
-          "docComment": "/**\n * A Command.\n *\n * It is generally preferred {@link dispatchDirectCommand} where the command definition is implicit, and more fully type checked.\n *\n * This, along with {@link dispatchCommand} is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.\n */\n",
+          "docComment": "/**\n * Defines a command handler in Eventicle's CQRS architecture.\n *\n * Commands encapsulate business operations that change system state and emit domain events. They provide the \"C\" in CQRS, handling write operations while maintaining strong consistency and business rule enforcement.\n *\n * @template I - Input data type for the command  @template O - Output/response type from the command\n *\n * Key Features: - **Business Logic**: Encapsulates domain operations and invariants - **Event Generation**: Produces events representing state changes - **Type Safety**: Strongly-typed input/output contracts - **Transactional**: Atomic execution with event emission - **Scalable**: Can be distributed across multiple instances\n *\n * @example\n *\n * User management command\n * ```typescript\n * const createUserCommand: Command<{email: string, name: string}, {userId: string}> = {\n *   type: 'CreateUser',\n *   streamToEmit: 'users',\n *   execute: async (data) => {\n *     // Validate business rules\n *     await validateUniqueEmail(data.email);\n *\n *     // Create aggregate and apply business logic\n *     const user = User.create(data.email, data.name);\n *\n *     // Persist and get generated events\n *     const events = await aggregates.persist(user);\n *\n *     return {\n *       response: { userId: user.id },\n *       events\n *     };\n *   }\n * };\n * ```\n *\n * @example\n *\n * Order processing with error handling\n * ```typescript\n * const processOrderCommand: Command<OrderData, {orderId: string}> = {\n *   type: 'ProcessOrder',\n *   streamToEmit: 'orders',\n *   execute: async (data) => {\n *     try {\n *       const order = await aggregates.load(Order, data.orderId);\n *       order.process(data.items);\n *\n *       return {\n *         response: { orderId: order.id },\n *         events: await aggregates.persist(order)\n *       };\n *     } catch (error) {\n *       // Emit failure event and propagate error\n *       return {\n *         events: [{\n *           type: 'OrderProcessingFailed',\n *           domainId: data.orderId,\n *           data: { error: error.message }\n *         }],\n *         webError: new Error('Order processing failed')\n *       };\n *     }\n *   }\n * };\n * ```\n *\n * @see\n *\n * {@link CommandIntent} For command requests\n *\n * @see\n *\n * {@link CommandReturn} For command results\n *\n * @see\n *\n * {@link dispatchCommand} For command execution\n *\n * @see\n *\n * {@link registerCommand} For command registration\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface Command<I, O> "
             }
           ],
+          "fileUrlPath": "src/events/command/index.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -1034,7 +1055,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!Command#streamToEmit:member",
-              "docComment": "/**\n * The event stream that any events in the CommandReturn should be emitted on\n *\n * @see\n *\n * EventClient\n *\n * @see\n *\n * CommandReturn#events\n */\n",
+              "docComment": "/**\n * Target event stream for publishing generated events.\n *\n * All events returned by the command execution will be published to this stream, making them available to event views, sagas, and other subscribers.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1061,7 +1082,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!Command#type:member",
-              "docComment": "/**\n * The name of the Command. This is used to look it up when the user calls {@link dispatchCommand}\n */\n",
+              "docComment": "/**\n * Unique command type identifier used for registration and dispatch.\n *\n * Should be descriptive and follow consistent naming conventions (e.g., 'CreateUser', 'ProcessPayment', 'CancelOrder').\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1091,13 +1112,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!CommandIntent:interface",
-          "docComment": "/**\n * A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the {@link EventClient}\n */\n",
+          "docComment": "/**\n * Represents a request to execute a command with typed payload data.\n *\n * CommandIntent provides a standardized way to request command execution in Eventicle's CQRS architecture. It decouples command requests from their implementations, enabling features like remote command execution, load balancing, and message-based architectures.\n *\n * @template T - The type of the command payload data\n *\n * @example\n * ```typescript\n * const createUserIntent: CommandIntent<{email: string, name: string}> = {\n *   type: 'CreateUser',\n *   data: {\n *     email: 'john@example.com',\n *     name: 'John Doe'\n *   }\n * };\n *\n * await dispatchCommand(createUserIntent);\n * ```\n *\n * @see\n *\n * {@link Command} For the command implementation\n *\n * @see\n *\n * {@link dispatchCommand} For command execution\n *\n * @see\n *\n * {@link dispatchDirectCommand} For simplified inline commands\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface CommandIntent<T> "
             }
           ],
+          "fileUrlPath": "src/events/command/index.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -1118,7 +1140,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!CommandIntent#data:member",
-              "docComment": "/**\n * The data that will be used when calling the Command instance.\n */\n",
+              "docComment": "/**\n * Strongly-typed payload data passed to the command handler.\n *\n * Contains all information needed to execute the command business logic.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1145,7 +1167,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!CommandIntent#type:member",
-              "docComment": "/**\n * The command type\n *\n * @see\n *\n * Command#type\n */\n",
+              "docComment": "/**\n * Unique identifier for the command type (e.g., 'CreateUser', 'ProcessPayment').\n *\n * Must match a registered command's type for successful dispatch.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1175,13 +1197,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!CommandReturn:interface",
-          "docComment": "/**\n * The global return type for {@link Command}, whether the command is explicit, as in {@link dispatchCommand}, or implicit, as in {@link dispatchDirectCommand}.\n *\n * This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture any events that need to be emitted.\n */\n",
+          "docComment": "/**\n * Standard return type for all command executions in Eventicle.\n *\n * CommandReturn provides a consistent interface for command results, separating the response data (returned to caller) from domain events (published to streams). This enables clean separation between synchronous API responses and asynchronous event-driven side effects.\n *\n * @template T - Type of the response data returned to the caller\n *\n * @example\n *\n * Successful command with response\n * ```typescript\n * const result: CommandReturn<{userId: string}> = {\n *   response: { userId: 'user-123' },\n *   events: [{\n *     type: 'UserCreated',\n *     domainId: 'user-123',\n *     data: { email: 'john@example.com', name: 'John Doe' }\n *   }]\n * };\n * ```\n *\n * @example\n *\n * Command with business error\n * ```typescript\n * const result: CommandReturn<void> = {\n *   events: [{\n *     type: 'PaymentFailed',\n *     domainId: 'payment-456',\n *     data: { reason: 'Insufficient funds' }\n *   }],\n *   webError: new Error('Payment processing failed')\n * };\n * ```\n *\n * @see\n *\n * {@link Command} For command definitions\n *\n * @see\n *\n * {@link EventicleEvent} For event structure\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface CommandReturn<T> "
             }
           ],
+          "fileUrlPath": "src/events/command/index.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -1202,7 +1225,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!CommandReturn#events:member",
-              "docComment": "/**\n * Any events that have been generated during command execution that should be emitted externally onto the configured topic. By the time the calling code receives the return, the events have already been passed to {@link EventClient#emit}, and cannot be altered.\n */\n",
+              "docComment": "/**\n * Domain events generated during command execution.\n *\n * These events are automatically published to the command's configured stream and become part of the permanent event history. Events represent facts about what happened and drive all downstream processing.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1234,7 +1257,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!CommandReturn#response:member",
-              "docComment": "/**\n * An optional response object. This will be ignored by the command dispatcher, and passed through to the calling code. Most commonly used to pass IDs that have been generated during command execution.\n */\n",
+              "docComment": "/**\n * Optional response data returned to the command caller.\n *\n * Typically contains generated IDs, confirmation data, or other information needed by the synchronous caller. This data is NOT published as events.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1261,7 +1284,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!CommandReturn#webError:member",
-              "docComment": "/**\n * Optional error property.\n *\n * Used by some implementations to indicate that the Command finished in an Error, which should now be thrown.\n *\n * This is performed so that the command can emit events (describing the error), and also instruct the calling code (which is normally a synchronous API) to subsequently throw the given Error back to the user.\n */\n",
+              "docComment": "/**\n * Optional error to throw after event emission.\n *\n * Allows commands to emit failure events while still signaling errors to callers. The events are published first, then this error is thrown to the caller, enabling both event-driven error handling and traditional exception handling.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1321,6 +1344,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/eventclient-kafka.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 5
@@ -1379,6 +1403,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/testing/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 7
@@ -1433,6 +1458,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/adapter/AggregateObservationAdapter.ts",
           "returnTypeTokenRange": {
             "startIndex": 5,
             "endIndex": 6
@@ -1509,6 +1535,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/command/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 4,
             "endIndex": 8
@@ -1581,6 +1608,15 @@
             },
             {
               "kind": "Content",
+              "text": ", transactionControl?: "
+            },
+            {
+              "kind": "Reference",
+              "text": "TransactionOptions",
+              "canonicalReference": "@eventicle/eventicle-utilities!TransactionOptions:interface"
+            },
+            {
+              "kind": "Content",
               "text": "): "
             },
             {
@@ -1597,9 +1633,10 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/command/index.ts",
           "returnTypeTokenRange": {
-            "startIndex": 9,
-            "endIndex": 11
+            "startIndex": 11,
+            "endIndex": 13
           },
           "releaseTag": "Public",
           "overloadIndex": 1,
@@ -1619,6 +1656,14 @@
                 "endIndex": 8
               },
               "isOptional": false
+            },
+            {
+              "parameterName": "transactionControl",
+              "parameterTypeTokenRange": {
+                "startIndex": 9,
+                "endIndex": 10
+              },
+              "isOptional": true
             }
           ],
           "typeParameters": [
@@ -1639,13 +1684,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!EncodedEvent:interface",
-          "docComment": "",
+          "docComment": "/**\n * Represents an event in its encoded, wire-ready format.\n *\n * EncodedEvent is the transport representation of an EventicleEvent, containing the serialized event data as a buffer along with metadata headers. This format is used by EventClient implementations for efficient network transmission and storage.\n *\n * @example\n * ```typescript\n * const encodedEvent: EncodedEvent = {\n *   buffer: Buffer.from(JSON.stringify(eventData)),\n *   key: 'user-123',\n *   timestamp: Date.now(),\n *   headers: {\n *     type: 'UserCreated',\n *     domainId: 'user-123',\n *     id: 'event-456',\n *     source: 'user-service'\n *   }\n * };\n * ```\n *\n * @see\n *\n * {@link EventicleEvent} For the domain event representation\n *\n * @see\n *\n * {@link EventClientCodec} For encoding/decoding between formats\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface EncodedEvent "
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "releaseTag": "Public",
           "name": "EncodedEvent",
           "preserveMemberOrder": false,
@@ -1653,7 +1699,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EncodedEvent#buffer:member",
-              "docComment": "",
+              "docComment": "/**\n * Serialized event data as binary buffer\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1662,7 +1708,7 @@
                 {
                   "kind": "Reference",
                   "text": "Buffer",
-                  "canonicalReference": "!\"\\\"buffer\\\"\"~__global.Buffer:interface"
+                  "canonicalReference": "!\"\\\"buffer\\\"\".__global.Buffer:interface"
                 },
                 {
                   "kind": "Content",
@@ -1681,7 +1727,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EncodedEvent#headers:member",
-              "docComment": "",
+              "docComment": "/**\n * Event metadata headers for routing and processing\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1708,7 +1754,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EncodedEvent#key:member",
-              "docComment": "",
+              "docComment": "/**\n * Partitioning key for event streaming (typically domainId)\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1735,7 +1781,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EncodedEvent#timestamp:member",
-              "docComment": "",
+              "docComment": "/**\n * Event creation timestamp in milliseconds\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1765,13 +1811,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!EventAdapter:interface",
-          "docComment": "/**\n * An adapter is an observer on an event stream.\n *\n * It only operates on hot event data, and will never attempt to replay everything\n */\n",
+          "docComment": "/**\n * Defines an event adapter for real-time event processing and integration.\n *\n * EventAdapter provides a hot-subscription pattern for processing live events as they occur, without replaying historical data. Unlike EventView which processes both historical and live events, adapters focus on real-time integration scenarios like external system synchronization, notifications, and live data feeds.\n *\n * Key Characteristics: - **Hot Subscription Only**: Processes new events, never replays history - **External Integration**: Designed for pushing data to external systems - **Transactional**: Each event is processed within a database transaction - **Error Handling**: Built-in error recovery and monitoring - **Consumer Groups**: Supports load balancing across multiple instances\n *\n * @example\n *\n * External system synchronization\n * ```typescript\n * const crmSyncAdapter: EventAdapter = {\n *   name: 'crm-synchronizer',\n *   consumerGroup: 'crm-sync',\n *   streamsToSubscribe: ['users', 'contacts'],\n *\n *   handleEvent: async (event) => {\n *     switch (event.type) {\n *       case 'UserCreated':\n *         await crmClient.createContact({\n *           externalId: event.domainId,\n *           email: event.data.email,\n *           name: event.data.name,\n *           source: 'app'\n *         });\n *         break;\n *\n *       case 'UserUpdated':\n *         await crmClient.updateContact(event.domainId, {\n *           email: event.data.email,\n *           name: event.data.name\n *         });\n *         break;\n *     }\n *   },\n *\n *   errorHandler: async (adapter, event, error) => {\n *     await errorTracking.report({\n *       adapter: adapter.name,\n *       eventType: event.type,\n *       eventId: event.id,\n *       error: error.message,\n *       timestamp: new Date()\n *     });\n *   }\n * };\n *\n * await registerAdapter(crmSyncAdapter);\n * ```\n *\n * @example\n *\n * Real-time notifications\n * ```typescript\n * const notificationAdapter: EventAdapter = {\n *   name: 'push-notifications',\n *   consumerGroup: 'notifications',\n *   streamsToSubscribe: ['orders', 'payments'],\n *\n *   handleEvent: async (event) => {\n *     const userId = event.data.userId || event.data.customerId;\n *     if (!userId) return;\n *\n *     let message: string;\n *     switch (event.type) {\n *       case 'OrderShipped':\n *         message = `Your order ${event.data.orderNumber} has been shipped!`;\n *         break;\n *       case 'PaymentFailed':\n *         message = 'Payment failed. Please update your payment method.';\n *         break;\n *       default:\n *         return;\n *     }\n *\n *     await pushNotificationService.send(userId, {\n *       title: 'Order Update',\n *       message,\n *       data: { eventId: event.id, type: event.type }\n *     });\n *   }\n * };\n * ```\n *\n * @see\n *\n * {@link registerAdapter} For adapter registration\n *\n * @see\n *\n * {@link EventView} For read-model projections with history replay\n *\n * @see\n *\n * {@link RawEventAdapter} For binary event processing\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface EventAdapter "
             }
           ],
+          "fileUrlPath": "src/events/adapter/index.ts",
           "releaseTag": "Public",
           "name": "EventAdapter",
           "preserveMemberOrder": false,
@@ -1779,7 +1826,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventAdapter#consumerGroup:member",
-              "docComment": "",
+              "docComment": "/**\n * Consumer group identifier for load balancing and failure recovery.\n *\n * Multiple adapter instances with the same consumer group will share event processing, enabling horizontal scaling and fault tolerance.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1806,7 +1853,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventAdapter#errorHandler:member",
-              "docComment": "",
+              "docComment": "/**\n * Optional custom error handler for event processing failures.\n *\n * If not provided, a default handler logs the error and continues processing. Use this for custom error reporting, retry logic, or dead letter queues.\n *\n * @param adapter - The adapter that encountered the error\n *\n * @param event - The event that failed to process\n *\n * @param error - The error that occurred\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1869,7 +1916,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventAdapter#handleEvent:member",
-              "docComment": "",
+              "docComment": "/**\n * Event processing function called for each live event.\n *\n * Should be idempotent as events may be redelivered during failures. Typically integrates with external systems or triggers side effects.\n *\n * @param event - The domain event to process\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1914,7 +1961,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventAdapter#name:member",
-              "docComment": "",
+              "docComment": "/**\n * Unique adapter identifier for monitoring and debugging.\n *\n * Should be descriptive of the adapter's purpose (e.g., 'crm-sync', 'email-notifications').\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1941,7 +1988,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventAdapter#streamsToSubscribe:member",
-              "docComment": "",
+              "docComment": "/**\n * List of event streams to monitor for live events.\n *\n * Adapter will receive all new events from these streams. Use specific stream names to reduce noise and improve performance.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -1987,6 +2034,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
@@ -1999,13 +2047,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!EventClient:interface",
-          "docComment": "",
+          "docComment": "/**\n * Core interface for event streaming clients in Eventicle.\n *\n * EventClient provides the fundamental operations for working with event streams: publishing events, subscribing to streams, and replaying historical events. Different implementations support various backends like Kafka, Redis, or in-memory storage for development and testing.\n *\n * Stream Types: - **Hot Streams**: Only new events (live subscription) - **Cold Streams**: Historical events from the beginning - **Cold-Hot Streams**: Historical events followed by live subscription\n *\n * @example\n *\n * Basic usage\n * ```typescript\n * // Emit events\n * await eventClient.emit([{\n *   type: 'UserCreated',\n *   domainId: 'user-123',\n *   data: { email: 'john@example.com' }\n * }], 'users');\n *\n * // Subscribe to live events\n * const subscription = await eventClient.hotStream({\n *   stream: 'users',\n *   groupId: 'user-processor',\n *   handler: async (event) => {\n *     console.log('New user:', event.data.email);\n *   }\n * });\n * ```\n *\n * @see\n *\n * {@link eventClientInMemory} For development/testing\n *\n * @see\n *\n * {@link eventClientOnKafka} For production Kafka implementation\n *\n * @see\n *\n * {@link eventClientOnDatastore} For PostgreSQL-backed storage\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface EventClient "
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "releaseTag": "Public",
           "name": "EventClient",
           "preserveMemberOrder": false,
@@ -2013,7 +2062,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClient#coldHotStream:member",
-              "docComment": "/**\n * Play from persisted storage the continue from in memory\n *\n * @param stream - \n *\n * @param from - \n *\n * @param handler - \n *\n * @param onError - \n *\n * @param onDone - \n */\n",
+              "docComment": "/**\n * Play from persisted storage the continue from in memory\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2021,7 +2070,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "(config: {\n        rawEvents: true;\n        stream: string | string[];\n        groupId?: string;\n        handler: (event: "
+                  "text": "(config: {\n        parallelEventCount?: number;\n        rawEvents: true;\n        stream: string | string[];\n        groupId: string;\n        handler: (event: "
                 },
                 {
                   "kind": "Reference",
@@ -2039,7 +2088,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>;\n        onError: (error: any) => void;\n    } | {\n        rawEvents: false;\n        stream: string | string[];\n        groupId?: string;\n        handler: (event: "
+                  "text": "<void>;\n        onError: (error: any) => void;\n    } | {\n        parallelEventCount?: number;\n        rawEvents: false;\n        stream: string | string[];\n        groupId: string;\n        handler: (event: "
                 },
                 {
                   "kind": "Reference",
@@ -2057,7 +2106,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>;\n        onError: (error: any) => void;\n    } | {\n        stream: string | string[];\n        groupId?: string;\n        handler: (event: "
+                  "text": "<void>;\n        onError: (error: any) => void;\n    } | {\n        parallelEventCount?: number;\n        stream: string | string[];\n        groupId: string;\n        handler: (event: "
                 },
                 {
                   "kind": "Reference",
@@ -2089,7 +2138,7 @@
                 {
                   "kind": "Reference",
                   "text": "EventSubscriptionControl",
-                  "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
                 },
                 {
                   "kind": "Content",
@@ -2112,7 +2161,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClient#coldStream:member",
-              "docComment": "/**\n * Play from persisted storage\n *\n * @param stream - \n *\n * @param from - \n *\n * @param handler - \n *\n * @param onError - \n *\n * @param onDone - \n */\n",
+              "docComment": "/**\n * Replays historical events from the beginning of a stream.\n *\n * Cold streams process all existing events in the stream from the start, then complete. This is useful for building projections, migrating data, or analyzing historical event patterns.\n *\n * @param config - Cold stream configuration\n *\n * @param  - config.stream - Stream name to replay\n *\n * @param  - config.parallelEventCount - Number of events to process concurrently\n *\n * @param  - config.handler - Function called for each event\n *\n * @param  - config.onError - Error handler for processing failures\n *\n * @param  - config.onDone - Callback when replay is complete\n *\n * @example\n * ```typescript\n * await eventClient.coldStream({\n *   stream: 'orders',\n *   parallelEventCount: 10,\n *   handler: async (event) => {\n *     await updateProjection(event);\n *   },\n *   onError: (error) => console.error('Replay error:', error),\n *   onDone: () => console.log('Replay complete')\n * });\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2120,7 +2169,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "(stream: string, handler: (event: "
+                  "text": "(config: {\n        stream: string;\n        parallelEventCount?: number;\n        handler: (event: "
                 },
                 {
                   "kind": "Reference",
@@ -2138,7 +2187,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>, onError: (error: any) => void, onDone: () => void) => "
+                  "text": "<void>;\n        onError: (error: any) => void;\n        onDone: () => void;\n    }) => "
                 },
                 {
                   "kind": "Reference",
@@ -2152,7 +2201,7 @@
                 {
                   "kind": "Reference",
                   "text": "EventSubscriptionControl",
-                  "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
                 },
                 {
                   "kind": "Content",
@@ -2175,7 +2224,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClient#emit:member",
-              "docComment": "/**\n * @param event - \n *\n * @param stream - \n */\n",
+              "docComment": "/**\n * Publishes events to the specified stream.\n *\n * Events are processed atomically and will be available to subscribers after successful emission. The method supports both domain events (EventicleEvent) and pre-encoded events (EncodedEvent).\n *\n * @param event - Array of events to publish (domain or encoded format)\n *\n * @param stream - Target stream name for the events\n *\n * @example\n * ```typescript\n * await eventClient.emit([{\n *   type: 'OrderCreated',\n *   domainId: 'order-123',\n *   data: { customerId: 'cust-456', total: 99.99 }\n * }], 'orders');\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2229,7 +2278,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClient#hotRawStream:member",
-              "docComment": "/**\n * Only play hot data.\n *\n * @param stream - \n *\n * @param consumerName - \n *\n * @param handler - \n *\n * @param onError - \n */\n",
+              "docComment": "/**\n * Only play hot data.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2237,7 +2286,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "(stream: string | string[], consumerName: string, handler: (event: "
+                  "text": "(config: {\n        parallelEventCount?: number;\n        stream: string | string[];\n        groupId: string;\n        handler: (event: "
                 },
                 {
                   "kind": "Reference",
@@ -2255,7 +2304,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>, onError: (error: any) => void) => "
+                  "text": "<void>;\n        onError: (error: any) => void;\n    }) => "
                 },
                 {
                   "kind": "Reference",
@@ -2269,7 +2318,7 @@
                 {
                   "kind": "Reference",
                   "text": "EventSubscriptionControl",
-                  "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
                 },
                 {
                   "kind": "Content",
@@ -2292,7 +2341,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClient#hotStream:member",
-              "docComment": "/**\n * Only play hot data.\n *\n * @param stream - \n *\n * @param consumerName - \n *\n * @param handler - \n *\n * @param onError - \n */\n",
+              "docComment": "/**\n * Subscribes to live events from one or more streams.\n *\n * Hot streams only receive new events published after the subscription is established. Multiple subscribers with the same groupId will share the event processing load (consumer group pattern).\n *\n * @param config - Hot stream configuration\n *\n * @param  - config.stream - Stream name(s) to subscribe to\n *\n * @param  - config.groupId - Consumer group ID for load balancing\n *\n * @param  - config.parallelEventCount - Concurrent event processing limit\n *\n * @param  - config.handler - Function called for each new event\n *\n * @param  - config.onError - Error handler for processing failures\n *\n * @example\n *\n * Single stream\n * ```typescript\n * await eventClient.hotStream({\n *   stream: 'orders',\n *   groupId: 'order-processor',\n *   handler: async (event) => {\n *     await processOrder(event);\n *   },\n *   onError: (error) => console.error('Processing error:', error)\n * });\n * ```\n *\n * @example\n *\n * Multiple streams\n * ```typescript\n * await eventClient.hotStream({\n *   stream: ['orders', 'payments', 'shipments'],\n *   groupId: 'fulfillment-processor',\n *   handler: async (event) => {\n *     await handleFulfillmentEvent(event);\n *   }\n * });\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2300,7 +2349,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "(stream: string | string[], consumerName: string, handler: (event: "
+                  "text": "(config: {\n        parallelEventCount?: number;\n        stream: string | string[];\n        groupId: string;\n        handler: (event: "
                 },
                 {
                   "kind": "Reference",
@@ -2318,7 +2367,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>, onError: (error: any) => void) => "
+                  "text": "<void>;\n        onError: (error: any) => void;\n    }) => "
                 },
                 {
                   "kind": "Reference",
@@ -2332,7 +2381,7 @@
                 {
                   "kind": "Reference",
                   "text": "EventSubscriptionControl",
-                  "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
                 },
                 {
                   "kind": "Content",
@@ -2437,6 +2486,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
@@ -2449,13 +2499,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!EventClientCodec:interface",
-          "docComment": "/**\n * Convert {@link EventicleEvent} to/ from {@link EncodedEvent}.\n *\n * EncodedEvent is suitable for the {@link EventClient} implementations to send on the wire, as it is a Buffer and a set of message headers.\n */\n",
+          "docComment": "/**\n * Codec interface for converting between domain events and wire format.\n *\n * EventClientCodec provides the serialization/deserialization layer between EventicleEvent (domain representation) and EncodedEvent (wire representation). Different implementations can provide JSON, Avro, Protocol Buffers, or custom encoding schemes.\n *\n * The codec is responsible for: - Serializing event payloads and metadata - Handling distributed tracing headers - Version compatibility and schema evolution - Compression and encryption (if needed)\n *\n * @example\n * ```typescript\n * class CustomCodec implements EventClientCodec {\n *   async encode(event: EventicleEvent): Promise<EncodedEvent> {\n *     return {\n *       buffer: Buffer.from(JSON.stringify(event)),\n *       key: event.domainId,\n *       timestamp: event.createdAt,\n *       headers: { type: event.type, version: '1.0' }\n *     };\n *   }\n *\n *   async decode(encoded: EncodedEvent): Promise<EventicleEvent> {\n *     return JSON.parse(encoded.buffer.toString());\n *   }\n * }\n * ```\n *\n * @see\n *\n * {@link EventClientJsonCodec} For the default JSON implementation\n *\n * @see\n *\n * {@link AvroCodec} For Avro-based schema evolution support\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface EventClientCodec "
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "releaseTag": "Public",
           "name": "EventClientCodec",
           "preserveMemberOrder": false,
@@ -2463,7 +2514,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClientCodec#decode:member",
-              "docComment": "",
+              "docComment": "/**\n * Converts an encoded event back into its domain representation.\n *\n * @param encoded - The encoded event received from the wire\n *\n * @returns Promise resolving to the decoded domain event\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2517,7 +2568,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventClientCodec#encode:member",
-              "docComment": "/**\n * Convert a raw event binary (as a {@link EncodedEvent}) into a {@link EventicleEvent}\n */\n",
+              "docComment": "/**\n * Converts a domain event into its wire-ready encoded format.\n *\n * @param event - The domain event to encode\n *\n * @returns Promise resolving to the encoded event ready for transmission\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2590,6 +2641,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/eventclient-datastore.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
@@ -2602,7 +2654,7 @@
         {
           "kind": "Function",
           "canonicalReference": "@eventicle/eventiclejs!eventClientOnKafka:function(1)",
-          "docComment": "",
+          "docComment": "/**\n * https://kafka.js.org/docs/admin#a-name-create-topics-a-create-topics\n *\n * @param config - as per kafkjs\n *\n * @param consumerConfig - as per kafkajs\n *\n * @param onTopicFailureConfig - If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -2620,7 +2672,33 @@
             {
               "kind": "Reference",
               "text": "ConsumerConfigFactory",
-              "canonicalReference": "@eventicle/eventiclejs!ConsumerConfigFactory:interface"
+              "canonicalReference": "@eventicle/eventiclejs!~ConsumerConfigFactory:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ", onTopicFailureConfig?: "
+            },
+            {
+              "kind": "Content",
+              "text": "(topicName: any) => "
+            },
+            {
+              "kind": "Reference",
+              "text": "Promise",
+              "canonicalReference": "!Promise:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "TopicFailureConfiguration",
+              "canonicalReference": "@eventicle/eventiclejs!~TopicFailureConfiguration:type"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
             },
             {
               "kind": "Content",
@@ -2649,9 +2727,10 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/eventclient-kafka.ts",
           "returnTypeTokenRange": {
-            "startIndex": 5,
-            "endIndex": 9
+            "startIndex": 11,
+            "endIndex": 15
           },
           "releaseTag": "Public",
           "overloadIndex": 1,
@@ -2671,6 +2750,14 @@
                 "endIndex": 4
               },
               "isOptional": true
+            },
+            {
+              "parameterName": "onTopicFailureConfig",
+              "parameterTypeTokenRange": {
+                "startIndex": 5,
+                "endIndex": 10
+              },
+              "isOptional": true
             }
           ],
           "name": "eventClientOnKafka"
@@ -2678,21 +2765,43 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface",
-          "docComment": "",
+          "docComment": "/**\n * Core event interface representing something that happened in the system.\n *\n * EventicleEvent is the fundamental building block of event-driven architectures in Eventicle. Events are immutable facts about state changes that occurred, providing the foundation for event sourcing, CQRS, and saga coordination.\n *\n * @template T - The type of the event payload data\n *\n * @example\n *\n * Basic event\n * ```typescript\n * const userCreated: EventicleEvent<{email: string, name: string}> = {\n *   type: 'UserCreated',\n *   domainId: 'user-123',\n *   data: {\n *     email: 'john@example.com',\n *     name: 'John Doe'\n *   }\n * };\n * ```\n *\n * @example\n *\n * Event with causation tracking\n * ```typescript\n * const orderShipped: EventicleEvent = {\n *   type: 'OrderShipped',\n *   domainId: 'order-456',\n *   causedById: 'payment-789',\n *   causedByType: 'PaymentProcessed',\n *   data: { trackingNumber: 'TRK123456' }\n * };\n * ```\n *\n * Key Properties: - **Immutable**: Events cannot be changed once created - **Causally Linked**: Events can reference what caused them - **Timestamped**: Automatic timestamp assignment - **Traceable**: Support for distributed tracing - **Typed**: Strong typing for event payloads\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
-              "text": "export interface EventicleEvent "
+              "text": "export interface EventicleEvent<T = "
+            },
+            {
+              "kind": "Content",
+              "text": "any"
+            },
+            {
+              "kind": "Content",
+              "text": "> "
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "releaseTag": "Public",
+          "typeParameters": [
+            {
+              "typeParameterName": "T",
+              "constraintTokenRange": {
+                "startIndex": 0,
+                "endIndex": 0
+              },
+              "defaultTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
           "name": "EventicleEvent",
           "preserveMemberOrder": false,
           "members": [
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#causedById:member",
-              "docComment": "",
+              "docComment": "/**\n * ID of the event that caused this event (for causation tracking)\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2719,7 +2828,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#causedByType:member",
-              "docComment": "",
+              "docComment": "/**\n * Type of the event that caused this event\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2746,7 +2855,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#createdAt:member",
-              "docComment": "",
+              "docComment": "/**\n * Event creation timestamp in milliseconds (auto-generated if not provided)\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2773,7 +2882,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#data:member",
-              "docComment": "",
+              "docComment": "/**\n * The event payload containing the actual event data\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2781,7 +2890,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "any"
+                  "text": "T"
                 },
                 {
                   "kind": "Content",
@@ -2800,7 +2909,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#domainId:member",
-              "docComment": "",
+              "docComment": "/**\n * Domain entity ID this event relates to\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2827,7 +2936,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#id:member",
-              "docComment": "",
+              "docComment": "/**\n * Unique identifier for this event (auto-generated if not provided)\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2854,7 +2963,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#source:member",
-              "docComment": "",
+              "docComment": "/**\n * Source system or service that generated this event\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2881,7 +2990,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#stream:member",
-              "docComment": "",
+              "docComment": "/**\n * Event stream name (often matches aggregate type)\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2908,7 +3017,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventicleEvent#type:member",
-              "docComment": "",
+              "docComment": "/**\n * Event type name (e.g., 'UserCreated', 'OrderShipped')\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -2953,6 +3062,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
@@ -2965,13 +3075,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!EventView:interface",
-          "docComment": "",
+          "docComment": "/**\n * Defines an event view for building read-side projections in CQRS architectures.\n *\n * EventView implements the \"Q\" (Query) side of CQRS, processing domain events to build optimized read models, projections, and materialized views. Views enable efficient querying by maintaining denormalized data structures tailored for specific read patterns.\n *\n * Key Features: - **Event Processing**: Handles events from multiple streams - **Consumer Groups**: Enables load balancing across multiple instances - **Parallel Processing**: Configurable concurrency for high throughput - **Cold/Hot Replay**: Processes historical events then continues with live events - **Error Handling**: Built-in error recovery and monitoring\n *\n * @example\n *\n * User profile projection\n * ```typescript\n * const userProfileView: EventView = {\n *   consumerGroup: 'user-profile-projection',\n *   parallelEventCount: 10,\n *   streamsToSubscribe: ['users', 'preferences'],\n *\n *   handleEvent: async (event) => {\n *     switch (event.type) {\n *       case 'UserCreated':\n *         await db.userProfiles.create({\n *           userId: event.domainId,\n *           email: event.data.email,\n *           name: event.data.name,\n *           createdAt: new Date(event.createdAt)\n *         });\n *         break;\n *\n *       case 'UserProfileUpdated':\n *         await db.userProfiles.update(\n *           { userId: event.domainId },\n *           { name: event.data.name }\n *         );\n *         break;\n *\n *       case 'PreferenceSet':\n *         await db.userProfiles.update(\n *           { userId: event.data.userId },\n *           { preferences: event.data.preferences }\n *         );\n *         break;\n *     }\n *   }\n * };\n *\n * await registerView(userProfileView);\n * ```\n *\n * @example\n *\n * Analytics aggregation\n * ```typescript\n * const analyticsView: EventView = {\n *   consumerGroup: 'analytics-aggregator',\n *   parallelEventCount: 20,\n *   streamsToSubscribe: ['orders', 'payments', 'shipments'],\n *\n *   handleEvent: async (event) => {\n *     switch (event.type) {\n *       case 'OrderCreated':\n *         await updateDailyMetrics('orders_created', event.createdAt);\n *         await updateCustomerMetrics(event.data.customerId, 'order_count');\n *         break;\n *\n *       case 'PaymentProcessed':\n *         await updateDailyMetrics('revenue', event.createdAt, event.data.amount);\n *         await updateCustomerMetrics(event.data.customerId, 'total_spent', event.data.amount);\n *         break;\n *     }\n *   }\n * };\n * ```\n *\n * @see\n *\n * {@link registerView} For view registration\n *\n * @see\n *\n * {@link RawEventView} For binary event processing\n *\n * @see\n *\n * {@link EventicleEvent} For event structure\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface EventView "
             }
           ],
+          "fileUrlPath": "src/events/view/index.ts",
           "releaseTag": "Public",
           "name": "EventView",
           "preserveMemberOrder": false,
@@ -2979,7 +3090,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventView#consumerGroup:member",
-              "docComment": "",
+              "docComment": "/**\n * Unique consumer group identifier for load balancing.\n *\n * Multiple view instances with the same consumer group will share event processing, enabling horizontal scaling and fault tolerance.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -3006,7 +3117,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventView#handleEvent:member",
-              "docComment": "",
+              "docComment": "/**\n * Event processing function called for each received event.\n *\n * Should be idempotent as events may be redelivered during failures. Typically updates read models, projections, or external systems.\n *\n * @param event - The domain event to process\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -3050,8 +3161,35 @@
             },
             {
               "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!EventView#parallelEventCount:member",
+              "docComment": "/**\n * Number of events to process concurrently (default varies by implementation).\n *\n * Higher values increase throughput but may impact memory usage and database connection pools. Tune based on your processing requirements.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "parallelEventCount?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "parallelEventCount",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventView#streamsToSubscribe:member",
-              "docComment": "",
+              "docComment": "/**\n * List of event streams to subscribe to.\n *\n * View will receive all events from these streams. Use specific stream names to reduce processing overhead and improve performance.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -3090,14 +3228,16 @@
             {
               "kind": "Reference",
               "text": "DataStore",
-              "canonicalReference": "@eventicle/eventicle-utilities!~DataStore:interface"
+              "canonicalReference": "@eventicle/eventicle-utilities!DataStore:interface"
             },
             {
               "kind": "Content",
               "text": " "
             }
           ],
+          "fileUrlPath": "src/datastore/inmem-data-store.ts",
           "releaseTag": "Public",
+          "isAbstract": false,
           "name": "InMemoryDatastore",
           "preserveMemberOrder": false,
           "members": [
@@ -3183,6 +3323,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "createEntity"
             },
             {
@@ -3267,6 +3408,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "deleteEntity"
             },
             {
@@ -3352,6 +3494,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "deleteMany"
             },
             {
@@ -3366,7 +3509,11 @@
                 {
                   "kind": "Reference",
                   "text": "EventEmitter",
-                  "canonicalReference": "!\"\\\"events\\\"\"~EventEmitter:class"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventEmitter"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<[never]>"
                 },
                 {
                   "kind": "Content",
@@ -3379,10 +3526,11 @@
               "name": "events",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 2
+                "endIndex": 3
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -3421,7 +3569,7 @@
                 {
                   "kind": "Reference",
                   "text": "DataSorting",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~DataSorting:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!DataSorting:interface"
                 },
                 {
                   "kind": "Content",
@@ -3439,7 +3587,7 @@
                 {
                   "kind": "Reference",
                   "text": "Record",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~Record:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!Record:interface"
                 },
                 {
                   "kind": "Content",
@@ -3493,6 +3641,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "findEntity"
             },
             {
@@ -3532,7 +3681,7 @@
                 {
                   "kind": "Reference",
                   "text": "DataSorting",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~DataSorting:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!DataSorting:interface"
                 },
                 {
                   "kind": "Content",
@@ -3566,7 +3715,7 @@
                 {
                   "kind": "Reference",
                   "text": "PagedRecords",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~PagedRecords:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!PagedRecords:interface"
                 },
                 {
                   "kind": "Content",
@@ -3636,6 +3785,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "findEntityPaginated"
             },
             {
@@ -3683,7 +3833,7 @@
                 {
                   "kind": "Reference",
                   "text": "Record",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~Record:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!Record:interface"
                 },
                 {
                   "kind": "Content",
@@ -3729,6 +3879,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "getEntity"
             },
             {
@@ -3743,7 +3894,7 @@
                 {
                   "kind": "Reference",
                   "text": "TransactionData",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~TransactionData:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!TransactionData:interface"
                 },
                 {
                   "kind": "Content",
@@ -3760,6 +3911,7 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "getTransactionData"
             },
             {
@@ -3790,6 +3942,7 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "hasTransactionData"
             },
             {
@@ -3816,7 +3969,7 @@
                 {
                   "kind": "Reference",
                   "text": "TransactionData",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~TransactionData:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!TransactionData:interface"
                 },
                 {
                   "kind": "Content",
@@ -3862,6 +4015,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "on"
             },
             {
@@ -3897,6 +4051,7 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "purge"
             },
             {
@@ -3927,7 +4082,7 @@
                 {
                   "kind": "Reference",
                   "text": "Record",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~Record:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!Record:interface"
                 },
                 {
                   "kind": "Content",
@@ -3945,7 +4100,7 @@
                 {
                   "kind": "Reference",
                   "text": "Record",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~Record:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!Record:interface"
                 },
                 {
                   "kind": "Content",
@@ -3991,6 +4146,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "saveEntity"
             },
             {
@@ -4065,6 +4221,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "transaction"
             }
           ],
@@ -4094,7 +4251,9 @@
               "text": " "
             }
           ],
+          "fileUrlPath": "src/local-schedule-job-runner.ts",
           "releaseTag": "Public",
+          "isAbstract": false,
           "name": "LocalScheduleJobRunner",
           "preserveMemberOrder": false,
           "members": [
@@ -4227,6 +4386,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "addScheduledTask"
             },
             {
@@ -4304,6 +4464,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "addScheduleTaskListener"
             },
             {
@@ -4334,6 +4495,7 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "clearAllTimers"
             },
             {
@@ -4352,11 +4514,11 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<string, nodeCron."
+                  "text": "<string, "
                 },
                 {
                   "kind": "Reference",
-                  "text": "ScheduledTask",
+                  "text": "nodeCron.ScheduledTask",
                   "canonicalReference": "@types/node-cron!ScheduledTask:interface"
                 },
                 {
@@ -4377,7 +4539,8 @@
                 "endIndex": 5
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
@@ -4391,7 +4554,11 @@
                 {
                   "kind": "Reference",
                   "text": "EventEmitter",
-                  "canonicalReference": "!\"\\\"events\\\"\"~EventEmitter:class"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventEmitter"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<[never]>"
                 },
                 {
                   "kind": "Content",
@@ -4404,10 +4571,11 @@
               "name": "events",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
-                "endIndex": 2
+                "endIndex": 3
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -4491,6 +4659,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "hasSchedule"
             },
             {
@@ -4575,6 +4744,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "removeSchedule"
             },
             {
@@ -4610,6 +4780,7 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "startup"
             },
             {
@@ -4633,7 +4804,7 @@
                 {
                   "kind": "Reference",
                   "text": "NodeJS.Timeout",
-                  "canonicalReference": "!\"\\\"timers\\\"\"~__global.NodeJS.Timeout:interface"
+                  "canonicalReference": "!\"\\\"timers\\\"\".__global.NodeJS.Timeout:interface"
                 },
                 {
                   "kind": "Content",
@@ -4653,7 +4824,8 @@
                 "endIndex": 5
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             }
           ],
           "implementsTokenRanges": [
@@ -4681,6 +4853,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/metrics.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
@@ -4693,13 +4866,14 @@
         {
           "kind": "Interface",
           "canonicalReference": "@eventicle/eventiclejs!RawEventView:interface",
-          "docComment": "",
+          "docComment": "/**\n * Defines a view for processing events in their raw, encoded format.\n *\n * RawEventView enables processing events without decoding them into domain objects, which is useful for scenarios requiring high performance, binary storage, or custom encoding schemes. Events are processed as EncodedEvent objects containing the raw buffer and metadata headers.\n *\n * Use Cases: - **High Performance**: Avoid decoding overhead for throughput-sensitive scenarios - **Binary Storage**: Store events in their original encoded format - **Custom Processing**: Implement custom decoding or transformation logic - **Event Forwarding**: Route events to external systems without modification - **Audit Trails**: Preserve exact event format for compliance requirements\n *\n * @example\n *\n * Binary event archival\n * ```typescript\n * const eventArchiveView: RawEventView = {\n *   consumerGroup: 'event-archiver',\n *   streamsToSubscribe: ['users', 'orders', 'payments'],\n *\n *   handleEvent: async (encodedEvent) => {\n *     // Store raw event data with metadata\n *     await archiveStorage.store({\n *       eventId: encodedEvent.headers.id,\n *       eventType: encodedEvent.headers.type,\n *       timestamp: encodedEvent.timestamp,\n *       rawData: encodedEvent.buffer,\n *       headers: encodedEvent.headers\n *     });\n *   }\n * };\n *\n * await registerRawView(eventArchiveView);\n * ```\n *\n * @example\n *\n * High-performance event forwarding\n * ```typescript\n * const eventForwarder: RawEventView = {\n *   consumerGroup: 'external-forwarder',\n *   streamsToSubscribe: ['public-events'],\n *\n *   handleEvent: async (encodedEvent) => {\n *     // Forward to external webhook without decoding\n *     await httpClient.post('/webhook', {\n *       headers: {\n *         'Content-Type': 'application/octet-stream',\n *         'X-Event-Type': encodedEvent.headers.type,\n *         'X-Event-Id': encodedEvent.headers.id\n *       },\n *       body: encodedEvent.buffer\n *     });\n *   }\n * };\n * ```\n *\n * @see\n *\n * {@link registerRawView} For view registration\n *\n * @see\n *\n * {@link EventView} For decoded event processing\n *\n * @see\n *\n * {@link EncodedEvent} For raw event structure\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export interface RawEventView "
             }
           ],
+          "fileUrlPath": "src/events/view/index.ts",
           "releaseTag": "Public",
           "name": "RawEventView",
           "preserveMemberOrder": false,
@@ -4707,7 +4881,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!RawEventView#consumerGroup:member",
-              "docComment": "",
+              "docComment": "/**\n * Unique consumer group identifier for load balancing.\n *\n * Multiple raw view instances with the same consumer group will share event processing, enabling horizontal scaling and fault tolerance.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -4734,7 +4908,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!RawEventView#handleEvent:member",
-              "docComment": "",
+              "docComment": "/**\n * Raw event processing function called for each received encoded event.\n *\n * Receives events in their binary format without decoding. Use this for high-performance scenarios or when you need access to the raw event data.\n *\n * @param event - The encoded event with buffer and metadata\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -4779,7 +4953,7 @@
             {
               "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!RawEventView#streamsToSubscribe:member",
-              "docComment": "",
+              "docComment": "/**\n * List of event streams to subscribe to.\n *\n * View will receive all raw events from these streams. Consider the performance implications of subscribing to high-volume streams.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -4836,7 +5010,7 @@
             {
               "kind": "Reference",
               "text": "EventSubscriptionControl",
-              "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+              "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
             },
             {
               "kind": "Content",
@@ -4847,6 +5021,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/adapter/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 7
@@ -4896,6 +5071,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/command/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 4,
             "endIndex": 5
@@ -4968,7 +5144,7 @@
             {
               "kind": "Reference",
               "text": "EventSubscriptionControl",
-              "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+              "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
             },
             {
               "kind": "Content",
@@ -4979,6 +5155,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/view/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 7
@@ -5031,7 +5208,7 @@
             {
               "kind": "Reference",
               "text": "EventSubscriptionControl",
-              "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+              "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
             },
             {
               "kind": "Content",
@@ -5042,6 +5219,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 4,
             "endIndex": 8
@@ -5114,7 +5292,7 @@
             {
               "kind": "Reference",
               "text": "EventSubscriptionControl",
-              "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+              "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
             },
             {
               "kind": "Content",
@@ -5125,6 +5303,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/view/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 7
@@ -5166,6 +5345,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 3
@@ -5176,69 +5356,16 @@
           "name": "removeAllSagas"
         },
         {
-          "kind": "Function",
-          "canonicalReference": "@eventicle/eventiclejs!removeXstateEvents:function(1)",
-          "docComment": "/**\n * This function removes any internal xstate-status events from the given list. Use inside a {@link Command} in conjunction with an {@link XStateAggregate} to filter out any XState internal status events and not emit them to the event bus.\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare function removeXstateEvents(events: "
-            },
-            {
-              "kind": "Reference",
-              "text": "EventicleEvent",
-              "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]"
-            },
-            {
-              "kind": "Content",
-              "text": "): "
-            },
-            {
-              "kind": "Reference",
-              "text": "EventicleEvent",
-              "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
-            },
-            {
-              "kind": "Content",
-              "text": "[]"
-            },
-            {
-              "kind": "Content",
-              "text": ";"
-            }
-          ],
-          "returnTypeTokenRange": {
-            "startIndex": 4,
-            "endIndex": 6
-          },
-          "releaseTag": "Public",
-          "overloadIndex": 1,
-          "parameters": [
-            {
-              "parameterName": "events",
-              "parameterTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 3
-              },
-              "isOptional": false
-            }
-          ],
-          "name": "removeXstateEvents"
-        },
-        {
           "kind": "Class",
           "canonicalReference": "@eventicle/eventiclejs!Saga:class",
-          "docComment": "/**\n * A saga!\n */\n",
+          "docComment": "/**\n * Defines a long-running business process that coordinates across events and time.\n *\n * Sagas implement the Saga pattern for managing complex workflows that span multiple aggregates, external services, and time-based operations. They provide stateful event processing with support for timers, error handling, and process coordination.\n *\n * @template TimeoutNames - Union type of timer names this saga can schedule  @template InstanceData - Type of the saga's persistent state data\n *\n * Key Features: - **Stateful Processing**: Maintains state across multiple events - **Timer Support**: Schedule delays and recurring operations - **Error Handling**: Custom error handling and compensation logic - **Event Correlation**: Match events to specific saga instances - **Parallel Processing**: Configurable concurrency for high throughput\n *\n * @example\n *\n * Payment processing saga\n * ```typescript\n * interface PaymentData {\n *   orderId: string;\n *   amount: number;\n *   attempts: number;\n * }\n *\n * type PaymentTimers = 'timeout' | 'retry';\n *\n * export function paymentSaga() {\n *   return saga<PaymentTimers, PaymentData>('PaymentSaga')\n *     .subscribeStreams(['orders', 'payments'])\n *     .startOn('OrderCreated', {}, async (instance, event) => {\n *       instance.set('orderId', event.data.orderId);\n *       instance.set('amount', event.data.amount);\n *       instance.set('attempts', 0);\n *\n *       // Process payment\n *       await processPayment(event.data);\n *\n *       // Set timeout\n *       instance.upsertTimer('timeout', {\n *         isCron: false,\n *         timeout: 300000 // 5 minutes\n *       });\n *     })\n *     .on('PaymentSucceeded', {\n *       matchInstance: (event) => ({\n *         instanceProperty: 'orderId',\n *         value: event.data.orderId\n *       })\n *     }, async (instance, event) => {\n *       instance.removeTimer('timeout');\n *       instance.endSaga();\n *     })\n *     .onTimer('timeout', async (instance) => {\n *       const attempts = instance.get('attempts');\n *       if (attempts < 3) {\n *         instance.set('attempts', attempts + 1);\n *         await retryPayment(instance.get('orderId'));\n *       } else {\n *         await failPayment(instance.get('orderId'));\n *         instance.endSaga();\n *       }\n *     });\n * }\n * ```\n *\n * @see\n *\n * {@link SagaInstance} For instance state management\n *\n * @see\n *\n * {@link registerSaga} For saga registration\n *\n * @see\n *\n * {@link SagaScheduler} For advanced scheduling\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export declare class Saga<TimeoutNames, InstanceData> "
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -5264,6 +5391,7 @@
               }
             }
           ],
+          "isAbstract": false,
           "name": "Saga",
           "preserveMemberOrder": false,
           "members": [
@@ -5353,7 +5481,8 @@
                 "endIndex": 8
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
@@ -5423,7 +5552,8 @@
                 "endIndex": 11
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
@@ -5452,12 +5582,13 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!Saga#on:member(1)",
-              "docComment": "",
+              "docComment": "/**\n * Registers an event handler for existing saga instances.\n *\n * When the specified event type is received, the handler will be called on any existing saga instances that match the event based on the matchInstance configuration.\n *\n * @param eventName - The event type to handle\n *\n * @param config - Configuration for instance matching and locking\n *\n * @param handler - The function to execute for matching instances\n *\n * @example\n * ```typescript\n * saga.on('PaymentCompleted', {\n *   matchInstance: (event) => ({\n *     instanceProperty: 'orderId',\n *     value: event.data.orderId\n *   }),\n *   withLock: (instance, event) => `payment-${event.data.orderId}`\n * }, async (instance, event) => {\n *   instance.set('paymentId', event.data.paymentId);\n *   instance.removeTimer('timeout');\n *   await completeOrder(instance.get('orderId'));\n *   instance.endSaga();\n * });\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -5581,6 +5712,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "on"
             },
             {
@@ -5660,12 +5792,13 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "onError"
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!Saga#onTimer:member(1)",
-              "docComment": "/**\n * Register a handler for a timer triggered saga step.\n *\n * @param name - The name of the timer\n *\n * @param handle - the\n */\n",
+              "docComment": "/**\n * Register a handler for a timer triggered saga step.\n *\n * This will be called on the timer.\n *\n * No event is present.\n *\n * @param name - The name of the timer\n *\n * @param handle - the async function to execute.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -5746,12 +5879,96 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "onTimer"
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "@eventicle/eventiclejs!Saga#parallelEventCount:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "parallelEventCount: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "parallelEventCount",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "@eventicle/eventiclejs!Saga#parallelEvents:member(1)",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "parallelEvents(val: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Saga",
+                  "canonicalReference": "@eventicle/eventiclejs!Saga:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TimeoutNames, InstanceData>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "val",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "parallelEvents"
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!Saga#startOn:member(1)",
-              "docComment": "",
+              "docComment": "/**\n * Registers an event handler that can start new saga instances.\n *\n * When the specified event type is received and no existing saga instance matches, a new saga instance will be created and the handler called. Only one startOn handler per event type is allowed.\n *\n * @param eventName - The event type that can start new saga instances\n *\n * @param config - Configuration for instance creation\n *\n * @param handler - The function to execute when starting a new instance\n *\n * @example\n * ```typescript\n * saga.startOn('OrderCreated', {\n *   matches: async (event) => event.data.requiresPayment,\n *   withLock: (instance, event) => `payment-${event.data.orderId}`\n * }, async (instance, event) => {\n *   instance.set('orderId', event.data.orderId);\n *   await initiatePayment(event.data);\n * });\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -5875,6 +6092,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "startOn"
             },
             {
@@ -5945,7 +6163,8 @@
                 "endIndex": 11
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
@@ -5974,7 +6193,8 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
@@ -5988,7 +6208,7 @@
                 {
                   "kind": "Reference",
                   "text": "EventSubscriptionControl",
-                  "canonicalReference": "@eventicle/eventiclejs!EventSubscriptionControl:interface"
+                  "canonicalReference": "@eventicle/eventiclejs!~EventSubscriptionControl:interface"
                 },
                 {
                   "kind": "Content",
@@ -6008,7 +6228,8 @@
                 "endIndex": 3
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -6060,6 +6281,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "subscribeStreams"
             },
             {
@@ -6112,7 +6334,8 @@
                 "endIndex": 7
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             }
           ],
           "implementsTokenRanges": []
@@ -6148,6 +6371,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 5
@@ -6193,13 +6417,14 @@
         {
           "kind": "Class",
           "canonicalReference": "@eventicle/eventiclejs!SagaInstance:class",
-          "docComment": "/**\n * The data for a single execution of a {@link Saga}\n *\n * Sagas are stateful concepts, and this type contains the state.\n */\n",
+          "docComment": "/**\n * Represents a single running instance of a saga workflow.\n *\n * SagaInstance contains the runtime state and execution context for a specific saga execution. Each instance tracks its data, manages timers, and provides methods for saga lifecycle management.\n *\n * @template TimeoutNames - Union type of timer names this saga can schedule  @template T - Type of the saga's persistent data\n *\n * @example\n * ```typescript\n * interface PaymentData {\n *   orderId: string;\n *   amount: number;\n *   attempts: number;\n * }\n *\n * type PaymentTimers = 'timeout' | 'retry';\n *\n * // In saga handler\n * async function handleOrderCreated(\n *   instance: SagaInstance<PaymentTimers, PaymentData>,\n *   event: OrderCreatedEvent\n * ) {\n *   instance.set('orderId', event.data.orderId);\n *   instance.set('amount', event.data.amount);\n *   instance.set('attempts', 0);\n *\n *   // Schedule timeout\n *   instance.upsertTimer('timeout', {\n *     isCron: false,\n *     timeout: 300000 // 5 minutes\n *   });\n * }\n * ```\n *\n * @see\n *\n * {@link Saga} For the saga definition\n *\n * @see\n *\n * {@link SagaScheduler} For timer execution\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
               "text": "export declare class SagaInstance<TimeoutNames, T> "
             }
           ],
+          "fileUrlPath": "src/events/saga/index.ts",
           "releaseTag": "Public",
           "typeParameters": [
             {
@@ -6225,6 +6450,7 @@
               }
             }
           ],
+          "isAbstract": false,
           "name": "SagaInstance",
           "preserveMemberOrder": false,
           "members": [
@@ -6248,7 +6474,7 @@
                 {
                   "kind": "Reference",
                   "text": "Record",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~Record:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!Record:interface"
                 },
                 {
                   "kind": "Content",
@@ -6280,7 +6506,7 @@
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!SagaInstance#endSaga:member(1)",
-              "docComment": "",
+              "docComment": "/**\n * Marks the saga instance as completed and schedules it for cleanup.\n *\n * Once a saga is ended, it will not receive any more events or timer callbacks. The instance data can optionally be preserved for debugging or audit purposes.\n *\n * @param preserveInstanceData - Whether to keep instance data after completion\n *\n * @example\n * ```typescript\n * // End saga and clean up data\n * instance.endSaga();\n *\n * // End saga but preserve data for audit\n * instance.endSaga(true);\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -6322,16 +6548,17 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "endSaga"
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!SagaInstance#get:member(1)",
-              "docComment": "/**\n * Get a piece of arbitrary data from the saga instance\n *\n * @param name - THe key\n */\n",
+              "docComment": "/**\n * Retrieves a piece of data from the saga instance state.\n *\n * @param name - The key of the data to retrieve\n *\n * @returns The value associated with the key\n *\n * @example\n * ```typescript\n * const orderId = instance.get('orderId');\n * const attempts = instance.get('attempts');\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
-                  "text": "get(name: "
+                  "text": "get<K extends "
                 },
                 {
                   "kind": "Content",
@@ -6339,21 +6566,42 @@
                 },
                 {
                   "kind": "Content",
+                  "text": ">(name: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "K"
+                },
+                {
+                  "kind": "Content",
                   "text": "): "
                 },
                 {
                   "kind": "Content",
-                  "text": "any"
+                  "text": "T[K]"
                 },
                 {
                   "kind": "Content",
                   "text": ";"
                 }
               ],
+              "typeParameters": [
+                {
+                  "typeParameterName": "K",
+                  "constraintTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "defaultTypeTokenRange": {
+                    "startIndex": 0,
+                    "endIndex": 0
+                  }
+                }
+              ],
               "isStatic": false,
               "returnTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
+                "startIndex": 5,
+                "endIndex": 6
               },
               "releaseTag": "Public",
               "isProtected": false,
@@ -6362,13 +6610,14 @@
                 {
                   "parameterName": "name",
                   "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
+                    "startIndex": 3,
+                    "endIndex": 4
                   },
                   "isOptional": false
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "get"
             },
             {
@@ -6398,7 +6647,8 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -6429,6 +6679,7 @@
               "overloadIndex": 1,
               "parameters": [],
               "isOptional": false,
+              "isAbstract": false,
               "name": "lastEvent"
             },
             {
@@ -6443,7 +6694,7 @@
                 {
                   "kind": "Reference",
                   "text": "Record",
-                  "canonicalReference": "@eventicle/eventicle-utilities!~Record:interface"
+                  "canonicalReference": "@eventicle/eventicle-utilities!Record:interface"
                 },
                 {
                   "kind": "Content",
@@ -6459,7 +6710,8 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -6506,12 +6758,13 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "removeTimer"
             },
             {
               "kind": "Method",
               "canonicalReference": "@eventicle/eventiclejs!SagaInstance#set:member(1)",
-              "docComment": "/**\n * Set a piece of arbitrary data into the saga instance\n *\n * @param name - The key\n *\n * @param value - the value. Must be able to encode to JSON.\n */\n",
+              "docComment": "/**\n * Sets a piece of data in the saga instance state.\n *\n * The value must be JSON-serializable as saga state is persisted. The 'id' field is protected and cannot be modified.\n *\n * @param name - The key to set\n *\n * @param value - The value to store (must be JSON-serializable)\n *\n * @throws\n *\n * Error if attempting to set the 'id' field\n *\n * @example\n * ```typescript\n * instance.set('status', 'processing');\n * instance.set('retryCount', 3);\n * instance.set('lastError', { code: 'TIMEOUT', message: 'Request timed out' });\n * ```\n *\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -6569,12 +6822,13 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "set"
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!SagaInstance#timersToAdd:member",
-              "docComment": "/**\n * Private instance data\n */\n",
+              "docComment": "/**\n * Timers pending addition in the next persistence cycle\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -6598,12 +6852,13 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Property",
               "canonicalReference": "@eventicle/eventiclejs!SagaInstance#timersToRemove:member",
-              "docComment": "/**\n * Private instance data\n */\n",
+              "docComment": "/**\n * Timers pending removal in the next persistence cycle\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -6627,7 +6882,8 @@
                 "endIndex": 2
               },
               "isStatic": false,
-              "isProtected": false
+              "isProtected": false,
+              "isAbstract": false
             },
             {
               "kind": "Method",
@@ -6690,6 +6946,7 @@
                 }
               ],
               "isOptional": false,
+              "isAbstract": false,
               "name": "upsertTimer"
             }
           ],
@@ -6714,6 +6971,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/scheduler.ts",
           "returnTypeTokenRange": {
             "startIndex": 1,
             "endIndex": 2
@@ -6750,6 +7008,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 4
@@ -6795,6 +7054,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 4
@@ -6839,6 +7099,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/events/core/event-client.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 4
@@ -6884,6 +7145,7 @@
               "text": ";"
             }
           ],
+          "fileUrlPath": "src/scheduler.ts",
           "returnTypeTokenRange": {
             "startIndex": 3,
             "endIndex": 4
@@ -6901,417 +7163,6 @@
             }
           ],
           "name": "setScheduler"
-        },
-        {
-          "kind": "Class",
-          "canonicalReference": "@eventicle/eventiclejs!XStateAggregate:class",
-          "docComment": "/**\n * An Eventicle Aggregate that uses the XState statechart to manage its internal state.\n *\n * @see\n *\n * https://book.eventicle.com/eventiclejs/book/aggregate-root-xstate.html\n */\n",
-          "excerptTokens": [
-            {
-              "kind": "Content",
-              "text": "export declare class XStateAggregate<MACHINE> extends "
-            },
-            {
-              "kind": "Reference",
-              "text": "AggregateRoot",
-              "canonicalReference": "@eventicle/eventiclejs!AggregateRoot:class"
-            },
-            {
-              "kind": "Content",
-              "text": " "
-            }
-          ],
-          "releaseTag": "Public",
-          "typeParameters": [
-            {
-              "typeParameterName": "MACHINE",
-              "constraintTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              },
-              "defaultTypeTokenRange": {
-                "startIndex": 0,
-                "endIndex": 0
-              }
-            }
-          ],
-          "name": "XStateAggregate",
-          "preserveMemberOrder": false,
-          "members": [
-            {
-              "kind": "Constructor",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate:constructor(1)",
-              "docComment": "/**\n * Constructor\n *\n * @param type - the name of the aggregate (e.g. \"complaints\")\n *\n * @param machineFactory - a function that returns a XState StateMachine (from a XState createMachine() function call)\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "constructor(type: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "string"
-                },
-                {
-                  "kind": "Content",
-                  "text": ", machineFactory: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "(_this: any) => any"
-                },
-                {
-                  "kind": "Content",
-                  "text": ");"
-                }
-              ],
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "type",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  },
-                  "isOptional": false
-                },
-                {
-                  "parameterName": "machineFactory",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 3,
-                    "endIndex": 4
-                  },
-                  "isOptional": false
-                }
-              ]
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#handleEvent:member(1)",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "handleEvent(event: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "EventicleEvent",
-                  "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Content",
-                  "text": "void"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isStatic": false,
-              "returnTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "event",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  },
-                  "isOptional": false
-                }
-              ],
-              "isOptional": false,
-              "name": "handleEvent"
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#initStateMachineService:member(1)",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "protected initStateMachineService(initialState?: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "any"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Content",
-                  "text": "void"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isStatic": false,
-              "returnTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "releaseTag": "Public",
-              "isProtected": true,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "initialState",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  },
-                  "isOptional": true
-                }
-              ],
-              "isOptional": false,
-              "name": "initStateMachineService"
-            },
-            {
-              "kind": "Property",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#machineFactory:member",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "readonly machineFactory: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "(_this: any) => any"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": true,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "machineFactory",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "isStatic": false,
-              "isProtected": false
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#raiseEvent:member(1)",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "raiseEvent(event: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "EventicleEvent",
-                  "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "EventicleEvent",
-                  "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isStatic": false,
-              "returnTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "event",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  },
-                  "isOptional": false
-                }
-              ],
-              "isOptional": false,
-              "name": "raiseEvent"
-            },
-            {
-              "kind": "Property",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#service:member",
-              "docComment": "/**\n * XState State chart service for this aggregate instance\n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "service: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "Interpreter",
-                  "canonicalReference": "xstate!Interpreter:class"
-                },
-                {
-                  "kind": "Content",
-                  "text": "<"
-                },
-                {
-                  "kind": "Reference",
-                  "text": "DefaultContext",
-                  "canonicalReference": "xstate!DefaultContext:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ", any, "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "EventObject",
-                  "canonicalReference": "xstate!EventObject:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": ", {\n        value: any;\n        context: "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "DefaultContext",
-                  "canonicalReference": "xstate!DefaultContext:type"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";\n    }, "
-                },
-                {
-                  "kind": "Reference",
-                  "text": "TypegenDisabled",
-                  "canonicalReference": "xstate!TypegenDisabled:interface"
-                },
-                {
-                  "kind": "Content",
-                  "text": ">"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isReadonly": false,
-              "isOptional": false,
-              "releaseTag": "Public",
-              "name": "service",
-              "propertyTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 11
-              },
-              "isStatic": false,
-              "isProtected": false
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#shutdown:member(1)",
-              "docComment": "",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "shutdown(): "
-                },
-                {
-                  "kind": "Content",
-                  "text": "void"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isStatic": false,
-              "returnTypeTokenRange": {
-                "startIndex": 1,
-                "endIndex": 2
-              },
-              "releaseTag": "Public",
-              "isProtected": false,
-              "overloadIndex": 1,
-              "parameters": [],
-              "isOptional": false,
-              "name": "shutdown"
-            },
-            {
-              "kind": "Method",
-              "canonicalReference": "@eventicle/eventiclejs!XStateAggregate#xsend:member(1)",
-              "docComment": "/**\n * Sends a XState Event into the interpreted XState machine\n *\n * @param msg - \n */\n",
-              "excerptTokens": [
-                {
-                  "kind": "Content",
-                  "text": "protected xsend(msg: "
-                },
-                {
-                  "kind": "Content",
-                  "text": "any"
-                },
-                {
-                  "kind": "Content",
-                  "text": "): "
-                },
-                {
-                  "kind": "Content",
-                  "text": "void"
-                },
-                {
-                  "kind": "Content",
-                  "text": ";"
-                }
-              ],
-              "isStatic": false,
-              "returnTypeTokenRange": {
-                "startIndex": 3,
-                "endIndex": 4
-              },
-              "releaseTag": "Public",
-              "isProtected": true,
-              "overloadIndex": 1,
-              "parameters": [
-                {
-                  "parameterName": "msg",
-                  "parameterTypeTokenRange": {
-                    "startIndex": 1,
-                    "endIndex": 2
-                  },
-                  "isOptional": false
-                }
-              ],
-              "isOptional": false,
-              "name": "xsend"
-            }
-          ],
-          "extendsTokenRange": {
-            "startIndex": 1,
-            "endIndex": 2
-          },
-          "implementsTokenRanges": []
         }
       ]
     }

@@ -3,9 +3,39 @@ name: EventClient
 uid: '@eventicle/eventiclejs!EventClient:interface'
 package: '@eventicle/eventiclejs!'
 fullName: EventClient
-summary: ''
+summary: >-
+  Core interface for event streaming clients in Eventicle.
+
+
+  EventClient provides the fundamental operations for working with event streams: publishing events, subscribing to
+  streams, and replaying historical events. Different implementations support various backends like Kafka, Redis, or
+  in-memory storage for development and testing.
+
+
+  Stream Types: - \*\*Hot Streams\*\*: Only new events (live subscription) - \*\*Cold Streams\*\*: Historical events
+  from the beginning - \*\*Cold-Hot Streams\*\*: Historical events followed by live subscription
 remarks: ''
-example: []
+example:
+  - |-
+    Basic usage
+
+    ```typescript
+    // Emit events
+    await eventClient.emit([{
+      type: 'UserCreated',
+      domainId: 'user-123',
+      data: { email: 'john@example.com' }
+    }], 'users');
+
+    // Subscribe to live events
+    const subscription = await eventClient.hotStream({
+      stream: 'users',
+      groupId: 'user-processor',
+      handler: async (event) => {
+        console.log('New user:', event.data.email);
+      }
+    });
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -22,68 +52,113 @@ properties:
     syntax:
       content: |-
         coldHotStream: (config: {
+                parallelEventCount?: number;
                 rawEvents: true;
                 stream: string | string[];
-                groupId?: string;
+                groupId: string;
                 handler: (event: EncodedEvent) => Promise<void>;
                 onError: (error: any) => void;
             } | {
+                parallelEventCount?: number;
                 rawEvents: false;
                 stream: string | string[];
-                groupId?: string;
+                groupId: string;
                 handler: (event: EventicleEvent) => Promise<void>;
                 onError: (error: any) => void;
             } | {
+                parallelEventCount?: number;
                 stream: string | string[];
-                groupId?: string;
+                groupId: string;
                 handler: (event: EventicleEvent) => Promise<void>;
                 onError: (error: any) => void;
             }) => Promise<EventSubscriptionControl>;
       return:
         type: |-
           (config: {
+                  parallelEventCount?: number;
                   rawEvents: true;
                   stream: string | string[];
-                  groupId?: string;
+                  groupId: string;
                   handler: (event: <xref uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;void&gt;;
                   onError: (error: any) =&gt; void;
               } | {
+                  parallelEventCount?: number;
                   rawEvents: false;
                   stream: string | string[];
-                  groupId?: string;
+                  groupId: string;
                   handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
                   onError: (error: any) =&gt; void;
               } | {
+                  parallelEventCount?: number;
                   stream: string | string[];
-                  groupId?: string;
+                  groupId: string;
                   handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
                   onError: (error: any) =&gt; void;
-              }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+              }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
   - name: coldStream
     uid: '@eventicle/eventiclejs!EventClient#coldStream:member'
     package: '@eventicle/eventiclejs!'
     fullName: coldStream
-    summary: Play from persisted storage
+    summary: >-
+      Replays historical events from the beginning of a stream.
+
+
+      Cold streams process all existing events in the stream from the start, then complete. This is useful for building
+      projections, migrating data, or analyzing historical event patterns.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        await eventClient.coldStream({
+          stream: 'orders',
+          parallelEventCount: 10,
+          handler: async (event) => {
+            await updateProjection(event);
+          },
+          onError: (error) => console.error('Replay error:', error),
+          onDone: () => console.log('Replay complete')
+        });
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
-      content: >-
-        coldStream: (stream: string, handler: (event: EventicleEvent) => Promise<void>, onError: (error: any) => void,
-        onDone: () => void) => Promise<EventSubscriptionControl>;
+      content: |-
+        coldStream: (config: {
+                stream: string;
+                parallelEventCount?: number;
+                handler: (event: EventicleEvent) => Promise<void>;
+                onError: (error: any) => void;
+                onDone: () => void;
+            }) => Promise<EventSubscriptionControl>;
       return:
-        type: >-
-          (stream: string, handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt;
-          Promise&lt;void&gt;, onError: (error: any) =&gt; void, onDone: () =&gt; void) =&gt; Promise&lt;<xref
-          uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+        type: |-
+          (config: {
+                  stream: string;
+                  parallelEventCount?: number;
+                  handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
+                  onError: (error: any) =&gt; void;
+                  onDone: () =&gt; void;
+              }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
   - name: emit
     uid: '@eventicle/eventiclejs!EventClient#emit:member'
     package: '@eventicle/eventiclejs!'
     fullName: emit
-    summary: ''
+    summary: >-
+      Publishes events to the specified stream.
+
+
+      Events are processed atomically and will be available to subscribers after successful emission. The method
+      supports both domain events (EventicleEvent) and pre-encoded events (EncodedEvent).
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        await eventClient.emit([{
+          type: 'OrderCreated',
+          domainId: 'order-123',
+          data: { customerId: 'cust-456', total: 99.99 }
+        }], 'orders');
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
@@ -102,32 +177,80 @@ properties:
     isPreview: false
     isDeprecated: false
     syntax:
-      content: >-
-        hotRawStream: (stream: string | string[], consumerName: string, handler: (event: EncodedEvent) => Promise<void>,
-        onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+      content: |-
+        hotRawStream: (config: {
+                parallelEventCount?: number;
+                stream: string | string[];
+                groupId: string;
+                handler: (event: EncodedEvent) => Promise<void>;
+                onError: (error: any) => void;
+            }) => Promise<EventSubscriptionControl>;
       return:
-        type: >-
-          (stream: string | string[], consumerName: string, handler: (event: <xref
-          uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;void&gt;, onError: (error: any) =&gt;
-          void) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+        type: |-
+          (config: {
+                  parallelEventCount?: number;
+                  stream: string | string[];
+                  groupId: string;
+                  handler: (event: <xref uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;void&gt;;
+                  onError: (error: any) =&gt; void;
+              }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
   - name: hotStream
     uid: '@eventicle/eventiclejs!EventClient#hotStream:member'
     package: '@eventicle/eventiclejs!'
     fullName: hotStream
-    summary: Only play hot data.
+    summary: >-
+      Subscribes to live events from one or more streams.
+
+
+      Hot streams only receive new events published after the subscription is established. Multiple subscribers with the
+      same groupId will share the event processing load (consumer group pattern).
     remarks: ''
-    example: []
+    example:
+      - |-
+        Single stream
+
+        ```typescript
+        await eventClient.hotStream({
+          stream: 'orders',
+          groupId: 'order-processor',
+          handler: async (event) => {
+            await processOrder(event);
+          },
+          onError: (error) => console.error('Processing error:', error)
+        });
+        ```
+      - |-
+        Multiple streams
+
+        ```typescript
+        await eventClient.hotStream({
+          stream: ['orders', 'payments', 'shipments'],
+          groupId: 'fulfillment-processor',
+          handler: async (event) => {
+            await handleFulfillmentEvent(event);
+          }
+        });
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
-      content: >-
-        hotStream: (stream: string | string[], consumerName: string, handler: (event: EventicleEvent) => Promise<void>,
-        onError: (error: any) => void) => Promise<EventSubscriptionControl>;
+      content: |-
+        hotStream: (config: {
+                parallelEventCount?: number;
+                stream: string | string[];
+                groupId: string;
+                handler: (event: EventicleEvent) => Promise<void>;
+                onError: (error: any) => void;
+            }) => Promise<EventSubscriptionControl>;
       return:
-        type: >-
-          (stream: string | string[], consumerName: string, handler: (event: <xref
-          uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;, onError: (error: any)
-          =&gt; void) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;
+        type: |-
+          (config: {
+                  parallelEventCount?: number;
+                  stream: string | string[];
+                  groupId: string;
+                  handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
+                  onError: (error: any) =&gt; void;
+              }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
   - name: isConnected
     uid: '@eventicle/eventiclejs!EventClient#isConnected:member'
     package: '@eventicle/eventiclejs!'

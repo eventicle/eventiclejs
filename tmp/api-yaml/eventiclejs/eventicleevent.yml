@@ -3,9 +3,48 @@ name: EventicleEvent
 uid: '@eventicle/eventiclejs!EventicleEvent:interface'
 package: '@eventicle/eventiclejs!'
 fullName: EventicleEvent
-summary: ''
+summary: >-
+  Core event interface representing something that happened in the system.
+
+
+  EventicleEvent is the fundamental building block of event-driven architectures in Eventicle. Events are immutable
+  facts about state changes that occurred, providing the foundation for event sourcing, CQRS, and saga coordination.
+
+   T - The type of the event payload data
 remarks: ''
-example: []
+example:
+  - |-
+    Basic event
+
+    ```typescript
+    const userCreated: EventicleEvent<{email: string, name: string}> = {
+      type: 'UserCreated',
+      domainId: 'user-123',
+      data: {
+        email: 'john@example.com',
+        name: 'John Doe'
+      }
+    };
+    ```
+  - >-
+    Event with causation tracking
+
+
+    ```typescript
+
+    const orderShipped: EventicleEvent = {
+      type: 'OrderShipped',
+      domainId: 'order-456',
+      causedById: 'payment-789',
+      causedByType: 'PaymentProcessed',
+      data: { trackingNumber: 'TRK123456' }
+    };
+
+    ```
+
+    Key Properties: - \*\*Immutable\*\*: Events cannot be changed once created - \*\*Causally Linked\*\*: Events can
+    reference what caused them - \*\*Timestamped\*\*: Automatic timestamp assignment - \*\*Traceable\*\*: Support for
+    distributed tracing - \*\*Typed\*\*: Strong typing for event payloads
 isPreview: false
 isDeprecated: false
 type: interface
@@ -14,7 +53,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#causedById:member'
     package: '@eventicle/eventiclejs!'
     fullName: causedById
-    summary: ''
+    summary: ID of the event that caused this event (for causation tracking)
     remarks: ''
     example: []
     isPreview: false
@@ -27,7 +66,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#causedByType:member'
     package: '@eventicle/eventiclejs!'
     fullName: causedByType
-    summary: ''
+    summary: Type of the event that caused this event
     remarks: ''
     example: []
     isPreview: false
@@ -40,7 +79,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#createdAt:member'
     package: '@eventicle/eventiclejs!'
     fullName: createdAt
-    summary: ''
+    summary: Event creation timestamp in milliseconds (auto-generated if not provided)
     remarks: ''
     example: []
     isPreview: false
@@ -53,20 +92,20 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#data:member'
     package: '@eventicle/eventiclejs!'
     fullName: data
-    summary: ''
+    summary: The event payload containing the actual event data
     remarks: ''
     example: []
     isPreview: false
     isDeprecated: false
     syntax:
-      content: 'data: any;'
+      content: 'data: T;'
       return:
-        type: any
+        type: T
   - name: domainId
     uid: '@eventicle/eventiclejs!EventicleEvent#domainId:member'
     package: '@eventicle/eventiclejs!'
     fullName: domainId
-    summary: ''
+    summary: Domain entity ID this event relates to
     remarks: ''
     example: []
     isPreview: false
@@ -79,7 +118,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#id:member'
     package: '@eventicle/eventiclejs!'
     fullName: id
-    summary: ''
+    summary: Unique identifier for this event (auto-generated if not provided)
     remarks: ''
     example: []
     isPreview: false
@@ -92,7 +131,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#source:member'
     package: '@eventicle/eventiclejs!'
     fullName: source
-    summary: ''
+    summary: Source system or service that generated this event
     remarks: ''
     example: []
     isPreview: false
@@ -105,7 +144,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#stream:member'
     package: '@eventicle/eventiclejs!'
     fullName: stream
-    summary: ''
+    summary: Event stream name (often matches aggregate type)
     remarks: ''
     example: []
     isPreview: false
@@ -118,7 +157,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#type:member'
     package: '@eventicle/eventiclejs!'
     fullName: type
-    summary: ''
+    summary: Event type name (e.g., 'UserCreated', 'OrderShipped')
     remarks: ''
     example: []
     isPreview: false

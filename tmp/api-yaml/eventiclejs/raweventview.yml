@@ -3,9 +3,64 @@ name: RawEventView
 uid: '@eventicle/eventiclejs!RawEventView:interface'
 package: '@eventicle/eventiclejs!'
 fullName: RawEventView
-summary: ''
+summary: >-
+  Defines a view for processing events in their raw, encoded format.
+
+
+  RawEventView enables processing events without decoding them into domain objects, which is useful for scenarios
+  requiring high performance, binary storage, or custom encoding schemes. Events are processed as EncodedEvent objects
+  containing the raw buffer and metadata headers.
+
+
+  Use Cases: - \*\*High Performance\*\*: Avoid decoding overhead for throughput-sensitive scenarios - \*\*Binary
+  Storage\*\*: Store events in their original encoded format - \*\*Custom Processing\*\*: Implement custom decoding or
+  transformation logic - \*\*Event Forwarding\*\*: Route events to external systems without modification - \*\*Audit
+  Trails\*\*: Preserve exact event format for compliance requirements
 remarks: ''
-example: []
+example:
+  - |-
+    Binary event archival
+
+    ```typescript
+    const eventArchiveView: RawEventView = {
+      consumerGroup: 'event-archiver',
+      streamsToSubscribe: ['users', 'orders', 'payments'],
+
+      handleEvent: async (encodedEvent) => {
+        // Store raw event data with metadata
+        await archiveStorage.store({
+          eventId: encodedEvent.headers.id,
+          eventType: encodedEvent.headers.type,
+          timestamp: encodedEvent.timestamp,
+          rawData: encodedEvent.buffer,
+          headers: encodedEvent.headers
+        });
+      }
+    };
+
+    await registerRawView(eventArchiveView);
+    ```
+  - |-
+    High-performance event forwarding
+
+    ```typescript
+    const eventForwarder: RawEventView = {
+      consumerGroup: 'external-forwarder',
+      streamsToSubscribe: ['public-events'],
+
+      handleEvent: async (encodedEvent) => {
+        // Forward to external webhook without decoding
+        await httpClient.post('/webhook', {
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'X-Event-Type': encodedEvent.headers.type,
+            'X-Event-Id': encodedEvent.headers.id
+          },
+          body: encodedEvent.buffer
+        });
+      }
+    };
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -14,7 +69,12 @@ properties:
     uid: '@eventicle/eventiclejs!RawEventView#consumerGroup:member'
     package: '@eventicle/eventiclejs!'
     fullName: consumerGroup
-    summary: ''
+    summary: >-
+      Unique consumer group identifier for load balancing.
+
+
+      Multiple raw view instances with the same consumer group will share event processing, enabling horizontal scaling
+      and fault tolerance.
     remarks: ''
     example: []
     isPreview: false
@@ -27,7 +87,12 @@ properties:
     uid: '@eventicle/eventiclejs!RawEventView#handleEvent:member'
     package: '@eventicle/eventiclejs!'
     fullName: handleEvent
-    summary: ''
+    summary: >-
+      Raw event processing function called for each received encoded event.
+
+
+      Receives events in their binary format without decoding. Use this for high-performance scenarios or when you need
+      access to the raw event data.
     remarks: ''
     example: []
     isPreview: false
@@ -40,7 +105,12 @@ properties:
     uid: '@eventicle/eventiclejs!RawEventView#streamsToSubscribe:member'
     package: '@eventicle/eventiclejs!'
     fullName: streamsToSubscribe
-    summary: ''
+    summary: >-
+      List of event streams to subscribe to.
+
+
+      View will receive all raw events from these streams. Consider the performance implications of subscribing to
+      high-volume streams.
     remarks: ''
     example: []
     isPreview: false
@@ -48,4 +118,4 @@ properties:
     syntax:
       content: 'streamsToSubscribe: string[];'
       return:
-        type: 'string[]'
+        type: string[]

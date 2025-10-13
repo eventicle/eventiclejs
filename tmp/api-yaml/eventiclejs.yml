@@ -9,7 +9,6 @@ classes:
   - '@eventicle/eventiclejs!LocalScheduleJobRunner:class'
   - '@eventicle/eventiclejs!Saga:class'
   - '@eventicle/eventiclejs!SagaInstance:class'
-  - '@eventicle/eventiclejs!XStateAggregate:class'
 interfaces:
   - '@eventicle/eventiclejs!Command:interface'
   - '@eventicle/eventiclejs!CommandIntent:interface'
@@ -22,7 +21,20 @@ interfaces:
   - '@eventicle/eventiclejs!EventView:interface'
   - '@eventicle/eventiclejs!RawEventView:interface'
 functions:
-  - name: 'aggregateObserver(aggregateType, id, timeout, exec)'
+  - name: aggregateObservationAdapter()
+    uid: '@eventicle/eventiclejs!aggregateObservationAdapter:function(1)'
+    package: '@eventicle/eventiclejs!'
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'aggregateObservationAdapter: () => AggregateObservationAdapter'
+      return:
+        type: <xref uid="@eventicle/eventiclejs!~AggregateObservationAdapter:class" />
+        description: ''
+  - name: aggregateObserver(aggregateType, id, timeout, exec)
     uid: '@eventicle/eventiclejs!aggregateObserver:function(1)'
     package: '@eventicle/eventiclejs!'
     summary: >-
@@ -153,7 +165,7 @@ functions:
           description: ''
           type: string
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;any, any&gt;[]&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;any, any&gt;[]&gt;
         description: ''
   - name: allSagas()
     uid: '@eventicle/eventiclejs!allSagas:function(1)'
@@ -166,9 +178,9 @@ functions:
     syntax:
       content: 'export declare function allSagas(): Promise<Saga<any, any>[]>;'
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;any, any&gt;[]&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;any, any&gt;[]&gt;
         description: ''
-  - name: 'apm.apmJoinEvent(event, name, type, subtype)'
+  - name: apm.apmJoinEvent(event, name, type, subtype)
     uid: '@eventicle/eventiclejs!apm.apmJoinEvent:function(1)'
     package: '@eventicle/eventiclejs!'
     summary: |-
@@ -184,7 +196,7 @@ functions:
       parameters:
         - id: event
           description: the event to join the APM trace on
-          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+          type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
         - id: name
           description: The name of the APM transaction
           type: string
@@ -210,7 +222,7 @@ functions:
       parameters:
         - id: config
           description: ''
-          type: '<xref uid="kafkajs!KafkaConfig:interface" />'
+          type: <xref uid="kafkajs!KafkaConfig:interface" />
       return:
         type: Promise&lt;void&gt;
         description: ''
@@ -232,7 +244,7 @@ functions:
           description: The event stream to cold replay
           type: string
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]&gt;
         description: ''
   - name: createAggregateObservationAdapter(aggregates)
     uid: '@eventicle/eventiclejs!createAggregateObservationAdapter:function(1)'
@@ -257,7 +269,7 @@ functions:
                 new (): AR;
             }[]
       return:
-        type: '<xref uid="@eventicle/eventiclejs!~AggregateObservationAdapter:class" />'
+        type: <xref uid="@eventicle/eventiclejs!~AggregateObservationAdapter:class" />
         description: ''
   - name: dispatchCommand(commandIntent)
     uid: '@eventicle/eventiclejs!dispatchCommand:function(1)'
@@ -282,11 +294,11 @@ functions:
       parameters:
         - id: commandIntent
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!CommandIntent:interface" />&lt;T&gt;'
+          type: <xref uid="@eventicle/eventiclejs!CommandIntent:interface" />&lt;T&gt;
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;T&gt;&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;T&gt;&gt;
         description: ''
-  - name: 'dispatchDirectCommand(command, streamToEmit)'
+  - name: dispatchDirectCommand(command, streamToEmit, transactionControl)
     uid: '@eventicle/eventiclejs!dispatchDirectCommand:function(1)'
     package: '@eventicle/eventiclejs!'
     summary: |-
@@ -313,15 +325,18 @@ functions:
     isDeprecated: false
     syntax:
       content: >-
-        export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit:
-        string): Promise<T>;
+        export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string,
+        transactionControl?: TransactionOptions): Promise<T>;
       parameters:
         - id: command
           description: ''
-          type: '() =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;T&gt;&gt;'
+          type: () =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!CommandReturn:interface" />&lt;T&gt;&gt;
         - id: streamToEmit
           description: ''
           type: string
+        - id: transactionControl
+          description: ''
+          type: <xref uid="@eventicle/eventicle-utilities!TransactionOptions:interface" />
       return:
         type: Promise&lt;T&gt;
         description: ''
@@ -336,7 +351,7 @@ functions:
     syntax:
       content: 'export declare function eventClient(): EventClient;'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventClient:interface" />'
+        type: <xref uid="@eventicle/eventiclejs!EventClient:interface" />
         description: ''
   - name: eventClientCodec()
     uid: '@eventicle/eventiclejs!eventClientCodec:function(1)'
@@ -349,7 +364,7 @@ functions:
     syntax:
       content: 'export declare function eventClientCodec(): EventClientCodec;'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventClientCodec:interface" />'
+        type: <xref uid="@eventicle/eventiclejs!EventClientCodec:interface" />
         description: ''
   - name: eventClientOnDatastore()
     uid: '@eventicle/eventiclejs!eventClientOnDatastore:function(1)'
@@ -369,29 +384,34 @@ functions:
     syntax:
       content: 'export declare function eventClientOnDatastore(): EventClient;'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventClient:interface" />'
+        type: <xref uid="@eventicle/eventiclejs!EventClient:interface" />
         description: ''
-  - name: 'eventClientOnKafka(config, consumerConfig)'
+  - name: eventClientOnKafka(config, consumerConfig, onTopicFailureConfig)
     uid: '@eventicle/eventiclejs!eventClientOnKafka:function(1)'
     package: '@eventicle/eventiclejs!'
-    summary: ''
+    summary: https://kafka.js.org/docs/admin\#a-name-create-topics-a-create-topics
     remarks: ''
     example: []
     isPreview: false
     isDeprecated: false
     syntax:
       content: >-
-        export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory):
-        Promise<EventClient>;
+        export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory,
+        onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
       parameters:
         - id: config
-          description: ''
-          type: '<xref uid="kafkajs!KafkaConfig:interface" />'
+          description: as per kafkjs
+          type: <xref uid="kafkajs!KafkaConfig:interface" />
         - id: consumerConfig
-          description: ''
-          type: '<xref uid="@eventicle/eventiclejs!ConsumerConfigFactory:interface" />'
+          description: as per kafkajs
+          type: <xref uid="@eventicle/eventiclejs!~ConsumerConfigFactory:interface" />
+        - id: onTopicFailureConfig
+          description: >-
+            If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated
+            with the given config
+          type: '(topicName: any) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~TopicFailureConfiguration:type" />&gt;'
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventClient:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!EventClient:interface" />&gt;
         description: ''
   - name: eventSourceName()
     uid: '@eventicle/eventiclejs!eventSourceName:function(1)'
@@ -450,9 +470,9 @@ functions:
       parameters:
         - id: adapter
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventAdapter:interface" />'
+          type: <xref uid="@eventicle/eventiclejs!EventAdapter:interface" />
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
         description: ''
   - name: registerCommand(command)
     uid: '@eventicle/eventiclejs!registerCommand:function(1)'
@@ -467,7 +487,7 @@ functions:
       parameters:
         - id: command
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!Command:interface" />&lt;I, O&gt;'
+          type: <xref uid="@eventicle/eventiclejs!Command:interface" />&lt;I, O&gt;
       return:
         type: void
         description: ''
@@ -496,9 +516,9 @@ functions:
       parameters:
         - id: view
           description: The View to subscribe to event streams
-          type: '<xref uid="@eventicle/eventiclejs!RawEventView:interface" />'
+          type: <xref uid="@eventicle/eventiclejs!RawEventView:interface" />
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
         description: ''
   - name: registerSaga(saga)
     uid: '@eventicle/eventiclejs!registerSaga:function(1)'
@@ -515,9 +535,9 @@ functions:
       parameters:
         - id: saga
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, Y&gt;'
+          type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, Y&gt;
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
         description: ''
   - name: registerView(view)
     uid: '@eventicle/eventiclejs!registerView:function(1)'
@@ -532,9 +552,9 @@ functions:
       parameters:
         - id: view
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventView:interface" />'
+          type: <xref uid="@eventicle/eventiclejs!EventView:interface" />
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
         description: ''
   - name: removeAllSagas()
     uid: '@eventicle/eventiclejs!removeAllSagas:function(1)'
@@ -548,27 +568,6 @@ functions:
       content: 'export declare function removeAllSagas(): Promise<void>;'
       return:
         type: Promise&lt;void&gt;
-        description: ''
-  - name: removeXstateEvents(events)
-    uid: '@eventicle/eventiclejs!removeXstateEvents:function(1)'
-    package: '@eventicle/eventiclejs!'
-    summary: >-
-      This function removes any internal xstate-status events from the given list. Use inside a
-      [Command](xref:@eventicle/eventiclejs!Command:interface) in conjunction with an
-      [XStateAggregate](xref:@eventicle/eventiclejs!XStateAggregate:class) to filter out any XState internal status
-      events and not emit them to the event bus.
-    remarks: ''
-    example: []
-    isPreview: false
-    isDeprecated: false
-    syntax:
-      content: 'export declare function removeXstateEvents(events: EventicleEvent[]): EventicleEvent[];'
-      parameters:
-        - id: events
-          description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
-      return:
-        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
         description: ''
   - name: saga(name)
     uid: '@eventicle/eventiclejs!saga:function(1)'
@@ -587,7 +586,7 @@ functions:
           description: ''
           type: string
       return:
-        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, SagaInstanceData&gt;'
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, SagaInstanceData&gt;
         description: ''
   - name: scheduler()
     uid: '@eventicle/eventiclejs!scheduler:function(1)'
@@ -600,7 +599,7 @@ functions:
     syntax:
       content: 'export declare function scheduler(): ScheduleJobRunner;'
       return:
-        type: '<xref uid="@eventicle/eventicle-utilities!ScheduleJobRunner:interface" />'
+        type: <xref uid="@eventicle/eventicle-utilities!ScheduleJobRunner:interface" />
         description: ''
   - name: setEventClient(cl)
     uid: '@eventicle/eventiclejs!setEventClient:function(1)'
@@ -615,7 +614,7 @@ functions:
       parameters:
         - id: cl
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventClient:interface" />'
+          type: <xref uid="@eventicle/eventiclejs!EventClient:interface" />
       return:
         type: void
         description: ''
@@ -632,7 +631,7 @@ functions:
       parameters:
         - id: cl
           description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventClientCodec:interface" />'
+          type: <xref uid="@eventicle/eventiclejs!EventClientCodec:interface" />
       return:
         type: void
         description: ''
@@ -666,7 +665,7 @@ functions:
       parameters:
         - id: scheduler
           description: ''
-          type: '<xref uid="@eventicle/eventicle-utilities!ScheduleJobRunner:interface" />'
+          type: <xref uid="@eventicle/eventicle-utilities!ScheduleJobRunner:interface" />
       return:
         type: void
         description: ''

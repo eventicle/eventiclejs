@@ -4,17 +4,74 @@ uid: '@eventicle/eventiclejs!Command:interface'
 package: '@eventicle/eventiclejs!'
 fullName: Command
 summary: >-
-  A Command.
+  Defines a command handler in Eventicle's CQRS architecture.
 
 
-  It is generally preferred [dispatchDirectCommand()](xref:@eventicle/eventiclejs!dispatchDirectCommand:function(1))
-  where the command definition is implicit, and more fully type checked.
+  Commands encapsulate business operations that change system state and emit domain events. They provide the "C" in
+  CQRS, handling write operations while maintaining strong consistency and business rule enforcement.
 
+   I - Input data type for the command  O - Output/response type from the command
 
-  This, along with [dispatchCommand()](xref:@eventicle/eventiclejs!dispatchCommand:function(1)) is available if you wish
-  to separate your code more fully, or introduce a remote capable message based command bus.
+  Key Features: - \*\*Business Logic\*\*: Encapsulates domain operations and invariants - \*\*Event Generation\*\*:
+  Produces events representing state changes - \*\*Type Safety\*\*: Strongly-typed input/output contracts -
+  \*\*Transactional\*\*: Atomic execution with event emission - \*\*Scalable\*\*: Can be distributed across multiple
+  instances
 remarks: ''
-example: []
+example:
+  - |-
+    User management command
+
+    ```typescript
+    const createUserCommand: Command<{email: string, name: string}, {userId: string}> = {
+      type: 'CreateUser',
+      streamToEmit: 'users',
+      execute: async (data) => {
+        // Validate business rules
+        await validateUniqueEmail(data.email);
+
+        // Create aggregate and apply business logic
+        const user = User.create(data.email, data.name);
+
+        // Persist and get generated events
+        const events = await aggregates.persist(user);
+
+        return {
+          response: { userId: user.id },
+          events
+        };
+      }
+    };
+    ```
+  - |-
+    Order processing with error handling
+
+    ```typescript
+    const processOrderCommand: Command<OrderData, {orderId: string}> = {
+      type: 'ProcessOrder',
+      streamToEmit: 'orders',
+      execute: async (data) => {
+        try {
+          const order = await aggregates.load(Order, data.orderId);
+          order.process(data.items);
+
+          return {
+            response: { orderId: order.id },
+            events: await aggregates.persist(order)
+          };
+        } catch (error) {
+          // Emit failure event and propagate error
+          return {
+            events: [{
+              type: 'OrderProcessingFailed',
+              domainId: data.orderId,
+              data: { error: error.message }
+            }],
+            webError: new Error('Order processing failed')
+          };
+        }
+      }
+    };
+    ```
 isPreview: false
 isDeprecated: false
 type: interface
@@ -66,7 +123,12 @@ properties:
     uid: '@eventicle/eventiclejs!Command#streamToEmit:member'
     package: '@eventicle/eventiclejs!'
     fullName: streamToEmit
-    summary: The event stream that any events in the CommandReturn should be emitted on
+    summary: >-
+      Target event stream for publishing generated events.
+
+
+      All events returned by the command execution will be published to this stream, making them available to event
+      views, sagas, and other subscribers.
     remarks: ''
     example: []
     isPreview: false
@@ -80,8 +142,11 @@ properties:
     package: '@eventicle/eventiclejs!'
     fullName: type
     summary: >-
-      The name of the Command. This is used to look it up when the user calls
-      [dispatchCommand()](xref:@eventicle/eventiclejs!dispatchCommand:function(1))
+      Unique command type identifier used for registration and dispatch.
+
+
+      Should be descriptive and follow consistent naming conventions (e.g., 'CreateUser', 'ProcessPayment',
+      'CancelOrder').
     remarks: ''
     example: []
     isPreview: false

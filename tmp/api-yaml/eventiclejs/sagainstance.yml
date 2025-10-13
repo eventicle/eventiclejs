@@ -3,20 +3,50 @@ name: SagaInstance
 uid: '@eventicle/eventiclejs!SagaInstance:class'
 package: '@eventicle/eventiclejs!'
 fullName: SagaInstance
-summary: |-
-  The data for a single execution of a [Saga](xref:@eventicle/eventiclejs!Saga:class)
+summary: >-
+  Represents a single running instance of a saga workflow.
 
-  Sagas are stateful concepts, and this type contains the state.
+
+  SagaInstance contains the runtime state and execution context for a specific saga execution. Each instance tracks its
+  data, manages timers, and provides methods for saga lifecycle management.
+
+   TimeoutNames - Union type of timer names this saga can schedule  T - Type of the saga's persistent data
 remarks: ''
-example: []
+example:
+  - |-
+    ```typescript
+    interface PaymentData {
+      orderId: string;
+      amount: number;
+      attempts: number;
+    }
+
+    type PaymentTimers = 'timeout' | 'retry';
+
+    // In saga handler
+    async function handleOrderCreated(
+      instance: SagaInstance<PaymentTimers, PaymentData>,
+      event: OrderCreatedEvent
+    ) {
+      instance.set('orderId', event.data.orderId);
+      instance.set('amount', event.data.amount);
+      instance.set('attempts', 0);
+
+      // Schedule timeout
+      instance.upsertTimer('timeout', {
+        isCron: false,
+        timeout: 300000 // 5 minutes
+      });
+    }
+    ```
 isPreview: false
 isDeprecated: false
 type: class
 constructors:
-  - name: '(constructor)(internalData, record)'
+  - name: (constructor)(internalData, record)
     uid: '@eventicle/eventiclejs!SagaInstance:constructor(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: '(constructor)(internalData, record)'
+    fullName: (constructor)(internalData, record)
     summary: Constructs a new instance of the `SagaInstance` class
     remarks: ''
     example: []
@@ -30,7 +60,7 @@ constructors:
           type: any
         - id: record
           description: ''
-          type: '<xref uid="@eventicle/eventicle-utilities!~Record:interface" />'
+          type: <xref uid="@eventicle/eventicle-utilities!Record:interface" />
 properties:
   - name: internalData
     uid: '@eventicle/eventiclejs!SagaInstance#internalData:member'
@@ -57,12 +87,12 @@ properties:
     syntax:
       content: 'readonly record?: Record;'
       return:
-        type: '<xref uid="@eventicle/eventicle-utilities!~Record:interface" />'
+        type: <xref uid="@eventicle/eventicle-utilities!Record:interface" />
   - name: timersToAdd
     uid: '@eventicle/eventiclejs!SagaInstance#timersToAdd:member'
     package: '@eventicle/eventiclejs!'
     fullName: timersToAdd
-    summary: Private instance data
+    summary: Timers pending addition in the next persistence cycle
     remarks: ''
     example: []
     isPreview: false
@@ -95,7 +125,7 @@ properties:
     uid: '@eventicle/eventiclejs!SagaInstance#timersToRemove:member'
     package: '@eventicle/eventiclejs!'
     fullName: timersToRemove
-    summary: Private instance data
+    summary: Timers pending removal in the next persistence cycle
     remarks: ''
     example: []
     isPreview: false
@@ -103,22 +133,35 @@ properties:
     syntax:
       content: 'readonly timersToRemove: TimeoutNames[];'
       return:
-        type: 'TimeoutNames[]'
+        type: TimeoutNames[]
 methods:
   - name: endSaga(preserveInstanceData)
     uid: '@eventicle/eventiclejs!SagaInstance#endSaga:member(1)'
     package: '@eventicle/eventiclejs!'
     fullName: endSaga(preserveInstanceData)
-    summary: ''
+    summary: >-
+      Marks the saga instance as completed and schedules it for cleanup.
+
+
+      Once a saga is ended, it will not receive any more events or timer callbacks. The instance data can optionally be
+      preserved for debugging or audit purposes.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        // End saga and clean up data
+        instance.endSaga();
+
+        // End saga but preserve data for audit
+        instance.endSaga(true);
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
       content: 'endSaga(preserveInstanceData?: boolean): void;'
       parameters:
         - id: preserveInstanceData
-          description: ''
+          description: Whether to keep instance data after completion
           type: boolean
       return:
         type: void
@@ -127,20 +170,25 @@ methods:
     uid: '@eventicle/eventiclejs!SagaInstance#get:member(1)'
     package: '@eventicle/eventiclejs!'
     fullName: get(name)
-    summary: Get a piece of arbitrary data from the saga instance
+    summary: Retrieves a piece of data from the saga instance state.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        const orderId = instance.get('orderId');
+        const attempts = instance.get('attempts');
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
-      content: 'get(name: keyof T): any;'
+      content: 'get<K extends keyof T>(name: K): T[K];'
       parameters:
         - id: name
-          description: THe key
-          type: keyof T
+          description: The key of the data to retrieve
+          type: K
       return:
-        type: any
-        description: ''
+        type: T[K]
+        description: The value associated with the key
   - name: lastEvent()
     uid: '@eventicle/eventiclejs!SagaInstance#lastEvent:member(1)'
     package: '@eventicle/eventiclejs!'
@@ -153,7 +201,7 @@ methods:
     syntax:
       content: 'lastEvent(): EventicleEvent;'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
         description: ''
   - name: removeTimer(name)
     uid: '@eventicle/eventiclejs!SagaInstance#removeTimer:member(1)'
@@ -173,31 +221,42 @@ methods:
       return:
         type: void
         description: ''
-  - name: 'set(name, value)'
+  - name: set(name, value)
     uid: '@eventicle/eventiclejs!SagaInstance#set:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'set(name, value)'
-    summary: Set a piece of arbitrary data into the saga instance
+    fullName: set(name, value)
+    summary: >-
+      Sets a piece of data in the saga instance state.
+
+
+      The value must be JSON-serializable as saga state is persisted. The 'id' field is protected and cannot be
+      modified.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        instance.set('status', 'processing');
+        instance.set('retryCount', 3);
+        instance.set('lastError', { code: 'TIMEOUT', message: 'Request timed out' });
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
       content: 'set(name: keyof T, value: any): void;'
       parameters:
         - id: name
-          description: The key
+          description: The key to set
           type: keyof T
         - id: value
-          description: the value. Must be able to encode to JSON.
+          description: The value to store (must be JSON-serializable)
           type: any
       return:
         type: void
         description: ''
-  - name: 'upsertTimer(name, config)'
+  - name: upsertTimer(name, config)
     uid: '@eventicle/eventiclejs!SagaInstance#upsertTimer:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'upsertTimer(name, config)'
+    fullName: upsertTimer(name, config)
     summary: |-
       Create (or overwrite) a timer to call. Can be either a simple timer (millis to wait), or a cron timer.
 

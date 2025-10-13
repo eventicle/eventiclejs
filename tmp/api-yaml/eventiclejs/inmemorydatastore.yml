@@ -23,14 +23,14 @@ properties:
     isPreview: false
     isDeprecated: false
     syntax:
-      content: 'events: EventEmitter;'
+      content: 'events: EventEmitter<[never]>;'
       return:
-        type: EventEmitter
+        type: '@eventicle/eventiclejs!~EventEmitter&lt;[never]&gt;'
 methods:
-  - name: 'createEntity(workspaceId, type, item)'
+  - name: createEntity(workspaceId, type, item)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#createEntity:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'createEntity(workspaceId, type, item)'
+    fullName: createEntity(workspaceId, type, item)
     summary: ''
     remarks: ''
     example: []
@@ -51,10 +51,10 @@ methods:
       return:
         type: Promise&lt;any&gt;
         description: ''
-  - name: 'deleteEntity(workspaceId, type, id)'
+  - name: deleteEntity(workspaceId, type, id)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#deleteEntity:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'deleteEntity(workspaceId, type, id)'
+    fullName: deleteEntity(workspaceId, type, id)
     summary: ''
     remarks: ''
     example: []
@@ -75,10 +75,10 @@ methods:
       return:
         type: Promise&lt;void&gt;
         description: ''
-  - name: 'deleteMany(workspaceId, type, query)'
+  - name: deleteMany(workspaceId, type, query)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#deleteMany:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'deleteMany(workspaceId, type, query)'
+    fullName: deleteMany(workspaceId, type, query)
     summary: ''
     remarks: ''
     example: []
@@ -95,14 +95,14 @@ methods:
           type: string
         - id: query
           description: ''
-          type: '<xref uid="@eventicle/eventicle-utilities!Query:type" />'
+          type: <xref uid="@eventicle/eventicle-utilities!Query:type" />
       return:
         type: Promise&lt;void&gt;
         description: ''
-  - name: 'findEntity(workspaceId, type, query, sorting)'
+  - name: findEntity(workspaceId, type, query, sorting)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#findEntity:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'findEntity(workspaceId, type, query, sorting)'
+    fullName: findEntity(workspaceId, type, query, sorting)
     summary: ''
     remarks: ''
     example: []
@@ -119,17 +119,17 @@ methods:
           type: any
         - id: query
           description: Json object to match fields
-          type: '<xref uid="@eventicle/eventicle-utilities!Query:type" />'
+          type: <xref uid="@eventicle/eventicle-utilities!Query:type" />
         - id: sorting
           description: ''
-          type: '<xref uid="@eventicle/eventicle-utilities!~DataSorting:interface" />'
+          type: <xref uid="@eventicle/eventicle-utilities!DataSorting:interface" />
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~Record:interface" />[]&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventicle-utilities!Record:interface" />[]&gt;
         description: ''
-  - name: 'findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)'
+  - name: findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#findEntityPaginated:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)'
+    fullName: findEntityPaginated(workspaceId, type, query, sorting, page, pageSize)
     summary: ''
     remarks: ''
     example: []
@@ -148,10 +148,10 @@ methods:
           type: string
         - id: query
           description: Json object to match fields
-          type: '<xref uid="@eventicle/eventicle-utilities!Query:type" />'
+          type: <xref uid="@eventicle/eventicle-utilities!Query:type" />
         - id: sorting
           description: ''
-          type: '<xref uid="@eventicle/eventicle-utilities!~DataSorting:interface" />'
+          type: <xref uid="@eventicle/eventicle-utilities!DataSorting:interface" />
         - id: page
           description: page count
           type: number
@@ -159,12 +159,12 @@ methods:
           description: page size
           type: number
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~PagedRecords:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventicle-utilities!PagedRecords:interface" />&gt;
         description: ''
-  - name: 'getEntity(workspaceId, type, id)'
+  - name: getEntity(workspaceId, type, id)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#getEntity:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'getEntity(workspaceId, type, id)'
+    fullName: getEntity(workspaceId, type, id)
     summary: ''
     remarks: ''
     example: []
@@ -183,7 +183,7 @@ methods:
           description: ''
           type: string
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~Record:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventicle-utilities!Record:interface" />&gt;
         description: ''
   - name: getTransactionData()
     uid: '@eventicle/eventiclejs!InMemoryDatastore#getTransactionData:member(1)'
@@ -197,7 +197,7 @@ methods:
     syntax:
       content: 'getTransactionData(): TransactionData;'
       return:
-        type: '<xref uid="@eventicle/eventicle-utilities!~TransactionData:interface" />'
+        type: <xref uid="@eventicle/eventicle-utilities!TransactionData:interface" />
         description: ''
   - name: hasTransactionData()
     uid: '@eventicle/eventiclejs!InMemoryDatastore#hasTransactionData:member(1)'
@@ -213,10 +213,10 @@ methods:
       return:
         type: boolean
         description: ''
-  - name: 'on(event, listener)'
+  - name: on(event, listener)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#on:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'on(event, listener)'
+    fullName: on(event, listener)
     summary: ''
     remarks: ''
     example: []
@@ -232,7 +232,7 @@ methods:
           type: '"transaction.start" | "transaction.commit"'
         - id: listener
           description: ''
-          type: '(name: string, data: <xref uid="@eventicle/eventicle-utilities!~TransactionData:interface" />) =&gt; void'
+          type: '(name: string, data: <xref uid="@eventicle/eventicle-utilities!TransactionData:interface" />) =&gt; void'
       return:
         type: this
         description: ''
@@ -250,10 +250,10 @@ methods:
       return:
         type: Promise&lt;void&gt;
         description: ''
-  - name: 'saveEntity(workspaceId, type, item)'
+  - name: saveEntity(workspaceId, type, item)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#saveEntity:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'saveEntity(workspaceId, type, item)'
+    fullName: saveEntity(workspaceId, type, item)
     summary: ''
     remarks: ''
     example: []
@@ -270,9 +270,9 @@ methods:
           type: string
         - id: item
           description: ''
-          type: '<xref uid="@eventicle/eventicle-utilities!~Record:interface" />'
+          type: <xref uid="@eventicle/eventicle-utilities!Record:interface" />
       return:
-        type: 'Promise&lt;<xref uid="@eventicle/eventicle-utilities!~Record:interface" />&gt;'
+        type: Promise&lt;<xref uid="@eventicle/eventicle-utilities!Record:interface" />&gt;
         description: ''
   - name: transaction(exec)
     uid: '@eventicle/eventiclejs!InMemoryDatastore#transaction:member(1)'

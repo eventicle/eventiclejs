@@ -3,9 +3,83 @@ name: AggregateRoot
 uid: '@eventicle/eventiclejs!AggregateRoot:class'
 package: '@eventicle/eventiclejs!'
 fullName: AggregateRoot
-summary: ''
+summary: >-
+  Base class for implementing event-sourced aggregate roots.
+
+
+  Aggregate roots are the core building blocks of domain-driven design and event sourcing. They encapsulate business
+  logic, maintain consistency boundaries, and generate events that represent state changes. The aggregate's current
+  state is rebuilt by replaying its historical events through reducer functions.
+
+
+  Key Features: - \*\*Event Sourcing\*\*: State is derived from events, not stored directly - \*\*Business Logic\*\*:
+  Encapsulates domain rules and invariants - \*\*Event Generation\*\*: Emits events when state changes occur -
+  \*\*Immutable History\*\*: Complete audit trail of all changes - \*\*Checkpointing\*\*: Optional performance
+  optimization for large event histories
 remarks: ''
-example: []
+example:
+  - |-
+    Basic aggregate
+
+    ```typescript
+    class BankAccount extends AggregateRoot {
+      balance: number = 0;
+      status: 'active' | 'frozen' = 'active';
+
+      constructor() {
+        super('bank-accounts');
+
+        this.reducers = {
+          AccountOpened: (event) => {
+            this.id = event.data.accountId;
+            this.balance = event.data.initialDeposit;
+          },
+          MoneyDeposited: (event) => {
+            this.balance += event.data.amount;
+          },
+          MoneyWithdrawn: (event) => {
+            this.balance -= event.data.amount;
+          }
+        };
+      }
+
+      static open(accountId: string, initialDeposit: number): BankAccount {
+        const account = new BankAccount();
+        account.raiseEvent({
+          type: 'AccountOpened',
+          data: { accountId, initialDeposit }
+        });
+        return account;
+      }
+
+      deposit(amount: number) {
+        if (this.status !== 'active') {
+          throw new Error('Account is not active');
+        }
+        this.raiseEvent({
+          type: 'MoneyDeposited',
+          data: { amount, timestamp: new Date() }
+        });
+      }
+    }
+    ```
+  - |-
+    With checkpointing
+
+    ```typescript
+    class HighVolumeAggregate extends AggregateRoot {
+      constructor() {
+        super({ type: 'high-volume', storeCheckpoint: true });
+      }
+
+      currentCheckpoint() {
+        return {
+          balance: this.balance,
+          transactionCount: this.transactionCount
+        };
+      }
+    }
+    ```
 isPreview: false
 isDeprecated: false
 type: class
@@ -24,13 +98,13 @@ constructors:
       parameters:
         - id: type
           description: ''
-          type: 'string | <xref uid="@eventicle/eventiclejs!AggregateConfig:interface" />'
+          type: string | <xref uid="@eventicle/eventiclejs!~AggregateConfig:interface" />
 properties:
   - name: config
     uid: '@eventicle/eventiclejs!AggregateRoot#config:member'
     package: '@eventicle/eventiclejs!'
     fullName: config
-    summary: ''
+    summary: Aggregate configuration settings
     remarks: ''
     example: []
     isPreview: false
@@ -38,12 +112,12 @@ properties:
     syntax:
       content: 'readonly config: AggregateConfig;'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!AggregateConfig:interface" />'
+        type: <xref uid="@eventicle/eventiclejs!~AggregateConfig:interface" />
   - name: history
     uid: '@eventicle/eventiclejs!AggregateRoot#history:member'
     package: '@eventicle/eventiclejs!'
     fullName: history
-    summary: ''
+    summary: Complete event history for this aggregate instance
     remarks: ''
     example: []
     isPreview: false
@@ -51,12 +125,12 @@ properties:
     syntax:
       content: 'history: EventicleEvent[];'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]
   - name: id
     uid: '@eventicle/eventiclejs!AggregateRoot#id:member'
     package: '@eventicle/eventiclejs!'
     fullName: id
-    summary: ''
+    summary: Unique identifier for this aggregate instance
     remarks: ''
     example: []
     isPreview: false
@@ -69,7 +143,7 @@ properties:
     uid: '@eventicle/eventiclejs!AggregateRoot#newEvents:member'
     package: '@eventicle/eventiclejs!'
     fullName: newEvents
-    summary: ''
+    summary: Events raised since last persistence (pending events)
     remarks: ''
     example: []
     isPreview: false
@@ -77,12 +151,12 @@ properties:
     syntax:
       content: 'newEvents: EventicleEvent[];'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
+        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]
   - name: reducers
     uid: '@eventicle/eventiclejs!AggregateRoot#reducers:member'
     package: '@eventicle/eventiclejs!'
     fullName: reducers
-    summary: ''
+    summary: Event reducer functions mapping event types to state update logic
     remarks: ''
     example: []
     isPreview: false
@@ -95,7 +169,7 @@ properties:
     uid: '@eventicle/eventiclejs!AggregateRoot#replaying:member'
     package: '@eventicle/eventiclejs!'
     fullName: replaying
-    summary: ''
+    summary: Flag indicating if aggregate is currently replaying historical events
     remarks: ''
     example: []
     isPreview: false
@@ -122,31 +196,62 @@ methods:
     uid: '@eventicle/eventiclejs!AggregateRoot#currentCheckpoint:member(1)'
     package: '@eventicle/eventiclejs!'
     fullName: currentCheckpoint()
-    summary: ''
+    summary: >-
+      Returns the current state as a checkpoint for performance optimization.
+
+
+      Checkpoints allow aggregates with long event histories to snapshot their current state, reducing the time needed
+      to rebuild from events. This method should be implemented when `storeCheckpoint` is enabled in the config.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        currentCheckpoint() {
+          return {
+            balance: this.balance,
+            status: this.status,
+            lastTransactionDate: this.lastTransactionDate
+          };
+        }
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
       content: 'currentCheckpoint(): object;'
       return:
         type: object
-        description: ''
+        description: Object representing the current aggregate state
   - name: handleEvent(event)
     uid: '@eventicle/eventiclejs!AggregateRoot#handleEvent:member(1)'
     package: '@eventicle/eventiclejs!'
     fullName: handleEvent(event)
-    summary: ''
+    summary: >-
+      Applies an event to the aggregate state using the appropriate reducer.
+
+
+      This method is called automatically by `raiseEvent` and during event replay. It looks up the reducer function for
+      the event type and applies the event to update the aggregate's state.
     remarks: ''
-    example: []
+    example:
+      - |-
+        Reducer function
+
+        ```typescript
+        this.reducers = {
+          MoneyDeposited: (event) => {
+            this.balance += event.data.amount;
+            this.lastActivity = event.data.timestamp;
+          }
+        };
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
       content: 'handleEvent(event: EventicleEvent): void;'
       parameters:
         - id: event
-          description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+          description: The event to apply to the aggregate state
+          type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
       return:
         type: void
         description: ''
@@ -154,17 +259,37 @@ methods:
     uid: '@eventicle/eventiclejs!AggregateRoot#raiseEvent:member(1)'
     package: '@eventicle/eventiclejs!'
     fullName: raiseEvent(event)
-    summary: ''
+    summary: >-
+      Raises a new domain event and applies it to the aggregate state.
+
+
+      This is the primary method for recording state changes in event-sourced aggregates. The event is automatically
+      assigned metadata (ID, timestamp, source) and applied through the appropriate reducer function.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        deposit(amount: number) {
+          // Validate business rules first
+          if (amount <= 0) {
+            throw new Error('Amount must be positive');
+          }
+
+          // Raise the event
+          this.raiseEvent({
+            type: 'MoneyDeposited',
+            data: { amount, timestamp: new Date() }
+          });
+        }
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
-      content: 'raiseEvent(event: EventicleEvent): EventicleEvent;'
+      content: 'raiseEvent(event: EventicleEvent): EventicleEvent<any>;'
       parameters:
         - id: event
-          description: ''
-          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
+          description: The domain event to raise
+          type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
-        description: ''
+        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />&lt;any&gt;
+        description: The event with populated metadata

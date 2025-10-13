@@ -3,9 +3,72 @@ name: Saga
 uid: '@eventicle/eventiclejs!Saga:class'
 package: '@eventicle/eventiclejs!'
 fullName: Saga
-summary: A saga!
+summary: >-
+  Defines a long-running business process that coordinates across events and time.
+
+
+  Sagas implement the Saga pattern for managing complex workflows that span multiple aggregates, external services, and
+  time-based operations. They provide stateful event processing with support for timers, error handling, and process
+  coordination.
+
+   TimeoutNames - Union type of timer names this saga can schedule  InstanceData - Type of the saga's persistent state data
+
+  Key Features: - \*\*Stateful Processing\*\*: Maintains state across multiple events - \*\*Timer Support\*\*: Schedule
+  delays and recurring operations - \*\*Error Handling\*\*: Custom error handling and compensation logic - \*\*Event
+  Correlation\*\*: Match events to specific saga instances - \*\*Parallel Processing\*\*: Configurable concurrency for
+  high throughput
 remarks: ''
-example: []
+example:
+  - |-
+    Payment processing saga
+
+    ```typescript
+    interface PaymentData {
+      orderId: string;
+      amount: number;
+      attempts: number;
+    }
+
+    type PaymentTimers = 'timeout' | 'retry';
+
+    export function paymentSaga() {
+      return saga<PaymentTimers, PaymentData>('PaymentSaga')
+        .subscribeStreams(['orders', 'payments'])
+        .startOn('OrderCreated', {}, async (instance, event) => {
+          instance.set('orderId', event.data.orderId);
+          instance.set('amount', event.data.amount);
+          instance.set('attempts', 0);
+
+          // Process payment
+          await processPayment(event.data);
+
+          // Set timeout
+          instance.upsertTimer('timeout', {
+            isCron: false,
+            timeout: 300000 // 5 minutes
+          });
+        })
+        .on('PaymentSucceeded', {
+          matchInstance: (event) => ({
+            instanceProperty: 'orderId',
+            value: event.data.orderId
+          })
+        }, async (instance, event) => {
+          instance.removeTimer('timeout');
+          instance.endSaga();
+        })
+        .onTimer('timeout', async (instance) => {
+          const attempts = instance.get('attempts');
+          if (attempts < 3) {
+            instance.set('attempts', attempts + 1);
+            await retryPayment(instance.get('orderId'));
+          } else {
+            await failPayment(instance.get('orderId'));
+            instance.endSaga();
+          }
+        });
+    }
+    ```
 isPreview: false
 isDeprecated: false
 type: class
@@ -75,6 +138,19 @@ properties:
       content: 'readonly name: string;'
       return:
         type: string
+  - name: parallelEventCount
+    uid: '@eventicle/eventiclejs!Saga#parallelEventCount:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: parallelEventCount
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'parallelEventCount: number;'
+      return:
+        type: number
   - name: starts
     uid: '@eventicle/eventiclejs!Saga#starts:member'
     package: '@eventicle/eventiclejs!'
@@ -108,7 +184,7 @@ properties:
     syntax:
       content: 'streams: string[];'
       return:
-        type: 'string[]'
+        type: string[]
   - name: streamSubs
     uid: '@eventicle/eventiclejs!Saga#streamSubs:member'
     package: '@eventicle/eventiclejs!'
@@ -121,7 +197,7 @@ properties:
     syntax:
       content: 'streamSubs: EventSubscriptionControl[];'
       return:
-        type: '<xref uid="@eventicle/eventiclejs!EventSubscriptionControl:interface" />[]'
+        type: <xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />[]
   - name: timerHandler
     uid: '@eventicle/eventiclejs!Saga#timerHandler:member'
     package: '@eventicle/eventiclejs!'
@@ -142,13 +218,33 @@ properties:
                   handle: (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;) =&gt; Promise&lt;void&gt;;
               }&gt;
 methods:
-  - name: 'on(eventName, config, handler)'
+  - name: on(eventName, config, handler)
     uid: '@eventicle/eventiclejs!Saga#on:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'on(eventName, config, handler)'
-    summary: ''
+    fullName: on(eventName, config, handler)
+    summary: >-
+      Registers an event handler for existing saga instances.
+
+
+      When the specified event type is received, the handler will be called on any existing saga instances that match
+      the event based on the matchInstance configuration.
     remarks: ''
-    example: []
+    example:
+      - |-
+        ```typescript
+        saga.on('PaymentCompleted', {
+          matchInstance: (event) => ({
+            instanceProperty: 'orderId',
+            value: event.data.orderId
+          }),
+          withLock: (instance, event) => `payment-${event.data.orderId}`
+        }, async (instance, event) => {
+          instance.set('paymentId', event.data.paymentId);
+          instance.removeTimer('timeout');
+          await completeOrder(instance.get('orderId'));
+          instance.endSaga();
+        });
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
@@ -157,18 +253,18 @@ methods:
         (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
       parameters:
         - id: eventName
-          description: ''
+          description: The event type to handle
           type: string
         - id: config
-          description: ''
-          type: '<xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;'
+          description: Configuration for instance matching and locking
+          type: <xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;
         - id: handler
-          description: ''
+          description: The function to execute for matching instances
           type: >-
             (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: T)
             =&gt; Promise&lt;void&gt;
       return:
-        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
         description: ''
   - name: onError(handler)
     uid: '@eventicle/eventiclejs!Saga#onError:member(1)'
@@ -190,13 +286,18 @@ methods:
             (saga: any, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />, error: Error) =&gt;
             Promise&lt;void&gt;
       return:
-        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
         description: ''
-  - name: 'onTimer(name, handle)'
+  - name: onTimer(name, handle)
     uid: '@eventicle/eventiclejs!Saga#onTimer:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'onTimer(name, handle)'
-    summary: Register a handler for a timer triggered saga step.
+    fullName: onTimer(name, handle)
+    summary: |-
+      Register a handler for a timer triggered saga step.
+
+      This will be called on the timer.
+
+      No event is present.
     remarks: ''
     example: []
     isPreview: false
@@ -210,20 +311,53 @@ methods:
           description: The name of the timer
           type: TimeoutNames
         - id: handle
-          description: the
+          description: the async function to execute.
           type: >-
             (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;) =&gt;
             Promise&lt;void&gt;
       return:
-        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
         description: ''
-  - name: 'startOn(eventName, config, handler)'
-    uid: '@eventicle/eventiclejs!Saga#startOn:member(1)'
+  - name: parallelEvents(val)
+    uid: '@eventicle/eventiclejs!Saga#parallelEvents:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: 'startOn(eventName, config, handler)'
+    fullName: parallelEvents(val)
     summary: ''
     remarks: ''
     example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;'
+      parameters:
+        - id: val
+          description: ''
+          type: number
+      return:
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        description: ''
+  - name: startOn(eventName, config, handler)
+    uid: '@eventicle/eventiclejs!Saga#startOn:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: startOn(eventName, config, handler)
+    summary: >-
+      Registers an event handler that can start new saga instances.
+
+
+      When the specified event type is received and no existing saga instance matches, a new saga instance will be
+      created and the handler called. Only one startOn handler per event type is allowed.
+    remarks: ''
+    example:
+      - |-
+        ```typescript
+        saga.startOn('OrderCreated', {
+          matches: async (event) => event.data.requiresPayment,
+          withLock: (instance, event) => `payment-${event.data.orderId}`
+        }, async (instance, event) => {
+          instance.set('orderId', event.data.orderId);
+          await initiatePayment(event.data);
+        });
+        ```
     isPreview: false
     isDeprecated: false
     syntax:
@@ -233,18 +367,18 @@ methods:
         InstanceData>;
       parameters:
         - id: eventName
-          description: ''
+          description: The event type that can start new saga instances
           type: string
         - id: config
-          description: ''
-          type: '<xref uid="@eventicle/eventiclejs!~StartHandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;'
+          description: Configuration for instance creation
+          type: <xref uid="@eventicle/eventiclejs!~StartHandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;
         - id: handler
-          description: ''
+          description: The function to execute when starting a new instance
           type: >-
             (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: T)
             =&gt; Promise&lt;void&gt;
       return:
-        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
         description: ''
   - name: subscribeStreams(streams)
     uid: '@eventicle/eventiclejs!Saga#subscribeStreams:member(1)'
@@ -260,7 +394,7 @@ methods:
       parameters:
         - id: streams
           description: ''
-          type: 'string[]'
+          type: string[]
       return:
-        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
         description: ''

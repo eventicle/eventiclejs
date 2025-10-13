@@ -35,5 +35,3 @@ items:
             uid: '@eventicle/eventiclejs!Saga:class'
           - name: SagaInstance
             uid: '@eventicle/eventiclejs!SagaInstance:class'
-          - name: XStateAggregate
-            uid: '@eventicle/eventiclejs!XStateAggregate:class'
