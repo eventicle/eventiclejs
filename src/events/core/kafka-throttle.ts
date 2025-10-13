@@ -60,10 +60,10 @@ export class ThrottledProducer {
     }
 
     if(!this.confirmedTopics.has(stream)) {
+      this.confirmedTopics.add(stream)
       const createConfig = await this.onTopicFailure(stream);
       await maybeCreateTopic(createConfig, stream, new Error(""));
     }
-    this.confirmedTopics.add(stream)
 
     return new Promise<void>((resolve, reject) => {
       this.recordQueue = [

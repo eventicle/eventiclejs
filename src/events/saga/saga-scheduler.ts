@@ -91,34 +91,46 @@ export interface SagaScheduler {
 }
 
 /**
- * Default saga scheduler that executes events and timers immediately.
- * 
- * This implementation provides no serialization guarantees and is suitable
- * for development, testing, or single-instance deployments where race
- * conditions are not a concern.
- * 
- * For production systems with multiple workers or complex saga workflows,
- * consider using a more sophisticated scheduler implementation that provides
- * serialization guarantees.
- * 
+ * Default saga scheduler that executes events and timers with per-instance serialization.
+ *
+ * This implementation ensures events and timers for the same saga instance are
+ * processed serially to prevent race conditions. Uses an in-memory queue per instance.
+ *
  * @example
  * ```typescript
- * // Default scheduler (no serialization)
+ * // Default scheduler (with serialization)
  * setSagaScheduler(new DefaultSagaScheduler());
- * 
- * // Custom scheduler with serialization
+ *
+ * // Custom scheduler with distributed serialization
  * setSagaScheduler(new BullMQSagaScheduler(redisConfig));
  * ```
- * 
+ *
  * @see {@link SagaScheduler} For the interface contract
  * @see {@link setSagaScheduler} For configuration
  */
 export class DefaultSagaScheduler implements SagaScheduler {
-  sagaHandleEvent(saga: Saga<any, any>, event: EventicleEvent, instanceId: string): Promise<void> {
-    return sagaHandleEvent(saga, event, instanceId)
+  private instanceQueues: Map<string, Promise<void>> = new Map();
+
+  async sagaHandleEvent(saga: Saga<any, any>, event: EventicleEvent, instanceId: string): Promise<void> {
+    return this.enqueue(instanceId, () => sagaHandleEvent(saga, event, instanceId));
   }
 
-  handleTimer(saga: Saga<any, any>, name: string, data: { instanceId: string }): Promise<void> {
-    return handleTimerEvent(saga, name, data);
+  async handleTimer(saga: Saga<any, any>, name: string, data: { instanceId: string }): Promise<void> {
+    return this.enqueue(data.instanceId, () => handleTimerEvent(saga, name, data));
+  }
+
+  private async enqueue(instanceId: string, task: () => Promise<void>): Promise<void> {
+    const existingChain = this.instanceQueues.get(instanceId) || Promise.resolve();
+
+    const newChain = existingChain.then(task).catch((error) => {
+      throw error;
+    }).finally(() => {
+      if (this.instanceQueues.get(instanceId) === newChain) {
+        this.instanceQueues.delete(instanceId);
+      }
+    });
+
+    this.instanceQueues.set(instanceId, newChain);
+    return newChain;
   }
 }

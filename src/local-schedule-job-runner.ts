@@ -74,7 +74,9 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
       this.crons.get(component + name + id).stop()
     }
     const sched = nodeCron.schedule(config.crontab, now => {
-      this.events.emit(component, {name, data, id})
+      this.events.emit(component, {name, id, data})
+    }, {
+      scheduled: true
     })
 
     this.crons.set(component + name + id, sched)
@@ -143,7 +145,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     if (crons.length > 0) {
       crons.forEach(value => {
 
-        let name = value.content.component + value.content.name
+        let name = value.content.component + value.content.name + value.content.timerId
 
         let cron = this.crons.get(name)
         if (cron) {
