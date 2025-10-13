@@ -42,7 +42,7 @@ jobs:
         run: yarn install
 
       - name: Run tests
-        run: yarn test
+        run: yarn unit-test
 
       - name: Build
         run: yarn build-ts
