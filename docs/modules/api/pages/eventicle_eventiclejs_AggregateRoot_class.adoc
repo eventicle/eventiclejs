@@ -1,6 +1,10 @@
 = class AggregateRoot
 
+Base class for implementing event-sourced aggregate roots.
 
+Aggregate roots are the core building blocks of domain-driven design and event sourcing. They encapsulate business logic, maintain consistency boundaries, and generate events that represent state changes. The aggregate's current state is rebuilt by replaying its historical events through reducer functions.
+
+Key Features: - \*\*Event Sourcing\*\*: State is derived from events, not stored directly - \*\*Business Logic\*\*: Encapsulates domain rules and invariants - \*\*Event Generation\*\*: Emits events when state changes occur - \*\*Immutable History\*\*: Complete audit trail of all changes - \*\*Checkpointing\*\*: Optional performance optimization for large event histories
 
 
 
@@ -11,7 +15,7 @@
 
 ========
 
-
+Aggregate configuration settings
 
 
 
@@ -28,7 +32,7 @@ readonly config: AggregateConfig;
 
 ========
 
-
+Complete event history for this aggregate instance
 
 
 
@@ -45,7 +49,7 @@ history: EventicleEvent[];
 
 ========
 
-
+Unique identifier for this aggregate instance
 
 
 
@@ -62,7 +66,7 @@ id: string;
 
 ========
 
-
+Events raised since last persistence (pending events)
 
 
 
@@ -79,7 +83,7 @@ newEvents: EventicleEvent[];
 
 ========
 
-
+Event reducer functions mapping event types to state update logic
 
 
 
@@ -96,7 +100,7 @@ reducers: any;
 
 ========
 
-
+Flag indicating if aggregate is currently replaying historical events
 
 
 
@@ -162,7 +166,9 @@ constructor(type: string | AggregateConfig);
 
 ========
 
+Returns the current state as a checkpoint for performance optimization.
 
+Checkpoints allow aggregates with long event histories to snapshot their current state, reducing the time needed to rebuild from events. This method should be implemented when `storeCheckpoint` is enabled in the config.
 
 
 
@@ -179,7 +185,9 @@ currentCheckpoint(): object;
 
 ========
 
+Applies an event to the aggregate state using the appropriate reducer.
 
+This method is called automatically by `raiseEvent` and during event replay. It looks up the reducer function for the event type and applies the event to update the aggregate's state.
 
 
 
@@ -190,7 +198,7 @@ currentCheckpoint(): object;
 
 m|event
 m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
-|
+|The event to apply to the aggregate state
 
 s|Returns
 m|void
@@ -209,7 +217,9 @@ handleEvent(event: EventicleEvent): void;
 
 ========
 
+Raises a new domain event and applies it to the aggregate state.
 
+This is the primary method for recording state changes in event-sourced aggregates. The event is automatically assigned metadata (ID, timestamp, source) and applied through the appropriate reducer function.
 
 
 
@@ -220,11 +230,11 @@ handleEvent(event: EventicleEvent): void;
 
 m|event
 m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
-|
+|The domain event to raise
 
 s|Returns
 m|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]&lt;any&gt;
-|
+|The event with populated metadata
 |===
 
 .Signature

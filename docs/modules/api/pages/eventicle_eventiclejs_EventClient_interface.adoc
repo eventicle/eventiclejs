@@ -1,6 +1,10 @@
 = interface EventClient
 
+Core interface for event streaming clients in Eventicle.
 
+EventClient provides the fundamental operations for working with event streams: publishing events, subscribing to streams, and replaying historical events. Different implementations support various backends like Kafka, Redis, or in-memory storage for development and testing.
+
+Stream Types: - \*\*Hot Streams\*\*: Only new events (live subscription) - \*\*Cold Streams\*\*: Historical events from the beginning - \*\*Cold-Hot Streams\*\*: Historical events followed by live subscription
 
 
 
@@ -48,7 +52,9 @@ coldHotStream: (config: {
 
 ========
 
-Play from persisted storage
+Replays historical events from the beginning of a stream.
+
+Cold streams process all existing events in the stream from the start, then complete. This is useful for building projections, migrating data, or analyzing historical event patterns.
 
 
 
@@ -58,6 +64,7 @@ Play from persisted storage
 ----
 coldStream: (config: {
         stream: string;
+        parallelEventCount?: number;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
         onDone: () => void;
@@ -70,7 +77,9 @@ coldStream: (config: {
 
 ========
 
+Publishes events to the specified stream.
 
+Events are processed atomically and will be available to subscribers after successful emission. The method supports both domain events (EventicleEvent) and pre-encoded events (EncodedEvent).
 
 
 
@@ -110,7 +119,9 @@ hotRawStream: (config: {
 
 ========
 
-Only play hot data.
+Subscribes to live events from one or more streams.
+
+Hot streams only receive new events published after the subscription is established. Multiple subscribers with the same groupId will share the event processing load (consumer group pattern).
 
 
 

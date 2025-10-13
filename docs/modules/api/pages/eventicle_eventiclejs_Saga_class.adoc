@@ -1,6 +1,12 @@
 = class Saga
 
-A saga!
+Defines a long-running business process that coordinates across events and time.
+
+Sagas implement the Saga pattern for managing complex workflows that span multiple aggregates, external services, and time-based operations. They provide stateful event processing with support for timers, error handling, and process coordination.
+
+ TimeoutNames - Union type of timer names this saga can schedule  InstanceData - Type of the saga's persistent state data
+
+Key Features: - \*\*Stateful Processing\*\*: Maintains state across multiple events - \*\*Timer Support\*\*: Schedule delays and recurring operations - \*\*Error Handling\*\*: Custom error handling and compensation logic - \*\*Event Correlation\*\*: Match events to specific saga instances - \*\*Parallel Processing\*\*: Configurable concurrency for high throughput
 
 
 
@@ -187,7 +193,9 @@ constructor(name: string);
 
 ========
 
+Registers an event handler for existing saga instances.
 
+When the specified event type is received, the handler will be called on any existing saga instances that match the event based on the matchInstance configuration.
 
 
 
@@ -198,15 +206,15 @@ constructor(name: string);
 
 m|eventName
 m|string
-|
+|The event type to handle
 
 m|config
 m|\~HandlerConfig&lt;T, InstanceData, TimeoutNames&gt;
-|
+|Configuration for instance matching and locking
 
 m|handler
 m|(saga: xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]&lt;TimeoutNames, InstanceData&gt;, event: T) =&gt; Promise&lt;void&gt;
-|
+|The function to execute for matching instances
 
 s|Returns
 m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
@@ -323,7 +331,9 @@ parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
 
 ========
 
+Registers an event handler that can start new saga instances.
 
+When the specified event type is received and no existing saga instance matches, a new saga instance will be created and the handler called. Only one startOn handler per event type is allowed.
 
 
 
@@ -334,15 +344,15 @@ parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
 
 m|eventName
 m|string
-|
+|The event type that can start new saga instances
 
 m|config
 m|\~StartHandlerConfig&lt;T, InstanceData, TimeoutNames&gt;
-|
+|Configuration for instance creation
 
 m|handler
 m|(saga: xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]&lt;TimeoutNames, InstanceData&gt;, event: T) =&gt; Promise&lt;void&gt;
-|
+|The function to execute when starting a new instance
 
 s|Returns
 m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;

@@ -11,7 +11,11 @@
 |Name |Summary
 
 s|xref:eventicle_eventiclejs_AggregateRoot_class.adoc[AggregateRoot]
-|
+|Base class for implementing event-sourced aggregate roots.
+
+Aggregate roots are the core building blocks of domain-driven design and event sourcing. They encapsulate business logic, maintain consistency boundaries, and generate events that represent state changes. The aggregate's current state is rebuilt by replaying its historical events through reducer functions.
+
+Key Features: - \*\*Event Sourcing\*\*: State is derived from events, not stored directly - \*\*Business Logic\*\*: Encapsulates domain rules and invariants - \*\*Event Generation\*\*: Emits events when state changes occur - \*\*Immutable History\*\*: Complete audit trail of all changes - \*\*Checkpointing\*\*: Optional performance optimization for large event histories
 
 s|xref:eventicle_eventiclejs_InMemoryDatastore_class.adoc[InMemoryDatastore]
 |In memory Datastore implementation.
@@ -24,12 +28,20 @@ s|xref:eventicle_eventiclejs_LocalScheduleJobRunner_class.adoc[LocalScheduleJobR
 Persists and loads schedules on process stop/ start in the datastore with the types `lock-manager-timer` and `lock-manager-cron`
 
 s|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
-|A saga!
+|Defines a long-running business process that coordinates across events and time.
+
+Sagas implement the Saga pattern for managing complex workflows that span multiple aggregates, external services, and time-based operations. They provide stateful event processing with support for timers, error handling, and process coordination.
+
+ TimeoutNames - Union type of timer names this saga can schedule  InstanceData - Type of the saga's persistent state data
+
+Key Features: - \*\*Stateful Processing\*\*: Maintains state across multiple events - \*\*Timer Support\*\*: Schedule delays and recurring operations - \*\*Error Handling\*\*: Custom error handling and compensation logic - \*\*Event Correlation\*\*: Match events to specific saga instances - \*\*Parallel Processing\*\*: Configurable concurrency for high throughput
 
 s|xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]
-|The data for a single execution of a xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
+|Represents a single running instance of a saga workflow.
 
-Sagas are stateful concepts, and this type contains the state.
+SagaInstance contains the runtime state and execution context for a specific saga execution. Each instance tracks its data, manages timers, and provides methods for saga lifecycle management.
+
+ TimeoutNames - Union type of timer names this saga can schedule  T - Type of the saga's persistent data
 |===
 
 == Interfaces
@@ -39,44 +51,74 @@ Sagas are stateful concepts, and this type contains the state.
 |Name |Summary
 
 s|xref:eventicle_eventiclejs_Command_interface.adoc[Command]
-|A Command.
+|Defines a command handler in Eventicle's CQRS architecture.
 
-It is generally preferred xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand] where the command definition is implicit, and more fully type checked.
+Commands encapsulate business operations that change system state and emit domain events. They provide the "C" in CQRS, handling write operations while maintaining strong consistency and business rule enforcement.
 
-This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
+ I - Input data type for the command  O - Output/response type from the command
+
+Key Features: - \*\*Business Logic\*\*: Encapsulates domain operations and invariants - \*\*Event Generation\*\*: Produces events representing state changes - \*\*Type Safety\*\*: Strongly-typed input/output contracts - \*\*Transactional\*\*: Atomic execution with event emission - \*\*Scalable\*\*: Can be distributed across multiple instances
 
 s|xref:eventicle_eventiclejs_CommandIntent_interface.adoc[CommandIntent]
-|A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
+|Represents a request to execute a command with typed payload data.
+
+CommandIntent provides a standardized way to request command execution in Eventicle's CQRS architecture. It decouples command requests from their implementations, enabling features like remote command execution, load balancing, and message-based architectures.
+
+ T - The type of the command payload data
 
 s|xref:eventicle_eventiclejs_CommandReturn_interface.adoc[CommandReturn]
-|The global return type for xref:eventicle_eventiclejs_Command_interface.adoc[Command], whether the command is explicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand], or implicit, as in xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand].
+|Standard return type for all command executions in Eventicle.
 
-This return type is passed to the caller, but before that happens, it will be processed by the dispatcher to capture any events that need to be emitted.
+CommandReturn provides a consistent interface for command results, separating the response data (returned to caller) from domain events (published to streams). This enables clean separation between synchronous API responses and asynchronous event-driven side effects.
+
+ T - Type of the response data returned to the caller
 
 s|xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent]
-|
+|Represents an event in its encoded, wire-ready format.
+
+EncodedEvent is the transport representation of an EventicleEvent, containing the serialized event data as a buffer along with metadata headers. This format is used by EventClient implementations for efficient network transmission and storage.
 
 s|xref:eventicle_eventiclejs_EventAdapter_interface.adoc[EventAdapter]
-|An adapter is an observer on an event stream.
+|Defines an event adapter for real-time event processing and integration.
 
-It only operates on hot event data, and will never attempt to replay everything
+EventAdapter provides a hot-subscription pattern for processing live events as they occur, without replaying historical data. Unlike EventView which processes both historical and live events, adapters focus on real-time integration scenarios like external system synchronization, notifications, and live data feeds.
+
+Key Characteristics: - \*\*Hot Subscription Only\*\*: Processes new events, never replays history - \*\*External Integration\*\*: Designed for pushing data to external systems - \*\*Transactional\*\*: Each event is processed within a database transaction - \*\*Error Handling\*\*: Built-in error recovery and monitoring - \*\*Consumer Groups\*\*: Supports load balancing across multiple instances
 
 s|xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
-|
+|Core interface for event streaming clients in Eventicle.
+
+EventClient provides the fundamental operations for working with event streams: publishing events, subscribing to streams, and replaying historical events. Different implementations support various backends like Kafka, Redis, or in-memory storage for development and testing.
+
+Stream Types: - \*\*Hot Streams\*\*: Only new events (live subscription) - \*\*Cold Streams\*\*: Historical events from the beginning - \*\*Cold-Hot Streams\*\*: Historical events followed by live subscription
 
 s|xref:eventicle_eventiclejs_EventClientCodec_interface.adoc[EventClientCodec]
-|Convert xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent] to/ from xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent].
+|Codec interface for converting between domain events and wire format.
 
-EncodedEvent is suitable for the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient] implementations to send on the wire, as it is a Buffer and a set of message headers.
+EventClientCodec provides the serialization/deserialization layer between EventicleEvent (domain representation) and EncodedEvent (wire representation). Different implementations can provide JSON, Avro, Protocol Buffers, or custom encoding schemes.
+
+The codec is responsible for: - Serializing event payloads and metadata - Handling distributed tracing headers - Version compatibility and schema evolution - Compression and encryption (if needed)
 
 s|xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
-|
+|Core event interface representing something that happened in the system.
+
+EventicleEvent is the fundamental building block of event-driven architectures in Eventicle. Events are immutable facts about state changes that occurred, providing the foundation for event sourcing, CQRS, and saga coordination.
+
+ T - The type of the event payload data
 
 s|xref:eventicle_eventiclejs_EventView_interface.adoc[EventView]
-|
+|Defines an event view for building read-side projections in CQRS architectures.
+
+EventView implements the "Q" (Query) side of CQRS, processing domain events to build optimized read models, projections, and materialized views. Views enable efficient querying by maintaining denormalized data structures tailored for specific read patterns.
+
+Key Features: - \*\*Event Processing\*\*: Handles events from multiple streams - \*\*Consumer Groups\*\*: Enables load balancing across multiple instances - \*\*Parallel Processing\*\*: Configurable concurrency for high throughput - \*\*Cold/Hot Replay\*\*: Processes historical events then continues with live events - \*\*Error Handling\*\*: Built-in error recovery and monitoring
 
 s|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
-|
+|Defines a view for processing events in their raw, encoded format.
+
+RawEventView enables processing events without decoding them into domain objects, which is useful for scenarios requiring high performance, binary storage, or custom encoding schemes. Events are processed as EncodedEvent objects containing the raw buffer and metadata headers.
+
+Use Cases: - \*\*High Performance\*\*: Avoid decoding overhead for throughput-sensitive scenarios - \*\*Binary Storage\*\*: Store events in their original encoded format - \*\*Custom Processing\*\*: Implement custom decoding or transformation logic - \*\*Event Forwarding\*\*: Route events to external systems without modification - \*\*Audit Trails\*\*: Preserve exact event format for compliance requirements
 |===
 
 == Functions

@@ -1,8 +1,10 @@
 = interface EventAdapter
 
-An adapter is an observer on an event stream.
+Defines an event adapter for real-time event processing and integration.
 
-It only operates on hot event data, and will never attempt to replay everything
+EventAdapter provides a hot-subscription pattern for processing live events as they occur, without replaying historical data. Unlike EventView which processes both historical and live events, adapters focus on real-time integration scenarios like external system synchronization, notifications, and live data feeds.
+
+Key Characteristics: - \*\*Hot Subscription Only\*\*: Processes new events, never replays history - \*\*External Integration\*\*: Designed for pushing data to external systems - \*\*Transactional\*\*: Each event is processed within a database transaction - \*\*Error Handling\*\*: Built-in error recovery and monitoring - \*\*Consumer Groups\*\*: Supports load balancing across multiple instances
 
 
 
@@ -13,7 +15,9 @@ It only operates on hot event data, and will never attempt to replay everything
 
 ========
 
+Consumer group identifier for load balancing and failure recovery.
 
+Multiple adapter instances with the same consumer group will share event processing, enabling horizontal scaling and fault tolerance.
 
 
 
@@ -30,7 +34,9 @@ consumerGroup: string;
 
 ========
 
+Optional custom error handler for event processing failures.
 
+If not provided, a default handler logs the error and continues processing. Use this for custom error reporting, retry logic, or dead letter queues.
 
 
 
@@ -47,7 +53,9 @@ errorHandler?: (adapter: EventAdapter, event: EventicleEvent, error: Error) => P
 
 ========
 
+Event processing function called for each live event.
 
+Should be idempotent as events may be redelivered during failures. Typically integrates with external systems or triggers side effects.
 
 
 
@@ -64,7 +72,9 @@ handleEvent: (event: EventicleEvent) => Promise<void>;
 
 ========
 
+Unique adapter identifier for monitoring and debugging.
 
+Should be descriptive of the adapter's purpose (e.g., 'crm-sync', 'email-notifications').
 
 
 
@@ -81,7 +91,9 @@ name: string;
 
 ========
 
+List of event streams to monitor for live events.
 
+Adapter will receive all new events from these streams. Use specific stream names to reduce noise and improve performance.
 
 
 

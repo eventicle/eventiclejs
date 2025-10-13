@@ -1,6 +1,10 @@
 = interface EventicleEvent
 
+Core event interface representing something that happened in the system.
 
+EventicleEvent is the fundamental building block of event-driven architectures in Eventicle. Events are immutable facts about state changes that occurred, providing the foundation for event sourcing, CQRS, and saga coordination.
+
+ T - The type of the event payload data
 
 
 
@@ -11,7 +15,7 @@
 
 ========
 
-
+ID of the event that caused this event (for causation tracking)
 
 
 
@@ -28,7 +32,7 @@ causedById?: string;
 
 ========
 
-
+Type of the event that caused this event
 
 
 
@@ -45,7 +49,7 @@ causedByType?: string;
 
 ========
 
-
+Event creation timestamp in milliseconds (auto-generated if not provided)
 
 
 
@@ -62,7 +66,7 @@ createdAt?: number;
 
 ========
 
-
+The event payload containing the actual event data
 
 
 
@@ -79,7 +83,7 @@ data: T;
 
 ========
 
-
+Domain entity ID this event relates to
 
 
 
@@ -96,7 +100,7 @@ domainId?: string;
 
 ========
 
-
+Unique identifier for this event (auto-generated if not provided)
 
 
 
@@ -113,7 +117,7 @@ id?: string;
 
 ========
 
-
+Source system or service that generated this event
 
 
 
@@ -130,7 +134,7 @@ source?: string;
 
 ========
 
-
+Event stream name (often matches aggregate type)
 
 
 
@@ -147,7 +151,7 @@ stream?: string;
 
 ========
 
-
+Event type name (e.g., 'UserCreated', 'OrderShipped')
 
 
 

@@ -21,8 +21,15 @@ import { TransactionData } from '@eventicle/eventicle-utilities/dist/datastore';
 import { TransactionListener } from '@eventicle/eventicle-utilities/dist/datastore';
 import { TransactionOptions } from '@eventicle/eventicle-utilities/dist/datastore';
 
+/**
+ * Configuration options for aggregate root behavior.
+ *
+ * @see {@link AggregateRoot} For usage details
+ */
 declare interface AggregateConfig {
+    /** The aggregate type name used for stream naming and identification */
     type: string;
+    /** Whether to store periodic checkpoints for performance optimization */
     storeCheckpoint: boolean;
 }
 
@@ -144,16 +151,166 @@ declare interface AggregateRepository {
     persist<T extends AggregateRoot>(aggregate: T): Promise<EventicleEvent[]>;
 }
 
+/**
+ * Base class for implementing event-sourced aggregate roots.
+ *
+ * Aggregate roots are the core building blocks of domain-driven design and event sourcing.
+ * They encapsulate business logic, maintain consistency boundaries, and generate events
+ * that represent state changes. The aggregate's current state is rebuilt by replaying
+ * its historical events through reducer functions.
+ *
+ * Key Features:
+ * - **Event Sourcing**: State is derived from events, not stored directly
+ * - **Business Logic**: Encapsulates domain rules and invariants
+ * - **Event Generation**: Emits events when state changes occur
+ * - **Immutable History**: Complete audit trail of all changes
+ * - **Checkpointing**: Optional performance optimization for large event histories
+ *
+ * @example Basic aggregate
+ * ```typescript
+ * class BankAccount extends AggregateRoot {
+ *   balance: number = 0;
+ *   status: 'active' | 'frozen' = 'active';
+ *
+ *   constructor() {
+ *     super('bank-accounts');
+ *
+ *     this.reducers = {
+ *       AccountOpened: (event) => {
+ *         this.id = event.data.accountId;
+ *         this.balance = event.data.initialDeposit;
+ *       },
+ *       MoneyDeposited: (event) => {
+ *         this.balance += event.data.amount;
+ *       },
+ *       MoneyWithdrawn: (event) => {
+ *         this.balance -= event.data.amount;
+ *       }
+ *     };
+ *   }
+ *
+ *   static open(accountId: string, initialDeposit: number): BankAccount {
+ *     const account = new BankAccount();
+ *     account.raiseEvent({
+ *       type: 'AccountOpened',
+ *       data: { accountId, initialDeposit }
+ *     });
+ *     return account;
+ *   }
+ *
+ *   deposit(amount: number) {
+ *     if (this.status !== 'active') {
+ *       throw new Error('Account is not active');
+ *     }
+ *     this.raiseEvent({
+ *       type: 'MoneyDeposited',
+ *       data: { amount, timestamp: new Date() }
+ *     });
+ *   }
+ * }
+ * ```
+ *
+ * @example With checkpointing
+ * ```typescript
+ * class HighVolumeAggregate extends AggregateRoot {
+ *   constructor() {
+ *     super({ type: 'high-volume', storeCheckpoint: true });
+ *   }
+ *
+ *   currentCheckpoint() {
+ *     return {
+ *       balance: this.balance,
+ *       transactionCount: this.transactionCount
+ *     };
+ *   }
+ * }
+ * ```
+ *
+ * @see {@link AggregateRepository} For persistence operations
+ * @see {@link XStateAggregate} For state machine-based aggregates
+ * @see {@link TenantAggregateRoot} For multi-tenant scenarios
+ */
 export declare abstract class AggregateRoot {
+    /** Complete event history for this aggregate instance */
     history: EventicleEvent[];
+    /** Events raised since last persistence (pending events) */
     newEvents: EventicleEvent[];
+    /** Unique identifier for this aggregate instance */
     id: string;
+    /** Event reducer functions mapping event types to state update logic */
     reducers: any;
+    /** Flag indicating if aggregate is currently replaying historical events */
     replaying: boolean;
+    /** Aggregate configuration settings */
     readonly config: AggregateConfig;
     constructor(type: string | AggregateConfig);
+    /**
+     * Returns the current state as a checkpoint for performance optimization.
+     *
+     * Checkpoints allow aggregates with long event histories to snapshot their
+     * current state, reducing the time needed to rebuild from events. This method
+     * should be implemented when `storeCheckpoint` is enabled in the config.
+     *
+     * @returns Object representing the current aggregate state
+     *
+     * @example
+     * ```typescript
+     * currentCheckpoint() {
+     *   return {
+     *     balance: this.balance,
+     *     status: this.status,
+     *     lastTransactionDate: this.lastTransactionDate
+     *   };
+     * }
+     * ```
+     */
     currentCheckpoint(): object;
+    /**
+     * Raises a new domain event and applies it to the aggregate state.
+     *
+     * This is the primary method for recording state changes in event-sourced
+     * aggregates. The event is automatically assigned metadata (ID, timestamp,
+     * source) and applied through the appropriate reducer function.
+     *
+     * @param event - The domain event to raise
+     * @returns The event with populated metadata
+     *
+     * @example
+     * ```typescript
+     * deposit(amount: number) {
+     *   // Validate business rules first
+     *   if (amount <= 0) {
+     *     throw new Error('Amount must be positive');
+     *   }
+     *
+     *   // Raise the event
+     *   this.raiseEvent({
+     *     type: 'MoneyDeposited',
+     *     data: { amount, timestamp: new Date() }
+     *   });
+     * }
+     * ```
+     */
     raiseEvent(event: EventicleEvent): EventicleEvent<any>;
+    /**
+     * Applies an event to the aggregate state using the appropriate reducer.
+     *
+     * This method is called automatically by `raiseEvent` and during event
+     * replay. It looks up the reducer function for the event type and applies
+     * the event to update the aggregate's state.
+     *
+     * @param event - The event to apply to the aggregate state
+     *
+     * @example Reducer function
+     * ```typescript
+     * this.reducers = {
+     *   MoneyDeposited: (event) => {
+     *     this.balance += event.data.amount;
+     *     this.lastActivity = event.data.timestamp;
+     *   }
+     * };
+     * ```
+     */
     handleEvent(event: EventicleEvent): void;
     get type(): string;
 }
@@ -203,25 +360,92 @@ declare type BulkResponse<T> = {
 };
 
 /**
- * A Command.
+ * Defines a command handler in Eventicle's CQRS architecture.
  *
- * It is generally preferred {@link dispatchDirectCommand} where the command
- * definition is implicit, and more fully type checked.
+ * Commands encapsulate business operations that change system state and emit domain events.
+ * They provide the "C" in CQRS, handling write operations while maintaining strong consistency
+ * and business rule enforcement.
  *
- * This, along with {@link dispatchCommand} is available if you wish to separate
- * your code more fully, or introduce a remote capable message based command bus.
+ * @template I - Input data type for the command
+ * @template O - Output/response type from the command
+ *
+ * Key Features:
+ * - **Business Logic**: Encapsulates domain operations and invariants
+ * - **Event Generation**: Produces events representing state changes
+ * - **Type Safety**: Strongly-typed input/output contracts
+ * - **Transactional**: Atomic execution with event emission
+ * - **Scalable**: Can be distributed across multiple instances
+ *
+ * @example User management command
+ * ```typescript
+ * const createUserCommand: Command<{email: string, name: string}, {userId: string}> = {
+ *   type: 'CreateUser',
+ *   streamToEmit: 'users',
+ *   execute: async (data) => {
+ *     // Validate business rules
+ *     await validateUniqueEmail(data.email);
+ *
+ *     // Create aggregate and apply business logic
+ *     const user = User.create(data.email, data.name);
+ *
+ *     // Persist and get generated events
+ *     const events = await aggregates.persist(user);
+ *
+ *     return {
+ *       response: { userId: user.id },
+ *       events
+ *     };
+ *   }
+ * };
+ * ```
+ *
+ * @example Order processing with error handling
+ * ```typescript
+ * const processOrderCommand: Command<OrderData, {orderId: string}> = {
+ *   type: 'ProcessOrder',
+ *   streamToEmit: 'orders',
+ *   execute: async (data) => {
+ *     try {
+ *       const order = await aggregates.load(Order, data.orderId);
+ *       order.process(data.items);
+ *
+ *       return {
+ *         response: { orderId: order.id },
+ *         events: await aggregates.persist(order)
+ *       };
+ *     } catch (error) {
+ *       // Emit failure event and propagate error
+ *       return {
+ *         events: [{
+ *           type: 'OrderProcessingFailed',
+ *           domainId: data.orderId,
+ *           data: { error: error.message }
+ *         }],
+ *         webError: new Error('Order processing failed')
+ *       };
+ *     }
+ *   }
+ * };
+ * ```
+ *
+ * @see {@link CommandIntent} For command requests
+ * @see {@link CommandReturn} For command results
+ * @see {@link dispatchCommand} For command execution
+ * @see {@link registerCommand} For command registration
  */
 export declare interface Command<I, O> {
     /**
-     * The name of the Command. This is used to look it up
-     * when the user calls {@link dispatchCommand}
+     * Unique command type identifier used for registration and dispatch.
+     *
+     * Should be descriptive and follow consistent naming conventions
+     * (e.g., 'CreateUser', 'ProcessPayment', 'CancelOrder').
      */
     type: string;
     /**
-     * The event stream that any events in the CommandReturn should be emitted on
+     * Target event stream for publishing generated events.
      *
-     * @see EventClient
-     * @see CommandReturn#events
+     * All events returned by the command execution will be published to this stream,
+     * making them available to event views, sagas, and other subscribers.
      */
     streamToEmit: string;
     /**
@@ -275,52 +499,105 @@ export declare interface Command<I, O> {
 }
 
 /**
- * A CommandIntent is a message instructing Eventicle to perform an action that
- * may emit events that should be sent externally using the {@link EventClient}
+ * Represents a request to execute a command with typed payload data.
+ *
+ * CommandIntent provides a standardized way to request command execution in Eventicle's
+ * CQRS architecture. It decouples command requests from their implementations, enabling
+ * features like remote command execution, load balancing, and message-based architectures.
+ *
+ * @template T - The type of the command payload data
+ *
+ * @example
+ * ```typescript
+ * const createUserIntent: CommandIntent<{email: string, name: string}> = {
+ *   type: 'CreateUser',
+ *   data: {
+ *     email: 'john@example.com',
+ *     name: 'John Doe'
+ *   }
+ * };
+ *
+ * await dispatchCommand(createUserIntent);
+ * ```
+ *
+ * @see {@link Command} For the command implementation
+ * @see {@link dispatchCommand} For command execution
+ * @see {@link dispatchDirectCommand} For simplified inline commands
  */
 export declare interface CommandIntent<T> {
     /**
-     * The command type
-     * @see Command#type
+     * Unique identifier for the command type (e.g., 'CreateUser', 'ProcessPayment').
+     *
+     * Must match a registered command's type for successful dispatch.
      */
     type: string;
     /**
-     * The data that will be used when calling the Command instance.
+     * Strongly-typed payload data passed to the command handler.
+     *
+     * Contains all information needed to execute the command business logic.
      */
     data: T;
 }
 
 /**
- * The global return type for {@link Command}, whether the command is explicit, as in
- * {@link dispatchCommand}, or implicit, as in {@link dispatchDirectCommand}.
+ * Standard return type for all command executions in Eventicle.
  *
- * This return type is passed to the caller, but before that happens, it will
- * be processed by the dispatcher to capture any events that need to be emitted.
+ * CommandReturn provides a consistent interface for command results, separating
+ * the response data (returned to caller) from domain events (published to streams).
+ * This enables clean separation between synchronous API responses and asynchronous
+ * event-driven side effects.
+ *
+ * @template T - Type of the response data returned to the caller
+ *
+ * @example Successful command with response
+ * ```typescript
+ * const result: CommandReturn<{userId: string}> = {
+ *   response: { userId: 'user-123' },
+ *   events: [{
+ *     type: 'UserCreated',
+ *     domainId: 'user-123',
+ *     data: { email: 'john@example.com', name: 'John Doe' }
+ *   }]
+ * };
+ * ```
+ *
+ * @example Command with business error
+ * ```typescript
+ * const result: CommandReturn<void> = {
+ *   events: [{
+ *     type: 'PaymentFailed',
+ *     domainId: 'payment-456',
+ *     data: { reason: 'Insufficient funds' }
+ *   }],
+ *   webError: new Error('Payment processing failed')
+ * };
+ * ```
+ *
+ * @see {@link Command} For command definitions
+ * @see {@link EventicleEvent} For event structure
  */
 export declare interface CommandReturn<T> {
     /**
-     * An optional response object.
-     * This will be ignored by the command dispatcher, and passed through
-     * to the calling code.  Most commonly used to pass IDs that have been generated
-     * during command execution.
+     * Optional response data returned to the command caller.
+     *
+     * Typically contains generated IDs, confirmation data, or other information
+     * needed by the synchronous caller. This data is NOT published as events.
      */
     response?: T;
     /**
-     * Any events that have been generated during command execution that should be
-     * emitted externally onto the configured topic.
-     * By the time the calling code receives the return, the events have already been
-     * passed to {@link EventClient#emit}, and cannot be altered.
+     * Domain events generated during command execution.
+     *
+     * These events are automatically published to the command's configured stream
+     * and become part of the permanent event history. Events represent facts about
+     * what happened and drive all downstream processing.
      */
     events: EventicleEvent[];
     /**
-     * Optional error property.
+     * Optional error to throw after event emission.
      *
-     * Used by some implementations to indicate that the Command finished in an Error,
-     * which should now be thrown.
-     *
-     * This is performed so that the command can emit events (describing the error),
-     * and also instruct the calling code (which is normally a synchronous API) to
-     * subsequently throw the given Error back to the user.
+     * Allows commands to emit failure events while still signaling errors to callers.
+     * The events are published first, then this error is thrown to the caller,
+     * enabling both event-driven error handling and traditional exception handling.
      */
     webError?: Error;
 }
@@ -400,46 +677,307 @@ export declare function dispatchCommand<T>(commandIntent: CommandIntent<T>): Pro
  */
 export declare function dispatchDirectCommand<T>(command: () => Promise<CommandReturn<T>>, streamToEmit: string, transactionControl?: TransactionOptions): Promise<T>;
 
+/**
+ * Represents an event in its encoded, wire-ready format.
+ *
+ * EncodedEvent is the transport representation of an EventicleEvent, containing
+ * the serialized event data as a buffer along with metadata headers. This format
+ * is used by EventClient implementations for efficient network transmission and
+ * storage.
+ *
+ * @example
+ * ```typescript
+ * const encodedEvent: EncodedEvent = {
+ *   buffer: Buffer.from(JSON.stringify(eventData)),
+ *   key: 'user-123',
+ *   timestamp: Date.now(),
+ *   headers: {
+ *     type: 'UserCreated',
+ *     domainId: 'user-123',
+ *     id: 'event-456',
+ *     source: 'user-service'
+ *   }
+ * };
+ * ```
+ *
+ * @see {@link EventicleEvent} For the domain event representation
+ * @see {@link EventClientCodec} For encoding/decoding between formats
+ */
 export declare interface EncodedEvent {
+    /** Serialized event data as binary buffer */
     buffer: Buffer;
+    /** Partitioning key for event streaming (typically domainId) */
     key: string;
+    /** Event creation timestamp in milliseconds */
     timestamp: number;
+    /** Event metadata headers for routing and processing */
     headers: {
         [key: string]: any;
     };
 }
 
 /**
- * An adapter is an observer on an event stream.
+ * Defines an event adapter for real-time event processing and integration.
  *
- * It only operates on hot event data, and will never attempt to replay everything
+ * EventAdapter provides a hot-subscription pattern for processing live events as they
+ * occur, without replaying historical data. Unlike EventView which processes both
+ * historical and live events, adapters focus on real-time integration scenarios
+ * like external system synchronization, notifications, and live data feeds.
+ *
+ * Key Characteristics:
+ * - **Hot Subscription Only**: Processes new events, never replays history
+ * - **External Integration**: Designed for pushing data to external systems
+ * - **Transactional**: Each event is processed within a database transaction
+ * - **Error Handling**: Built-in error recovery and monitoring
+ * - **Consumer Groups**: Supports load balancing across multiple instances
+ *
+ * @example External system synchronization
+ * ```typescript
+ * const crmSyncAdapter: EventAdapter = {
+ *   name: 'crm-synchronizer',
+ *   consumerGroup: 'crm-sync',
+ *   streamsToSubscribe: ['users', 'contacts'],
+ *
+ *   handleEvent: async (event) => {
+ *     switch (event.type) {
+ *       case 'UserCreated':
+ *         await crmClient.createContact({
+ *           externalId: event.domainId,
+ *           email: event.data.email,
+ *           name: event.data.name,
+ *           source: 'app'
+ *         });
+ *         break;
+ *
+ *       case 'UserUpdated':
+ *         await crmClient.updateContact(event.domainId, {
+ *           email: event.data.email,
+ *           name: event.data.name
+ *         });
+ *         break;
+ *     }
+ *   },
+ *
+ *   errorHandler: async (adapter, event, error) => {
+ *     await errorTracking.report({
+ *       adapter: adapter.name,
+ *       eventType: event.type,
+ *       eventId: event.id,
+ *       error: error.message,
+ *       timestamp: new Date()
+ *     });
+ *   }
+ * };
+ *
+ * await registerAdapter(crmSyncAdapter);
+ * ```
+ *
+ * @example Real-time notifications
+ * ```typescript
+ * const notificationAdapter: EventAdapter = {
+ *   name: 'push-notifications',
+ *   consumerGroup: 'notifications',
+ *   streamsToSubscribe: ['orders', 'payments'],
+ *
+ *   handleEvent: async (event) => {
+ *     const userId = event.data.userId || event.data.customerId;
+ *     if (!userId) return;
+ *
+ *     let message: string;
+ *     switch (event.type) {
+ *       case 'OrderShipped':
+ *         message = `Your order ${event.data.orderNumber} has been shipped!`;
+ *         break;
+ *       case 'PaymentFailed':
+ *         message = 'Payment failed. Please update your payment method.';
+ *         break;
+ *       default:
+ *         return;
+ *     }
+ *
+ *     await pushNotificationService.send(userId, {
+ *       title: 'Order Update',
+ *       message,
+ *       data: { eventId: event.id, type: event.type }
+ *     });
+ *   }
+ * };
+ * ```
+ *
+ * @see {@link registerAdapter} For adapter registration
+ * @see {@link EventView} For read-model projections with history replay
+ * @see {@link RawEventAdapter} For binary event processing
  */
 export declare interface EventAdapter {
+    /**
+     * Unique adapter identifier for monitoring and debugging.
+     *
+     * Should be descriptive of the adapter's purpose (e.g., 'crm-sync', 'email-notifications').
+     */
     name: string;
+    /**
+     * Consumer group identifier for load balancing and failure recovery.
+     *
+     * Multiple adapter instances with the same consumer group will share event
+     * processing, enabling horizontal scaling and fault tolerance.
+     */
     consumerGroup: string;
+    /**
+     * Event processing function called for each live event.
+     *
+     * Should be idempotent as events may be redelivered during failures.
+     * Typically integrates with external systems or triggers side effects.
+     *
+     * @param event - The domain event to process
+     */
     handleEvent: (event: EventicleEvent) => Promise<void>;
+    /**
+     * List of event streams to monitor for live events.
+     *
+     * Adapter will receive all new events from these streams. Use specific
+     * stream names to reduce noise and improve performance.
+     */
     streamsToSubscribe: string[];
+    /**
+     * Optional custom error handler for event processing failures.
+     *
+     * If not provided, a default handler logs the error and continues processing.
+     * Use this for custom error reporting, retry logic, or dead letter queues.
+     *
+     * @param adapter - The adapter that encountered the error
+     * @param event - The event that failed to process
+     * @param error - The error that occurred
+     */
     errorHandler?: (adapter: EventAdapter, event: EventicleEvent, error: Error) => Promise<void>;
 }
 
+/**
+ * Core interface for event streaming clients in Eventicle.
+ *
+ * EventClient provides the fundamental operations for working with event streams:
+ * publishing events, subscribing to streams, and replaying historical events.
+ * Different implementations support various backends like Kafka, Redis, or in-memory
+ * storage for development and testing.
+ *
+ * Stream Types:
+ * - **Hot Streams**: Only new events (live subscription)
+ * - **Cold Streams**: Historical events from the beginning
+ * - **Cold-Hot Streams**: Historical events followed by live subscription
+ *
+ * @example Basic usage
+ * ```typescript
+ * // Emit events
+ * await eventClient.emit([{
+ *   type: 'UserCreated',
+ *   domainId: 'user-123',
+ *   data: { email: 'john@example.com' }
+ * }], 'users');
+ *
+ * // Subscribe to live events
+ * const subscription = await eventClient.hotStream({
+ *   stream: 'users',
+ *   groupId: 'user-processor',
+ *   handler: async (event) => {
+ *     console.log('New user:', event.data.email);
+ *   }
+ * });
+ * ```
+ *
+ * @see {@link eventClientInMemory} For development/testing
+ * @see {@link eventClientOnKafka} For production Kafka implementation
+ * @see {@link eventClientOnDatastore} For PostgreSQL-backed storage
+ */
 export declare interface EventClient {
     /**
+     * Publishes events to the specified stream.
      *
-     * @param event
-     * @param stream
+     * Events are processed atomically and will be available to subscribers
+     * after successful emission. The method supports both domain events
+     * (EventicleEvent) and pre-encoded events (EncodedEvent).
+     *
+     * @param event - Array of events to publish (domain or encoded format)
+     * @param stream - Target stream name for the events
+     *
+     * @example
+     * ```typescript
+     * await eventClient.emit([{
+     *   type: 'OrderCreated',
+     *   domainId: 'order-123',
+     *   data: { customerId: 'cust-456', total: 99.99 }
+     * }], 'orders');
+     * ```
      */
     emit: (event: EventicleEvent[] | EncodedEvent[], stream: string) => Promise<void>;
     /**
-     * Play from persisted storage
+     * Replays historical events from the beginning of a stream.
+     *
+     * Cold streams process all existing events in the stream from the start,
+     * then complete. This is useful for building projections, migrating data,
+     * or analyzing historical event patterns.
+     *
+     * @param config - Cold stream configuration
+     * @param config.stream - Stream name to replay
+     * @param config.parallelEventCount - Number of events to process concurrently
+     * @param config.handler - Function called for each event
+     * @param config.onError - Error handler for processing failures
+     * @param config.onDone - Callback when replay is complete
+     *
+     * @example
+     * ```typescript
+     * await eventClient.coldStream({
+     *   stream: 'orders',
+     *   parallelEventCount: 10,
+     *   handler: async (event) => {
+     *     await updateProjection(event);
+     *   },
+     *   onError: (error) => console.error('Replay error:', error),
+     *   onDone: () => console.log('Replay complete')
+     * });
+     * ```
      */
     coldStream: (config: {
         stream: string;
+        parallelEventCount?: number;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
         onDone: () => void;
     }) => Promise<EventSubscriptionControl>;
     /**
-     * Only play hot data.
+     * Subscribes to live events from one or more streams.
+     *
+     * Hot streams only receive new events published after the subscription
+     * is established. Multiple subscribers with the same groupId will share
+     * the event processing load (consumer group pattern).
+     *
+     * @param config - Hot stream configuration
+     * @param config.stream - Stream name(s) to subscribe to
+     * @param config.groupId - Consumer group ID for load balancing
+     * @param config.parallelEventCount - Concurrent event processing limit
+     * @param config.handler - Function called for each new event
+     * @param config.onError - Error handler for processing failures
+     *
+     * @example Single stream
+     * ```typescript
+     * await eventClient.hotStream({
+     *   stream: 'orders',
+     *   groupId: 'order-processor',
+     *   handler: async (event) => {
+     *     await processOrder(event);
+     *   },
+     *   onError: (error) => console.error('Processing error:', error)
+     * });
+     * ```
+     *
+     * @example Multiple streams
+     * ```typescript
+     * await eventClient.hotStream({
+     *   stream: ['orders', 'payments', 'shipments'],
+     *   groupId: 'fulfillment-processor',
+     *   handler: async (event) => {
+     *     await handleFulfillmentEvent(event);
+     *   }
+     * });
+     * ```
      */
     hotStream: (config: {
         parallelEventCount?: number;
@@ -489,16 +1027,54 @@ export declare interface EventClient {
 export declare function eventClient(): EventClient;
 
 /**
- * Convert {@link EventicleEvent} to/ from {@link EncodedEvent}.
+ * Codec interface for converting between domain events and wire format.
  *
- * EncodedEvent is suitable for the {@link EventClient} implementations to send on the wire, as it
- * is a Buffer and a set of message headers.
+ * EventClientCodec provides the serialization/deserialization layer between
+ * EventicleEvent (domain representation) and EncodedEvent (wire representation).
+ * Different implementations can provide JSON, Avro, Protocol Buffers, or custom
+ * encoding schemes.
+ *
+ * The codec is responsible for:
+ * - Serializing event payloads and metadata
+ * - Handling distributed tracing headers
+ * - Version compatibility and schema evolution
+ * - Compression and encryption (if needed)
+ *
+ * @example
+ * ```typescript
+ * class CustomCodec implements EventClientCodec {
+ *   async encode(event: EventicleEvent): Promise<EncodedEvent> {
+ *     return {
+ *       buffer: Buffer.from(JSON.stringify(event)),
+ *       key: event.domainId,
+ *       timestamp: event.createdAt,
+ *       headers: { type: event.type, version: '1.0' }
+ *     };
+ *   }
+ *
+ *   async decode(encoded: EncodedEvent): Promise<EventicleEvent> {
+ *     return JSON.parse(encoded.buffer.toString());
+ *   }
+ * }
+ * ```
+ *
+ * @see {@link EventClientJsonCodec} For the default JSON implementation
+ * @see {@link AvroCodec} For Avro-based schema evolution support
  */
 export declare interface EventClientCodec {
     /**
-     * Convert a raw event binary (as a {@link EncodedEvent}) into a {@link EventicleEvent}
+     * Converts a domain event into its wire-ready encoded format.
+     *
+     * @param event - The domain event to encode
+     * @returns Promise resolving to the encoded event ready for transmission
      */
     encode: (event: EventicleEvent) => Promise<EncodedEvent>;
+    /**
+     * Converts an encoded event back into its domain representation.
+     *
+     * @param encoded - The encoded event received from the wire
+     * @returns Promise resolving to the decoded domain event
+     */
     decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;
 }
 
@@ -524,28 +1100,202 @@ export declare function eventClientOnDatastore(): EventClient;
  */
 export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
 
+/**
+ * Core event interface representing something that happened in the system.
+ *
+ * EventicleEvent is the fundamental building block of event-driven architectures
+ * in Eventicle. Events are immutable facts about state changes that occurred,
+ * providing the foundation for event sourcing, CQRS, and saga coordination.
+ *
+ * @template T - The type of the event payload data
+ *
+ * @example Basic event
+ * ```typescript
+ * const userCreated: EventicleEvent<{email: string, name: string}> = {
+ *   type: 'UserCreated',
+ *   domainId: 'user-123',
+ *   data: {
+ *     email: 'john@example.com',
+ *     name: 'John Doe'
+ *   }
+ * };
+ * ```
+ *
+ * @example Event with causation tracking
+ * ```typescript
+ * const orderShipped: EventicleEvent = {
+ *   type: 'OrderShipped',
+ *   domainId: 'order-456',
+ *   causedById: 'payment-789',
+ *   causedByType: 'PaymentProcessed',
+ *   data: { trackingNumber: 'TRK123456' }
+ * };
+ * ```
+ *
+ * Key Properties:
+ * - **Immutable**: Events cannot be changed once created
+ * - **Causally Linked**: Events can reference what caused them
+ * - **Timestamped**: Automatic timestamp assignment
+ * - **Traceable**: Support for distributed tracing
+ * - **Typed**: Strong typing for event payloads
+ */
 export declare interface EventicleEvent<T = any> {
+    /** Unique identifier for this event (auto-generated if not provided) */
     id?: string;
+    /** Event type name (e.g., 'UserCreated', 'OrderShipped') */
     type: string;
+    /** Source system or service that generated this event */
     source?: string;
+    /** ID of the event that caused this event (for causation tracking) */
     causedById?: string;
+    /** Type of the event that caused this event */
     causedByType?: string;
+    /** Event stream name (often matches aggregate type) */
     stream?: string;
+    /** Domain entity ID this event relates to */
     domainId?: string;
+    /** Event creation timestamp in milliseconds (auto-generated if not provided) */
     createdAt?: number;
+    /** The event payload containing the actual event data */
     data: T;
 }
 
 export declare function eventSourceName(): string;
 
+/**
+ * Control interface for managing event stream subscriptions.
+ *
+ * Provides lifecycle management for active event subscriptions,
+ * allowing graceful shutdown and resource cleanup.
+ *
+ * @example
+ * ```typescript
+ * const subscription = await eventClient.hotStream({
+ *   stream: 'orders',
+ *   groupId: 'order-processor',
+ *   handler: async (event) => {
+ *     await processOrder(event);
+ *   }
+ * });
+ *
+ * // Later, when shutting down
+ * await subscription.close();
+ * ```
+ */
 declare interface EventSubscriptionControl {
+    /** Closes the subscription and releases associated resources */
     close: () => Promise<void>;
 }
 
+/**
+ * Defines an event view for building read-side projections in CQRS architectures.
+ *
+ * EventView implements the "Q" (Query) side of CQRS, processing domain events to build
+ * optimized read models, projections, and materialized views. Views enable efficient
+ * querying by maintaining denormalized data structures tailored for specific read patterns.
+ *
+ * Key Features:
+ * - **Event Processing**: Handles events from multiple streams
+ * - **Consumer Groups**: Enables load balancing across multiple instances
+ * - **Parallel Processing**: Configurable concurrency for high throughput
+ * - **Cold/Hot Replay**: Processes historical events then continues with live events
+ * - **Error Handling**: Built-in error recovery and monitoring
+ *
+ * @example User profile projection
+ * ```typescript
+ * const userProfileView: EventView = {
+ *   consumerGroup: 'user-profile-projection',
+ *   parallelEventCount: 10,
+ *   streamsToSubscribe: ['users', 'preferences'],
+ *
+ *   handleEvent: async (event) => {
+ *     switch (event.type) {
+ *       case 'UserCreated':
+ *         await db.userProfiles.create({
+ *           userId: event.domainId,
+ *           email: event.data.email,
+ *           name: event.data.name,
+ *           createdAt: new Date(event.createdAt)
+ *         });
+ *         break;
+ *
+ *       case 'UserProfileUpdated':
+ *         await db.userProfiles.update(
+ *           { userId: event.domainId },
+ *           { name: event.data.name }
+ *         );
+ *         break;
+ *
+ *       case 'PreferenceSet':
+ *         await db.userProfiles.update(
+ *           { userId: event.data.userId },
+ *           { preferences: event.data.preferences }
+ *         );
+ *         break;
+ *     }
+ *   }
+ * };
+ *
+ * await registerView(userProfileView);
+ * ```
+ *
+ * @example Analytics aggregation
+ * ```typescript
+ * const analyticsView: EventView = {
+ *   consumerGroup: 'analytics-aggregator',
+ *   parallelEventCount: 20,
+ *   streamsToSubscribe: ['orders', 'payments', 'shipments'],
+ *
+ *   handleEvent: async (event) => {
+ *     switch (event.type) {
+ *       case 'OrderCreated':
+ *         await updateDailyMetrics('orders_created', event.createdAt);
+ *         await updateCustomerMetrics(event.data.customerId, 'order_count');
+ *         break;
+ *
+ *       case 'PaymentProcessed':
+ *         await updateDailyMetrics('revenue', event.createdAt, event.data.amount);
+ *         await updateCustomerMetrics(event.data.customerId, 'total_spent', event.data.amount);
+ *         break;
+ *     }
+ *   }
+ * };
+ * ```
+ *
+ * @see {@link registerView} For view registration
+ * @see {@link RawEventView} For binary event processing
+ * @see {@link EventicleEvent} For event structure
+ */
 export declare interface EventView {
+    /**
+     * Number of events to process concurrently (default varies by implementation).
+     *
+     * Higher values increase throughput but may impact memory usage and database
+     * connection pools. Tune based on your processing requirements.
+     */
     parallelEventCount?: number;
+    /**
+     * Unique consumer group identifier for load balancing.
+     *
+     * Multiple view instances with the same consumer group will share event
+     * processing, enabling horizontal scaling and fault tolerance.
+     */
     consumerGroup: string;
+    /**
+     * Event processing function called for each received event.
+     *
+     * Should be idempotent as events may be redelivered during failures.
+     * Typically updates read models, projections, or external systems.
+     *
+     * @param event - The domain event to process
+     */
     handleEvent: (event: EventicleEvent) => Promise<void>;
+    /**
+     * List of event streams to subscribe to.
+     *
+     * View will receive all events from these streams. Use specific stream
+     * names to reduce processing overhead and improve performance.
+     */
     streamsToSubscribe: string[];
 }
 
@@ -661,9 +1411,89 @@ export declare function metrics(): {
 
 export { PagedRecords }
 
+/**
+ * Defines a view for processing events in their raw, encoded format.
+ *
+ * RawEventView enables processing events without decoding them into domain objects,
+ * which is useful for scenarios requiring high performance, binary storage, or
+ * custom encoding schemes. Events are processed as EncodedEvent objects containing
+ * the raw buffer and metadata headers.
+ *
+ * Use Cases:
+ * - **High Performance**: Avoid decoding overhead for throughput-sensitive scenarios
+ * - **Binary Storage**: Store events in their original encoded format
+ * - **Custom Processing**: Implement custom decoding or transformation logic
+ * - **Event Forwarding**: Route events to external systems without modification
+ * - **Audit Trails**: Preserve exact event format for compliance requirements
+ *
+ * @example Binary event archival
+ * ```typescript
+ * const eventArchiveView: RawEventView = {
+ *   consumerGroup: 'event-archiver',
+ *   streamsToSubscribe: ['users', 'orders', 'payments'],
+ *
+ *   handleEvent: async (encodedEvent) => {
+ *     // Store raw event data with metadata
+ *     await archiveStorage.store({
+ *       eventId: encodedEvent.headers.id,
+ *       eventType: encodedEvent.headers.type,
+ *       timestamp: encodedEvent.timestamp,
+ *       rawData: encodedEvent.buffer,
+ *       headers: encodedEvent.headers
+ *     });
+ *   }
+ * };
+ *
+ * await registerRawView(eventArchiveView);
+ * ```
+ *
+ * @example High-performance event forwarding
+ * ```typescript
+ * const eventForwarder: RawEventView = {
+ *   consumerGroup: 'external-forwarder',
+ *   streamsToSubscribe: ['public-events'],
+ *
+ *   handleEvent: async (encodedEvent) => {
+ *     // Forward to external webhook without decoding
+ *     await httpClient.post('/webhook', {
+ *       headers: {
+ *         'Content-Type': 'application/octet-stream',
+ *         'X-Event-Type': encodedEvent.headers.type,
+ *         'X-Event-Id': encodedEvent.headers.id
+ *       },
+ *       body: encodedEvent.buffer
+ *     });
+ *   }
+ * };
+ * ```
+ *
+ * @see {@link registerRawView} For view registration
+ * @see {@link EventView} For decoded event processing
+ * @see {@link EncodedEvent} For raw event structure
+ */
 export declare interface RawEventView {
+    /**
+     * Unique consumer group identifier for load balancing.
+     *
+     * Multiple raw view instances with the same consumer group will share event
+     * processing, enabling horizontal scaling and fault tolerance.
+     */
     consumerGroup: string;
+    /**
+     * Raw event processing function called for each received encoded event.
+     *
+     * Receives events in their binary format without decoding. Use this for
+     * high-performance scenarios or when you need access to the raw event data.
+     *
+     * @param event - The encoded event with buffer and metadata
+     */
     handleEvent: (event: EncodedEvent) => Promise<void>;
+    /**
+     * List of event streams to subscribe to.
+     *
+     * View will receive all raw events from these streams. Consider the
+     * performance implications of subscribing to high-volume streams.
+     */
     streamsToSubscribe: string[];
 }
 
@@ -704,7 +1534,74 @@ export declare function registerView(view: EventView): Promise<EventSubscription
 export declare function removeAllSagas(): Promise<void>;
 
 /**
- * A saga!
+ * Defines a long-running business process that coordinates across events and time.
+ *
+ * Sagas implement the Saga pattern for managing complex workflows that span multiple
+ * aggregates, external services, and time-based operations. They provide stateful
+ * event processing with support for timers, error handling, and process coordination.
+ *
+ * @template TimeoutNames - Union type of timer names this saga can schedule
+ * @template InstanceData - Type of the saga's persistent state data
+ *
+ * Key Features:
+ * - **Stateful Processing**: Maintains state across multiple events
+ * - **Timer Support**: Schedule delays and recurring operations
+ * - **Error Handling**: Custom error handling and compensation logic
+ * - **Event Correlation**: Match events to specific saga instances
+ * - **Parallel Processing**: Configurable concurrency for high throughput
+ *
+ * @example Payment processing saga
+ * ```typescript
+ * interface PaymentData {
+ *   orderId: string;
+ *   amount: number;
+ *   attempts: number;
+ * }
+ *
+ * type PaymentTimers = 'timeout' | 'retry';
+ *
+ * export function paymentSaga() {
+ *   return saga<PaymentTimers, PaymentData>('PaymentSaga')
+ *     .subscribeStreams(['orders', 'payments'])
+ *     .startOn('OrderCreated', {}, async (instance, event) => {
+ *       instance.set('orderId', event.data.orderId);
+ *       instance.set('amount', event.data.amount);
+ *       instance.set('attempts', 0);
+ *
+ *       // Process payment
+ *       await processPayment(event.data);
+ *
+ *       // Set timeout
+ *       instance.upsertTimer('timeout', {
+ *         isCron: false,
+ *         timeout: 300000 // 5 minutes
+ *       });
+ *     })
+ *     .on('PaymentSucceeded', {
+ *       matchInstance: (event) => ({
+ *         instanceProperty: 'orderId',
+ *         value: event.data.orderId
+ *       })
+ *     }, async (instance, event) => {
+ *       instance.removeTimer('timeout');
+ *       instance.endSaga();
+ *     })
+ *     .onTimer('timeout', async (instance) => {
+ *       const attempts = instance.get('attempts');
+ *       if (attempts < 3) {
+ *         instance.set('attempts', attempts + 1);
+ *         await retryPayment(instance.get('orderId'));
+ *       } else {
+ *         await failPayment(instance.get('orderId'));
+ *         instance.endSaga();
+ *       }
+ *     });
+ * }
+ * ```
+ *
+ * @see {@link SagaInstance} For instance state management
+ * @see {@link registerSaga} For saga registration
+ * @see {@link SagaScheduler} For advanced scheduling
  */
 export declare class Saga<TimeoutNames, InstanceData> {
     readonly name: string;
@@ -737,7 +1634,56 @@ export declare class Saga<TimeoutNames, InstanceData> {
      * @param handle the async function to execute.
      */
     onTimer(name: TimeoutNames, handle: (saga: SagaInstance<TimeoutNames, InstanceData>) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+    /**
+     * Registers an event handler that can start new saga instances.
+     *
+     * When the specified event type is received and no existing saga instance
+     * matches, a new saga instance will be created and the handler called.
+     * Only one startOn handler per event type is allowed.
+     *
+     * @param eventName - The event type that can start new saga instances
+     * @param config - Configuration for instance creation
+     * @param handler - The function to execute when starting a new instance
+     *
+     * @example
+     * ```typescript
+     * saga.startOn('OrderCreated', {
+     *   matches: async (event) => event.data.requiresPayment,
+     *   withLock: (instance, event) => `payment-${event.data.orderId}`
+     * }, async (instance, event) => {
+     *   instance.set('orderId', event.data.orderId);
+     *   await initiatePayment(event.data);
+     * });
+     * ```
+     */
     startOn<T extends EventicleEvent>(eventName: string, config: StartHandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
+    /**
+     * Registers an event handler for existing saga instances.
+     *
+     * When the specified event type is received, the handler will be called
+     * on any existing saga instances that match the event based on the
+     * matchInstance configuration.
+     *
+     * @param eventName - The event type to handle
+     * @param config - Configuration for instance matching and locking
+     * @param handler - The function to execute for matching instances
+     *
+     * @example
+     * ```typescript
+     * saga.on('PaymentCompleted', {
+     *   matchInstance: (event) => ({
+     *     instanceProperty: 'orderId',
+     *     value: event.data.orderId
+     *   }),
+     *   withLock: (instance, event) => `payment-${event.data.orderId}`
+     * }, async (instance, event) => {
+     *   instance.set('paymentId', event.data.paymentId);
+     *   instance.removeTimer('timeout');
+     *   await completeOrder(instance.get('orderId'));
+     *   instance.endSaga();
+     * });
+     * ```
+     */
     on<T extends EventicleEvent>(eventName: string, config: HandlerConfig<T, InstanceData, TimeoutNames>, handler: (saga: SagaInstance<TimeoutNames, InstanceData>, event: T) => Promise<void>): Saga<TimeoutNames, InstanceData>;
     onError(handler: (saga: any, event: EventicleEvent, error: Error) => Promise<void>): Saga<TimeoutNames, InstanceData>;
 }
@@ -745,20 +1691,51 @@ export declare class Saga<TimeoutNames, InstanceData> {
 export declare function saga<TimeoutNames, SagaInstanceData>(name: string): Saga<TimeoutNames, SagaInstanceData>;
 
 /**
- * The data for a single execution of a {@link Saga}
+ * Represents a single running instance of a saga workflow.
  *
- * Sagas are stateful concepts, and this type contains the state.
+ * SagaInstance contains the runtime state and execution context for a specific
+ * saga execution. Each instance tracks its data, manages timers, and provides
+ * methods for saga lifecycle management.
+ *
+ * @template TimeoutNames - Union type of timer names this saga can schedule
+ * @template T - Type of the saga's persistent data
+ *
+ * @example
+ * ```typescript
+ * interface PaymentData {
+ *   orderId: string;
+ *   amount: number;
+ *   attempts: number;
+ * }
+ *
+ * type PaymentTimers = 'timeout' | 'retry';
+ *
+ * // In saga handler
+ * async function handleOrderCreated(
+ *   instance: SagaInstance<PaymentTimers, PaymentData>,
+ *   event: OrderCreatedEvent
+ * ) {
+ *   instance.set('orderId', event.data.orderId);
+ *   instance.set('amount', event.data.amount);
+ *   instance.set('attempts', 0);
+ *
+ *   // Schedule timeout
+ *   instance.upsertTimer('timeout', {
+ *     isCron: false,
+ *     timeout: 300000 // 5 minutes
+ *   });
+ * }
+ * ```
+ *
+ * @see {@link Saga} For the saga definition
+ * @see {@link SagaScheduler} For timer execution
  */
 export declare class SagaInstance<TimeoutNames, T> {
     readonly internalData: any;
     readonly record?: Record_2;
-    /**
-     * Private instance data
-     */
+    /** Timers pending removal in the next persistence cycle */
     readonly timersToRemove: TimeoutNames[];
-    /**
-     * Private instance data
-     */
+    /** Timers pending addition in the next persistence cycle */
     readonly timersToAdd: {
         name: TimeoutNames;
         config: {
@@ -771,14 +1748,35 @@ export declare class SagaInstance<TimeoutNames, T> {
     }[];
     constructor(internalData: any, record?: Record_2);
     /**
-     * Get a piece of arbitrary data from the saga instance
-     * @param name THe key
+     * Retrieves a piece of data from the saga instance state.
+     *
+     * @param name - The key of the data to retrieve
+     * @returns The value associated with the key
+     *
+     * @example
+     * ```typescript
+     * const orderId = instance.get('orderId');
+     * const attempts = instance.get('attempts');
+     * ```
      */
     get<K extends keyof T>(name: K): T[K];
     /**
-     * Set a piece of arbitrary data into the saga instance
-     * @param name The key
-     * @param value the value. Must be able to encode to JSON.
+     * Sets a piece of data in the saga instance state.
+     *
+     * The value must be JSON-serializable as saga state is persisted.
+     * The 'id' field is protected and cannot be modified.
+     *
+     * @param name - The key to set
+     * @param value - The value to store (must be JSON-serializable)
+     *
+     * @throws Error if attempting to set the 'id' field
+     *
+     * @example
+     * ```typescript
+     * instance.set('status', 'processing');
+     * instance.set('retryCount', 3);
+     * instance.set('lastError', { code: 'TIMEOUT', message: 'Request timed out' });
+     * ```
      */
     set(name: keyof T, value: any): void;
     lastEvent(): EventicleEvent;
@@ -827,6 +1825,24 @@ export declare class SagaInstance<TimeoutNames, T> {
         timeout: number;
     }): void;
     removeTimer(name: TimeoutNames): void;
+    /**
+     * Marks the saga instance as completed and schedules it for cleanup.
+     *
+     * Once a saga is ended, it will not receive any more events or timer
+     * callbacks. The instance data can optionally be preserved for debugging
+     * or audit purposes.
+     *
+     * @param preserveInstanceData - Whether to keep instance data after completion
+     *
+     * @example
+     * ```typescript
+     * // End saga and clean up data
+     * instance.endSaga();
+     *
+     * // End saga but preserve data for audit
+     * instance.endSaga(true);
+     * ```
+     */
     endSaga(preserveInstanceData?: boolean): void;
 }
 

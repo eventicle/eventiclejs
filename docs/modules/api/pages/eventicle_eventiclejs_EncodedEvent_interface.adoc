@@ -1,6 +1,8 @@
 = interface EncodedEvent
 
+Represents an event in its encoded, wire-ready format.
 
+EncodedEvent is the transport representation of an EventicleEvent, containing the serialized event data as a buffer along with metadata headers. This format is used by EventClient implementations for efficient network transmission and storage.
 
 
 
@@ -11,7 +13,7 @@
 
 ========
 
-
+Serialized event data as binary buffer
 
 
 
@@ -28,7 +30,7 @@ buffer: Buffer;
 
 ========
 
-
+Event metadata headers for routing and processing
 
 
 
@@ -47,7 +49,7 @@ headers: {
 
 ========
 
-
+Partitioning key for event streaming (typically domainId)
 
 
 
@@ -64,7 +66,7 @@ key: string;
 
 ========
 
-
+Event creation timestamp in milliseconds
 
 
 

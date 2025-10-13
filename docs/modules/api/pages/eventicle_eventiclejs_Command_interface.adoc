@@ -1,10 +1,12 @@
 = interface Command
 
-A Command.
+Defines a command handler in Eventicle's CQRS architecture.
 
-It is generally preferred xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchDirectCommand_function_1[dispatchDirectCommand] where the command definition is implicit, and more fully type checked.
+Commands encapsulate business operations that change system state and emit domain events. They provide the "C" in CQRS, handling write operations while maintaining strong consistency and business rule enforcement.
 
-This, along with xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand] is available if you wish to separate your code more fully, or introduce a remote capable message based command bus.
+ I - Input data type for the command  O - Output/response type from the command
+
+Key Features: - \*\*Business Logic\*\*: Encapsulates domain operations and invariants - \*\*Event Generation\*\*: Produces events representing state changes - \*\*Type Safety\*\*: Strongly-typed input/output contracts - \*\*Transactional\*\*: Atomic execution with event emission - \*\*Scalable\*\*: Can be distributed across multiple instances
 
 
 
@@ -36,7 +38,9 @@ execute: (data: I) => Promise<CommandReturn<O>>;
 
 ========
 
-The event stream that any events in the CommandReturn should be emitted on
+Target event stream for publishing generated events.
+
+All events returned by the command execution will be published to this stream, making them available to event views, sagas, and other subscribers.
 
 
 
@@ -53,7 +57,9 @@ streamToEmit: string;
 
 ========
 
-The name of the Command. This is used to look it up when the user calls xref:eventicle_eventiclejs.adoc#eventicle_eventiclejs_dispatchCommand_function_1[dispatchCommand]
+Unique command type identifier used for registration and dispatch.
+
+Should be descriptive and follow consistent naming conventions (e.g., 'CreateUser', 'ProcessPayment', 'CancelOrder').
 
 
 

@@ -1,8 +1,10 @@
 = class SagaInstance
 
-The data for a single execution of a xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
+Represents a single running instance of a saga workflow.
 
-Sagas are stateful concepts, and this type contains the state.
+SagaInstance contains the runtime state and execution context for a specific saga execution. Each instance tracks its data, manages timers, and provides methods for saga lifecycle management.
+
+ TimeoutNames - Union type of timer names this saga can schedule  T - Type of the saga's persistent data
 
 
 
@@ -47,7 +49,7 @@ readonly record?: Record;
 
 ========
 
-Private instance data
+Timers pending addition in the next persistence cycle
 
 
 
@@ -73,7 +75,7 @@ readonly timersToAdd: {
 
 ========
 
-Private instance data
+Timers pending removal in the next persistence cycle
 
 
 
@@ -126,7 +128,9 @@ constructor(internalData: any, record?: Record);
 
 ========
 
+Marks the saga instance as completed and schedules it for cleanup.
 
+Once a saga is ended, it will not receive any more events or timer callbacks. The instance data can optionally be preserved for debugging or audit purposes.
 
 
 
@@ -137,7 +141,7 @@ constructor(internalData: any, record?: Record);
 
 m|preserveInstanceData
 m|boolean
-|
+|Whether to keep instance data after completion
 
 s|Returns
 m|void
@@ -156,7 +160,7 @@ endSaga(preserveInstanceData?: boolean): void;
 
 ========
 
-Get a piece of arbitrary data from the saga instance
+Retrieves a piece of data from the saga instance state.
 
 
 
@@ -167,11 +171,11 @@ Get a piece of arbitrary data from the saga instance
 
 m|name
 m|K
-|THe key
+|The key of the data to retrieve
 
 s|Returns
 m|T[K]
-|
+|The value associated with the key
 |===
 
 .Signature
@@ -233,7 +237,9 @@ removeTimer(name: TimeoutNames): void;
 
 ========
 
-Set a piece of arbitrary data into the saga instance
+Sets a piece of data in the saga instance state.
+
+The value must be JSON-serializable as saga state is persisted. The 'id' field is protected and cannot be modified.
 
 
 
@@ -244,11 +250,11 @@ Set a piece of arbitrary data into the saga instance
 
 m|name
 m|keyof T
-|The key
+|The key to set
 
 m|value
 m|any
-|the value. Must be able to encode to JSON.
+|The value to store (must be JSON-serializable)
 
 s|Returns
 m|void

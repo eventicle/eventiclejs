@@ -1,8 +1,10 @@
 = interface EventClientCodec
 
-Convert xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent] to/ from xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent].
+Codec interface for converting between domain events and wire format.
 
-EncodedEvent is suitable for the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient] implementations to send on the wire, as it is a Buffer and a set of message headers.
+EventClientCodec provides the serialization/deserialization layer between EventicleEvent (domain representation) and EncodedEvent (wire representation). Different implementations can provide JSON, Avro, Protocol Buffers, or custom encoding schemes.
+
+The codec is responsible for: - Serializing event payloads and metadata - Handling distributed tracing headers - Version compatibility and schema evolution - Compression and encryption (if needed)
 
 
 
@@ -13,7 +15,7 @@ EncodedEvent is suitable for the xref:eventicle_eventiclejs_EventClient_interfac
 
 ========
 
-
+Converts an encoded event back into its domain representation.
 
 
 
@@ -30,7 +32,7 @@ decode: (encoded: EncodedEvent) => Promise<EventicleEvent>;
 
 ========
 
-Convert a raw event binary (as a xref:eventicle_eventiclejs_EncodedEvent_interface.adoc[EncodedEvent]) into a xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]
+Converts a domain event into its wire-ready encoded format.
 
 
 

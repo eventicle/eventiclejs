@@ -1,6 +1,10 @@
 = interface CommandIntent
 
-A CommandIntent is a message instructing Eventicle to perform an action that may emit events that should be sent externally using the xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]
+Represents a request to execute a command with typed payload data.
+
+CommandIntent provides a standardized way to request command execution in Eventicle's CQRS architecture. It decouples command requests from their implementations, enabling features like remote command execution, load balancing, and message-based architectures.
+
+ T - The type of the command payload data
 
 
 
@@ -11,7 +15,9 @@ A CommandIntent is a message instructing Eventicle to perform an action that may
 
 ========
 
-The data that will be used when calling the Command instance.
+Strongly-typed payload data passed to the command handler.
+
+Contains all information needed to execute the command business logic.
 
 
 
@@ -28,7 +34,9 @@ data: T;
 
 ========
 
-The command type
+Unique identifier for the command type (e.g., 'CreateUser', 'ProcessPayment').
+
+Must match a registered command's type for successful dispatch.
 
 
 

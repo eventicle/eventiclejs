@@ -1,6 +1,10 @@
 = interface EventView
 
+Defines an event view for building read-side projections in CQRS architectures.
 
+EventView implements the "Q" (Query) side of CQRS, processing domain events to build optimized read models, projections, and materialized views. Views enable efficient querying by maintaining denormalized data structures tailored for specific read patterns.
+
+Key Features: - \*\*Event Processing\*\*: Handles events from multiple streams - \*\*Consumer Groups\*\*: Enables load balancing across multiple instances - \*\*Parallel Processing\*\*: Configurable concurrency for high throughput - \*\*Cold/Hot Replay\*\*: Processes historical events then continues with live events - \*\*Error Handling\*\*: Built-in error recovery and monitoring
 
 
 
@@ -11,7 +15,9 @@
 
 ========
 
+Unique consumer group identifier for load balancing.
 
+Multiple view instances with the same consumer group will share event processing, enabling horizontal scaling and fault tolerance.
 
 
 
@@ -28,7 +34,9 @@ consumerGroup: string;
 
 ========
 
+Event processing function called for each received event.
 
+Should be idempotent as events may be redelivered during failures. Typically updates read models, projections, or external systems.
 
 
 
@@ -45,7 +53,9 @@ handleEvent: (event: EventicleEvent) => Promise<void>;
 
 ========
 
+Number of events to process concurrently (default varies by implementation).
 
+Higher values increase throughput but may impact memory usage and database connection pools. Tune based on your processing requirements.
 
 
 
@@ -62,7 +72,9 @@ parallelEventCount?: number;
 
 ========
 
+List of event streams to subscribe to.
 
+View will receive all events from these streams. Use specific stream names to reduce processing overhead and improve performance.
 
 
 

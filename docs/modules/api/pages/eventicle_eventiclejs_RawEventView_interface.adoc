@@ -1,6 +1,10 @@
 = interface RawEventView
 
+Defines a view for processing events in their raw, encoded format.
 
+RawEventView enables processing events without decoding them into domain objects, which is useful for scenarios requiring high performance, binary storage, or custom encoding schemes. Events are processed as EncodedEvent objects containing the raw buffer and metadata headers.
+
+Use Cases: - \*\*High Performance\*\*: Avoid decoding overhead for throughput-sensitive scenarios - \*\*Binary Storage\*\*: Store events in their original encoded format - \*\*Custom Processing\*\*: Implement custom decoding or transformation logic - \*\*Event Forwarding\*\*: Route events to external systems without modification - \*\*Audit Trails\*\*: Preserve exact event format for compliance requirements
 
 
 
@@ -11,7 +15,9 @@
 
 ========
 
+Unique consumer group identifier for load balancing.
 
+Multiple raw view instances with the same consumer group will share event processing, enabling horizontal scaling and fault tolerance.
 
 
 
@@ -28,7 +34,9 @@ consumerGroup: string;
 
 ========
 
+Raw event processing function called for each received encoded event.
 
+Receives events in their binary format without decoding. Use this for high-performance scenarios or when you need access to the raw event data.
 
 
 
@@ -45,7 +53,9 @@ handleEvent: (event: EncodedEvent) => Promise<void>;
 
 ========
 
+List of event streams to subscribe to.
 
+View will receive all raw events from these streams. Consider the performance implications of subscribing to high-volume streams.
 
 
 
