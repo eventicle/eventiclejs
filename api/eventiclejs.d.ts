@@ -38,6 +38,7 @@ declare class AggregateObservationAdapter implements EventAdapter {
     readonly name = "aggregate-observer";
     constructor(streamsToSubscribe: string[]);
     readonly consumerGroup: string;
+    readonly deleteConsumerGroupOnClose = true;
     handleEvent(event: EventicleEvent): Promise<void>;
 }
 
@@ -839,6 +840,13 @@ export declare interface EventAdapter {
      */
     streamsToSubscribe: string[];
     /**
+     * When true, deletes the Kafka consumer group when the adapter is closed.
+     *
+     * Useful for ephemeral adapters with dynamic consumer groups (e.g., UUID-based)
+     * to prevent accumulation of stale consumer groups in Kafka.
+     */
+    deleteConsumerGroupOnClose?: boolean;
+    /**
      * Optional custom error handler for event processing failures.
      *
      * If not provided, a default handler logs the error and continues processing.
@@ -985,6 +993,7 @@ export declare interface EventClient {
         groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
+        deleteConsumerGroupOnClose?: boolean;
     }) => Promise<EventSubscriptionControl>;
     /**
      * Only play hot data.
@@ -995,6 +1004,7 @@ export declare interface EventClient {
         groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
+        deleteConsumerGroupOnClose?: boolean;
     }) => Promise<EventSubscriptionControl>;
     /**
      * Play from persisted storage the continue from in memory
@@ -1861,6 +1871,8 @@ export { setLockManager }
 export { setLogApi }
 
 export declare function setScheduler(scheduler: ScheduleJobRunner): void;
+
+export declare function shutdownAllAdapters(): Promise<void>;
 
 declare interface StartHandlerConfig<T extends EventicleEvent, Y, TimeoutNames> {
     /**
