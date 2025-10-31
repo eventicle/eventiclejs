@@ -578,7 +578,8 @@ class EventclientKafka implements EventClient {
       stream: string | string[],
       consumerName: string,
       consumer: (event: EventicleEvent | EncodedEvent) => Promise<void>,
-      onError: (error: any) => void
+      onError: (error: any) => void,
+      deleteConsumerGroupOnClose?: boolean
     }): Promise<EventSubscriptionControl> {
     if (consumerGroups.includes(config.consumerName)) {
       logger.error("Consumer Group has subscribed multiple times, this is a bug, error: " + config.consumerName, new Error("Consumer Group has subscribed multiple times, this is a bug,  error " + config.consumerName))
@@ -647,6 +648,18 @@ class EventclientKafka implements EventClient {
 
     return {
       close: async () => {
+        if (config.deleteConsumerGroupOnClose) {
+          const admin = kafka.admin()
+          try {
+            await admin.connect()
+            await admin.deleteGroups([config.consumerName])
+            logger.debug(`Deleted consumer group ${config.consumerName}`)
+          } catch (error) {
+            logger.warn(`Failed to delete consumer group ${config.consumerName}`, error)
+          } finally {
+            await admin.disconnect()
+          }
+        }
         await cons.disconnect()
         consumerGroups = consumerGroups.filter(value => value !== config.consumerName)
       }
@@ -658,13 +671,14 @@ class EventclientKafka implements EventClient {
     stream: string | string[],
     groupId: string,
     handler: (event: EncodedEvent) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    deleteConsumerGroupOnClose?: boolean
   }): Promise<EventSubscriptionControl> {
     return this.hotStreamInternal({
       parallelEventCount: config.parallelEventCount,
       rawEvents: true,
       stream:config.stream, consumerName: config.groupId, consumer: config.handler, onError: config.onError,
-
+      deleteConsumerGroupOnClose: config.deleteConsumerGroupOnClose
     })
   }
 
@@ -673,12 +687,14 @@ class EventclientKafka implements EventClient {
     stream: string | string[],
     groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    deleteConsumerGroupOnClose?: boolean
   }): Promise<EventSubscriptionControl> {
     return this.hotStreamInternal({
       parallelEventCount: config.parallelEventCount,
       rawEvents: false,
-      stream:config.stream, consumerName: config.groupId, consumer: config.handler, onError: config.onError
+      stream:config.stream, consumerName: config.groupId, consumer: config.handler, onError: config.onError,
+      deleteConsumerGroupOnClose: config.deleteConsumerGroupOnClose
     })
   }
 

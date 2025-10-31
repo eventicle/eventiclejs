@@ -383,7 +383,8 @@ export interface EventClient {
     stream: string | string[],
     groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    deleteConsumerGroupOnClose?: boolean
   }) => Promise<EventSubscriptionControl>
 
   /**
@@ -394,7 +395,8 @@ export interface EventClient {
     stream: string | string[],
     groupId: string,
     handler: (event: EncodedEvent) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    deleteConsumerGroupOnClose?: boolean
   }) => Promise<EventSubscriptionControl>
 
 

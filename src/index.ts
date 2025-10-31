@@ -12,7 +12,7 @@ export { Saga, registerSaga, saga, SagaInstance, allSagaInstances, allSagas, rem
 export { default as InMemoryDatastore } from "./datastore/inmem-data-store"
 export { DataStore, Record, setDataStore, dataStore, DataSorting, DataQuery, PagedRecords, TransactionListener, TransactionData, TransactionOptions } from "@eventicle/eventicle-utilities/dist/datastore"
 export { aggregateObservationAdapter, createAggregateObservationAdapter, aggregateObserver} from "./events/adapter/AggregateObservationAdapter"
-export { EventAdapter, registerAdapter } from "./events/adapter"
+export { EventAdapter, registerAdapter, shutdownAllAdapters } from "./events/adapter"
 export { LogApi, setLogApi } from "@eventicle/eventicle-utilities"
 export { consumeFullEventLog } from "./testing"
 export { metrics } from "./metrics"
