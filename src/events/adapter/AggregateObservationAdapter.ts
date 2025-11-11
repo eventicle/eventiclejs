@@ -16,6 +16,7 @@ class AggregateObservationAdapter implements EventAdapter {
   }
 
   readonly consumerGroup = "aggregate-observation-" + uuid.v4();
+  readonly deleteConsumerGroupOnClose = true;
 
   async handleEvent(event: EventicleEvent): Promise<void> {
     logger.trace("AR Observer has an event", event);

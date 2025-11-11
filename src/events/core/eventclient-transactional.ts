@@ -82,7 +82,8 @@ class EventclientTransactional implements EventClient {
     stream: string | string[],
     groupId: string,
     handler: (event: EventicleEvent) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    deleteConsumerGroupOnClose?: boolean
   }) {
     return this.delegate.hotStream(config)
   }
@@ -92,7 +93,8 @@ class EventclientTransactional implements EventClient {
     stream: string | string[],
     groupId: string,
     handler: (event: EncodedEvent) => Promise<void>,
-    onError: (error: any) => void
+    onError: (error: any) => void,
+    deleteConsumerGroupOnClose?: boolean
   }): Promise<EventSubscriptionControl> {
     return this.delegate.hotRawStream(config)
   }
@@ -101,7 +103,9 @@ class EventclientTransactional implements EventClient {
     return this.delegate.isConnected();
   }
 
-  shutdown(): Promise<void> {
+  async shutdown(): Promise<void> {
+    const { shutdownAllAdapters } = await import('../adapter');
+    await shutdownAllAdapters();
     return this.delegate.shutdown();
   }
 }

@@ -36,6 +36,14 @@ export function getAdapterMetrics() {
   return metrics;
 }
 
+export async function shutdownAllAdapters(): Promise<void> {
+  logger.debug("Shutting down all adapters", Object.keys(viewControls));
+  await Promise.all(
+    Object.values(viewControls).map(control => control.close())
+  );
+  logger.debug("All adapters shut down");
+}
+
 /**
  * This will connect the given EventAdapter to event streams.
  *
@@ -69,6 +77,7 @@ export async function registerAdapter(
       logger.error("Error in adapter", error);
     },
     groupId: adapter.consumerGroup,
+    deleteConsumerGroupOnClose: adapter.deleteConsumerGroupOnClose,
     handler: async (event) => {
       await dataStore()
         .transaction(async () => {
@@ -107,6 +116,7 @@ export async function registerRawAdapter(
   let control = await eventClient().hotRawStream({
     stream: view.streamsToSubscribe,
     groupId: view.consumerGroup,
+    deleteConsumerGroupOnClose: view.deleteConsumerGroupOnClose,
     handler: async (event) => {
       await dataStore()
         .transaction(async () => {
@@ -247,15 +257,23 @@ export interface EventAdapter {
    */
   handleEvent: (event: EventicleEvent) => Promise<void>;
   
-  /** 
+  /**
    * List of event streams to monitor for live events.
-   * 
+   *
    * Adapter will receive all new events from these streams. Use specific
    * stream names to reduce noise and improve performance.
    */
   streamsToSubscribe: string[];
-  
-  /** 
+
+  /**
+   * When true, deletes the Kafka consumer group when the adapter is closed.
+   *
+   * Useful for ephemeral adapters with dynamic consumer groups (e.g., UUID-based)
+   * to prevent accumulation of stale consumer groups in Kafka.
+   */
+  deleteConsumerGroupOnClose?: boolean;
+
+  /**
    * Optional custom error handler for event processing failures.
    * 
    * If not provided, a default handler logs the error and continues processing.
@@ -342,15 +360,23 @@ export interface RawEventAdapter {
    */
   handleEvent: (event: EncodedEvent) => Promise<void>;
   
-  /** 
+  /**
    * List of event streams to monitor for live events.
-   * 
+   *
    * Adapter will receive all new raw events from these streams. Consider the
    * performance implications of subscribing to high-volume streams.
    */
   streamsToSubscribe: string[];
-  
-  /** 
+
+  /**
+   * When true, deletes the Kafka consumer group when the adapter is closed.
+   *
+   * Useful for ephemeral adapters with dynamic consumer groups (e.g., UUID-based)
+   * to prevent accumulation of stale consumer groups in Kafka.
+   */
+  deleteConsumerGroupOnClose?: boolean;
+
+  /**
    * Optional custom error handler for event processing failures.
    * 
    * If not provided, a default handler logs the error and continues processing.

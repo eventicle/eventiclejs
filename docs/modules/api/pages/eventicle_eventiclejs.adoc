@@ -988,3 +988,20 @@ export declare function setScheduler(scheduler: ScheduleJobRunner): void;
 ----
 
 ========
+[id="eventicle_eventiclejs_shutdownAllAdapters_function_1"]
+=== shutdownAllAdapters()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function shutdownAllAdapters(): Promise<void>;
+----
+
+========

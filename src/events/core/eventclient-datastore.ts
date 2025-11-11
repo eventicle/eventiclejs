@@ -341,5 +341,8 @@ class EventclientDatastore implements EventClient {
 
   async shutdown(): Promise<void> {
     subscriptions.length=0
+    consumerGroups.length=0
+    emitter.removeAllListeners("event")
+    streams.clear()
   }
 }
