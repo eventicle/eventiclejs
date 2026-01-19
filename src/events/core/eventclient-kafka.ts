@@ -126,6 +126,64 @@ export async function maybeCreateTopic(config: TopicFailureConfiguration, topicN
   }
 }
 
+async function ensurePartitionOffsetsCommitted(
+  groupId: string,
+  topicName: string
+): Promise<void> {
+  const admin = kafka.admin();
+  await admin.connect();
+
+  try {
+    const metadata = await admin.fetchTopicMetadata({ topics: [topicName] });
+    const topicInfo = metadata.topics.find(t => t.name === topicName);
+    if (!topicInfo) {
+      logger.debug(`Topic ${topicName} not found, skipping offset initialization`);
+      return;
+    }
+
+    const partitions = topicInfo.partitions.map(p => p.partitionId);
+    const topicOffsets = await admin.fetchTopicOffsets(topicName);
+
+    const existingOffsets = await admin.fetchOffsets({ groupId, topics: [topicName] });
+    const existingPartitionOffsets = new Map<number, string>();
+    for (const topicOffset of existingOffsets) {
+      if (topicOffset.topic === topicName) {
+        for (const partitionData of topicOffset.partitions) {
+          existingPartitionOffsets.set(partitionData.partition, partitionData.offset);
+        }
+      }
+    }
+
+    const partitionsNeedingInit: { partition: number; offset: string }[] = [];
+
+    for (const partition of partitions) {
+      const existingOffset = existingPartitionOffsets.get(partition);
+      const isUninitialized = !existingOffset || existingOffset === "-1" || parseInt(existingOffset) < 0;
+
+      if (isUninitialized) {
+        const latestOffset = topicOffsets.find(o => o.partition === partition)?.high || "0";
+        partitionsNeedingInit.push({
+          partition,
+          offset: latestOffset
+        });
+      }
+    }
+
+    if (partitionsNeedingInit.length > 0) {
+      logger.info(`Initializing offsets for ${partitionsNeedingInit.length} partitions in group ${groupId} on topic ${topicName}`,
+        partitionsNeedingInit);
+
+      await admin.setOffsets({
+        groupId,
+        topic: topicName,
+        partitions: partitionsNeedingInit
+      });
+    }
+  } finally {
+    await admin.disconnect();
+  }
+}
+
 async function connectConsumerWithOptionalCreation<T>(topicNames: string | string[], executor: () => Promise<T>) {
   let topics: string[]
   if (!Array.isArray(topicNames)) {
@@ -605,11 +663,14 @@ class EventclientKafka implements EventClient {
     await connectConsumerWithOptionalCreation(config.stream, async () => {
       await cons.connect()
 
+      const groupId = newConf.groupId || config.consumerName;
       if (Array.isArray(config.stream)) {
         for (let str of config.stream) {
+          await ensurePartitionOffsetsCommitted(groupId, str);
           await cons.subscribe({topic: str})
         }
       } else {
+        await ensurePartitionOffsetsCommitted(groupId, config.stream);
         await cons.subscribe({topic: config.stream})
       }
 
