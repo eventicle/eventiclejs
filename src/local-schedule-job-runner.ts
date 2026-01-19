@@ -4,7 +4,7 @@ import {logger} from "@eventicle/eventicle-utilities";
 import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util";
 import {dataStore} from "./";
 import * as nodeCron from "node-cron"
-import * as CronParser from "cron-parser"
+import CronParser from "cron-parser"
 
 
 /**
@@ -54,7 +54,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
           timerId: id,
           config,
           data,
-          nextExecutionTime: CronParser.parseExpression(config.crontab).next().getTime()
+          nextExecutionTime: CronParser.parse(config.crontab).next().getTime()
         }
 
         await dataStore().saveEntity("system", "lock-manager-cron", existing[0])
@@ -65,7 +65,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
           timerId: id,
           config,
           data,
-          nextExecutionTime: CronParser.parseExpression(config.crontab).next().getTime()
+          nextExecutionTime: CronParser.parse(config.crontab).next().getTime()
         })
       }
     }
@@ -75,9 +75,8 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     }
     const sched = nodeCron.schedule(config.crontab, now => {
       this.events.emit(component, {name, id, data})
-    }, {
-      scheduled: true
     })
+    sched.start()
 
     this.crons.set(component + name + id, sched)
   }
