@@ -19,7 +19,6 @@ export interface RedisStreamConfig {
   coldBatchSize?: number;
   consumerNamePrefix?: string;
   maxStreamLength?: number;
-  claimIdleTimeMs?: number;
 }
 
 const FIELD_BUFFER = "buf";
@@ -41,7 +40,7 @@ function decodeHeaders(raw: string): { [key: string]: any } {
   return JSON.parse(raw);
 }
 
-function buildStreamEntryFields(encoded: EncodedEvent): string[] {
+export function buildStreamEntryFields(encoded: EncodedEvent): string[] {
   return [
     FIELD_BUFFER,
     encoded.buffer.toString("base64"),
@@ -54,7 +53,7 @@ function buildStreamEntryFields(encoded: EncodedEvent): string[] {
   ];
 }
 
-function parseStreamEntry(fields: string[]): EncodedEvent {
+export function parseStreamEntry(fields: string[]): EncodedEvent {
   const fieldMap: { [key: string]: string } = {};
   for (let fieldIdx = 0; fieldIdx < fields.length; fieldIdx += 2) {
     fieldMap[fields[fieldIdx]] = fields[fieldIdx + 1];
@@ -128,7 +127,6 @@ class EventclientRedis implements EventClient {
       coldBatchSize: config.coldBatchSize ?? 100,
       consumerNamePrefix: config.consumerNamePrefix ?? "eventicle",
       maxStreamLength: config.maxStreamLength ?? 0,
-      claimIdleTimeMs: config.claimIdleTimeMs ?? 300000,
     };
   }
 
@@ -637,48 +635,58 @@ class EventclientRedis implements EventClient {
     groupId: string,
     rawEvents: boolean,
     handler: (event: EventicleEvent | EncodedEvent) => Promise<void>,
-    _parallelEventCount?: number
+    parallelEventCount?: number
   ): Promise<void> {
-    for (const [messageId, fields] of messages) {
-      const encoded = parseStreamEntry(fields);
+    const concurrency = parallelEventCount && parallelEventCount > 1
+      ? parallelEventCount
+      : 1;
 
-      try {
-        if (rawEvents) {
-          await handler(encoded);
-        } else {
-          const decoded = await eventClientCodec().decode(encoded);
-          if (!decoded) continue;
+    for (let batchStart = 0; batchStart < messages.length; batchStart += concurrency) {
+      const batch = messages.slice(batchStart, batchStart + concurrency);
 
-          decoded.stream = streamName;
+      await Promise.all(
+        batch.map(async ([messageId, fields]) => {
+          const encoded = parseStreamEntry(fields);
 
-          logger.debug(
-            `Received event ${decoded.id} on ${groupId} on stream ${streamName}`,
-            decoded
-          );
-          await handler(decoded);
-        }
-      } catch (handlerError) {
-        logger.warn(
-          "Consumer failed to process message, dropping to avoid poisoning queue",
-          {
-            error: maybeRenderError(handlerError),
-            consumer: groupId,
-            stream: streamName,
-            messageId,
+          try {
+            if (rawEvents) {
+              await handler(encoded);
+            } else {
+              const decoded = await eventClientCodec().decode(encoded);
+              if (!decoded) return;
+
+              decoded.stream = streamName;
+
+              logger.debug(
+                `Received event ${decoded.id} on ${groupId} on stream ${streamName}`,
+                decoded
+              );
+              await handler(decoded);
+            }
+          } catch (handlerError) {
+            logger.warn(
+              "Consumer failed to process message, dropping to avoid poisoning queue",
+              {
+                error: maybeRenderError(handlerError),
+                consumer: groupId,
+                stream: streamName,
+                messageId,
+              }
+            );
           }
-        );
-      }
 
-      try {
-        await subscriber.xack(streamName, groupId, messageId);
-      } catch (ackError) {
-        logger.warn("Failed to XACK message", {
-          error: maybeRenderError(ackError),
-          stream: streamName,
-          groupId,
-          messageId,
-        });
-      }
+          try {
+            await subscriber.xack(streamName, groupId, messageId);
+          } catch (ackError) {
+            logger.warn("Failed to XACK message", {
+              error: maybeRenderError(ackError),
+              stream: streamName,
+              groupId,
+              messageId,
+            });
+          }
+        })
+      );
     }
   }
 
