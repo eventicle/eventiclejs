@@ -2,6 +2,7 @@
 export { EventClient, eventClientCodec, EventicleEvent, setEventClient, eventClient, setEventSourceName, eventSourceName, EventClientCodec, setEventClientCodec, EncodedEvent } from "./events/core/event-client";
 export { eventClientOnDatastore } from "./events/core/eventclient-datastore";
 export { eventClientOnKafka, connectBroker } from "./events/core/eventclient-kafka";
+export { eventClientOnRedis, RedisStreamConfig } from "./events/core/eventclient-redis";
 export {default as aggregates, AggregateRoot} from "./events/aggregate-root";
 export {scheduler, setScheduler} from "./scheduler";
 export {LocalScheduleJobRunner} from "./local-schedule-job-runner";
