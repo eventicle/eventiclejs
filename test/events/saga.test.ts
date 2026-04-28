@@ -468,6 +468,98 @@ describe('Sagas', function () {
     }
   });
 
+  describe('hot/cold consumer-group prioritisation', function () {
+
+    it('saga without withHotPredicate registers a single consumer group (existing behaviour)', async function () {
+      const single = saga<timeouts, SagaData>("Single Lane Saga")
+        .subscribeStreams(["users"])
+        .startOn("UserCreated", {}, async (instance, event) => {
+          instance.set("usercreated", true)
+          instance.set("domainId", event.domainId)
+        })
+
+      await registerSaga(single)
+      expect(single.streamSubs.length).toBe(1)
+    });
+
+    it('saga with withHotPredicate registers two consumer groups (cold + hot)', async function () {
+      const dual = saga<timeouts, SagaData>("Dual Lane Saga")
+        .subscribeStreams(["users"])
+        .withHotPredicate(() => false)
+        .startOn("UserCreated", {}, async (instance, event) => {
+          instance.set("usercreated", true)
+          instance.set("domainId", event.domainId)
+        })
+
+      await registerSaga(dual)
+      expect(dual.streamSubs.length).toBe(2)
+    });
+
+    it('cold lane skips hot events; hot lane skips cold events; each event processed exactly once', async function () {
+      let coldProcessedCount = 0
+      let hotProcessedCount = 0
+
+      const routedSaga = saga<timeouts, SagaData>("Hot Cold Routing")
+        .subscribeStreams(["users"])
+        .withHotPredicate((ev) => ev.data?.kind === "hot")
+        .startOn("UserCreated", {}, async (instance, event) => {
+          instance.set("usercreated", true)
+          instance.set("domainId", event.domainId)
+          if (event.data?.kind === "hot") hotProcessedCount++
+          else coldProcessedCount++
+        })
+
+      await registerSaga(routedSaga)
+
+      await eventClient().emit([{
+        data: { id: "cold-1", kind: "cold" },
+        type: "UserCreated",
+        id: "cold-1",
+        domainId: "cold-domain"
+      }], "users")
+
+      await eventClient().emit([{
+        data: { id: "hot-1", kind: "hot" },
+        type: "UserCreated",
+        id: "hot-1",
+        domainId: "hot-domain"
+      }], "users")
+
+      await pause(200)
+
+      expect(coldProcessedCount).toBe(1)
+      expect(hotProcessedCount).toBe(1)
+      const instances = await allSagaInstances()
+      expect(instances.length).toBe(2)
+    });
+
+    it('predicate that throws defaults the event to cold lane', async function () {
+      let processedCount = 0
+
+      const sagaWithBrokenPredicate = saga<timeouts, SagaData>("Broken Predicate Saga")
+        .subscribeStreams(["users"])
+        .withHotPredicate(() => { throw new Error("predicate boom") })
+        .startOn("UserCreated", {}, async (instance, event) => {
+          instance.set("usercreated", true)
+          instance.set("domainId", event.domainId)
+          processedCount++
+        })
+
+      await registerSaga(sagaWithBrokenPredicate)
+
+      await eventClient().emit([{
+        data: { id: "ev-1" },
+        type: "UserCreated",
+        id: "ev-1",
+        domainId: "broken-domain"
+      }], "users")
+
+      await pause(200)
+
+      expect(processedCount).toBe(1)
+    });
+  });
+
   /*
   TODO, this is in flight
 
