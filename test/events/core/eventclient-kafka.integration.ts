@@ -13,6 +13,12 @@ import { logger } from "@eventicle/eventicle-utilities";
 
 jest.setTimeout(10000);
 
+const TEST_STREAMS = {
+  hot: `mystream-${uuid.v4()}`,
+  cold: `thestream-${uuid.v4()}`,
+  coldHot: `last-stream-${uuid.v4()}`,
+};
+
 beforeAll(async function () {
   // await initConfig();
   let clientId = "testclient-" + uuid.v4();
@@ -25,37 +31,25 @@ beforeAll(async function () {
     })
   );
   await testDbPurge();
-  await (eventClient() as any).clear([
-    "mystream",
-    "thestream",
-    "test-mystream",
-    "last-stream",
-  ]);
   await pause(5000);
 });
 beforeEach(async () => {
   console.log("STARTING DATA PUURGE");
   await testDbPurge();
-  await (eventClient() as any).clear([
-    "mystream",
-    "thestream",
-    "test-mystream",
-    "last-stream",
-  ]);
 });
 afterEach(async () => {
   await testDbPurge();
-  await (eventClient() as any).clear(
-    ["mystream", "thestream", "test-mystream"],
-    "last-stream"
-  );
+});
+
+afterAll(async () => {
+  await eventClient().shutdown();
 });
 
 test("hot stream receives events", async function () {
   let myevents = [] as EventicleEvent[];
 
   let consumer = await eventClient().hotStream({
-    stream: "mystream",
+    stream: TEST_STREAMS.hot,
     groupId: "me",
     handler: async (event) => {
       myevents.push(event);
@@ -78,7 +72,7 @@ test("hot stream receives events", async function () {
         domainId: uuid.v4(),
       },
     ],
-    "mystream"
+    TEST_STREAMS.hot
   );
 
   await pause(1500);
@@ -90,9 +84,7 @@ test("hot stream receives events", async function () {
   expect(myevents[0].id).toEqual("epic");
 });
 
-test("cold stream fully replays historical", async function (done) {
-  await (eventClient() as any).clear(["thestream"]);
-
+test("cold stream fully replays historical", async function () {
   let myevents = [] as EventicleEvent[];
 
   await eventClient().emit(
@@ -108,7 +100,7 @@ test("cold stream fully replays historical", async function (done) {
         domainId: uuid.v4(),
       },
     ],
-    "thestream"
+    TEST_STREAMS.cold
   );
 
   await eventClient().emit(
@@ -124,7 +116,7 @@ test("cold stream fully replays historical", async function (done) {
         domainId: uuid.v4(),
       },
     ],
-    "thestream"
+    TEST_STREAMS.cold
   );
 
   await eventClient().emit(
@@ -140,7 +132,7 @@ test("cold stream fully replays historical", async function (done) {
         domainId: uuid.v4(),
       },
     ],
-    "thestream"
+    TEST_STREAMS.cold
   );
 
   await pause(100).catch((reason) => console.log(reason));
@@ -148,7 +140,7 @@ test("cold stream fully replays historical", async function (done) {
   await new Promise((resolve) => {
     eventClient()
       .coldStream({
-        stream: "thestream",
+        stream: TEST_STREAMS.cold,
         handler: async (event) => {
           myevents.push(event);
         },
@@ -165,7 +157,6 @@ test("cold stream fully replays historical", async function (done) {
   console.log(myevents);
   expect(myevents.length).toEqual(3);
   expect(myevents[0].type).toEqual("fake-event");
-  done();
 });
 
 test("cold hot stream fully replays historical and also events afterwards", async function () {
@@ -184,13 +175,13 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
         domainId: uuid.v4(),
       },
     ],
-    "last-stream"
+    TEST_STREAMS.coldHot
   );
 
   await pause(500);
 
   let control = await eventClient().coldHotStream({
-    stream: "last-stream",
+    stream: TEST_STREAMS.coldHot,
     groupId: "test-group",
     handler: async (event) => {
       myevents.push(event);
@@ -211,7 +202,7 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
         domainId: uuid.v4(),
       },
     ],
-    "last-stream"
+    TEST_STREAMS.coldHot
   );
 
   await pause(3000);

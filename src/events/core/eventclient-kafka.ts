@@ -169,17 +169,39 @@ class EventclientKafka implements EventClient {
     return this
   }
 
-  async clear(topics: string[]) {
-    let admin = kafka.admin()
-    await admin.connect()
-    let existingTopics = await admin.listTopics()
+  async clear(topics: string | string[] = []) {
+    const topicList = Array.isArray(topics)
+      ? topics
+      : topics
+        ? [topics]
+        : []
 
-    for (let topic of topics) {
-      if (existingTopics.includes(topic)) {
-        admin.deleteTopics({
-          topics: [topic]
-        }).catch(reason => logger.debug("Error tpic cleanup", reason))
+    const admin = kafka.admin()
+
+    try {
+      await admin.connect()
+      const existingTopics = await admin.listTopics()
+
+      for (const topic of topicList) {
+        if (existingTopics.includes(topic)) {
+          const topicOffsets = await admin.fetchTopicOffsets(topic)
+          const partitionsToDelete = topicOffsets
+            .filter(partition => partition.offset !== "0")
+            .map(partition => ({
+              partition: partition.partition,
+              offset: partition.offset
+            }))
+
+          if (partitionsToDelete.length > 0) {
+            await admin.deleteTopicRecords({
+              topic,
+              partitions: partitionsToDelete
+            }).catch(reason => logger.debug("Error topic cleanup", reason))
+          }
+        }
       }
+    } finally {
+      await admin.disconnect().catch(reason => logger.debug("Error disconnecting admin after topic cleanup", reason))
     }
   }
 

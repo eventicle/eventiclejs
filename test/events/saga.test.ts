@@ -470,7 +470,7 @@ describe('Sagas', function () {
 
   describe('hot/cold consumer-group prioritisation', function () {
 
-    it('saga without withHotPredicate registers a single consumer group (existing behaviour)', async function () {
+    it('saga without withHotPredicate registers a single subscription control (existing behaviour)', async function () {
       const single = saga<timeouts, SagaData>("Single Lane Saga")
         .subscribeStreams(["users"])
         .startOn("UserCreated", {}, async (instance, event) => {
@@ -482,7 +482,7 @@ describe('Sagas', function () {
       expect(single.streamSubs.length).toBe(1)
     });
 
-    it('saga with withHotPredicate registers two consumer groups (cold + hot)', async function () {
+    it('saga with withHotPredicate registers one combined subscription control', async function () {
       const dual = saga<timeouts, SagaData>("Dual Lane Saga")
         .subscribeStreams(["users"])
         .withHotPredicate(() => false)
@@ -492,7 +492,7 @@ describe('Sagas', function () {
         })
 
       await registerSaga(dual)
-      expect(dual.streamSubs.length).toBe(2)
+      expect(dual.streamSubs.length).toBe(1)
     });
 
     it('cold lane skips hot events; hot lane skips cold events; each event processed exactly once', async function () {

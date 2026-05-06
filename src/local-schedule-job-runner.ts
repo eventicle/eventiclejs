@@ -4,7 +4,7 @@ import {logger} from "@eventicle/eventicle-utilities";
 import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util";
 import {dataStore} from "./";
 import * as nodeCron from "node-cron"
-import * as CronParser from "cron-parser"
+import {CronExpressionParser} from "cron-parser"
 
 
 /**
@@ -19,6 +19,10 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
   events = new EventEmitter()
 
   constructor() {
+  }
+
+  private nextCronExecutionTime(crontab: string): number {
+    return CronExpressionParser.parse(crontab).next().getTime()
   }
 
   async addScheduleTaskListener(component: string, exec: (name: string, id: string, data: any) => Promise<void>): Promise<void> {
@@ -54,7 +58,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
           timerId: id,
           config,
           data,
-          nextExecutionTime: CronParser.parseExpression(config.crontab).next().getTime()
+          nextExecutionTime: this.nextCronExecutionTime(config.crontab)
         }
 
         await dataStore().saveEntity("system", "lock-manager-cron", existing[0])
@@ -65,18 +69,16 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
           timerId: id,
           config,
           data,
-          nextExecutionTime: CronParser.parseExpression(config.crontab).next().getTime()
+          nextExecutionTime: this.nextCronExecutionTime(config.crontab)
         })
       }
     }
 
     if (this.crons.has(component + name + id)) {
-      this.crons.get(component + name + id).stop()
+      this.crons.get(component + name + id).destroy()
     }
     const sched = nodeCron.schedule(config.crontab, now => {
       this.events.emit(component, {name, id, data})
-    }, {
-      scheduled: true
     })
 
     this.crons.set(component + name + id, sched)
@@ -149,7 +151,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
 
         let cron = this.crons.get(name)
         if (cron) {
-          cron.stop()
+          cron.destroy()
           this.crons.delete(name)
         }
         dataStore().deleteEntity("system", "lock-manager-cron", value.id)
@@ -188,7 +190,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
     this.timers.clear()
 
     for (let t of this.crons.values()) {
-      t.stop()
+      t.destroy()
     }
 
     this.crons.clear()
