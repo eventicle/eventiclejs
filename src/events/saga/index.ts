@@ -303,6 +303,18 @@ export class Saga<TimeoutNames, InstanceData> {
 
   parallelEventCount: number = 50
 
+  /**
+   * Optional predicate that classifies an incoming event as hot (true) or cold (false).
+   * When set, the saga registers two Kafka consumer groups:
+   *   - cold lane (`saga-${name}`): processes only events where the predicate returns false
+   *   - hot lane (`saga-${name}-hot`): processes only events where the predicate returns true
+   * Hot events get a dedicated pool of slots that cannot be saturated by cold flood.
+   */
+  isHotPredicate?: (event: EventicleEvent) => Promise<boolean> | boolean
+
+  /** Slot count for the hot lane. Defaults to parallelEventCount when isHotPredicate is set. */
+  hotLaneParallelEventCount?: number
+
   starts: Map<string, {
     config: StartHandlerConfig<any, InstanceData, TimeoutNames>,
     handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>
@@ -327,6 +339,22 @@ export class Saga<TimeoutNames, InstanceData> {
 
   parallelEvents(val: number): Saga<TimeoutNames, InstanceData> {
     this.parallelEventCount = val
+    return this
+  }
+
+  /**
+   * Enable hot/cold prioritisation by subscribing two Kafka consumer groups.
+   * The predicate is evaluated for every event in both lanes; each lane only
+   * processes events that match its bucket.
+   */
+  withHotPredicate(predicate: (event: EventicleEvent) => Promise<boolean> | boolean): Saga<TimeoutNames, InstanceData> {
+    this.isHotPredicate = predicate
+    return this
+  }
+
+  /** Configure dedicated slot count for the hot lane. */
+  withHotParallelEvents(val: number): Saga<TimeoutNames, InstanceData> {
+    this.hotLaneParallelEventCount = val
     return this
   }
 
@@ -441,45 +469,49 @@ export function setSagaScheduler(scheduler: SagaScheduler) {
 
 
 
+async function dispatchSagaEvent<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>, event: EventicleEvent): Promise<void> {
+  logger.debug(`Saga event: ${saga.name}`, event)
+
+  const timeoutTimer = setTimeout(() => {
+    logger.warn("Saga processing step is taking an excessive amount of time, check for promise errors ", {
+      saga: saga.name,
+      event
+    })
+  }, 60000)
+
+  try {
+    logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
+    if (saga.eventHandler.has(event.type)) {
+      logger.debug(`      saga can handle event: ${saga.name} :: ` + event.type)
+      await checkSagaEventHandlers(saga, event)
+      logger.debug(`      done intents: ${saga.name} :: ` + event.type)
+    } else if (saga.starts.has(event.type)) {
+      logger.debug(`      saga can start: ${saga.name} :: ` + event.type)
+      await startSagaInstance(saga, event)
+    }
+    logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
+  } catch (e) {
+    await saga.errorHandler(saga, event, e)
+  } finally {
+    clearTimeout(timeoutTimer)
+  }
+}
+
 export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>): Promise<EventSubscriptionControl> {
 
   SAGAS.push(saga)
 
   await scheduler().addScheduleTaskListener(saga.name, async (name, id, data) => sagaScheduler.handleTimer(saga, name, data))
 
+  if (saga.isHotPredicate) {
+    return registerSagaWithHotColdLanes(saga)
+  }
+
   let control = await eventClient().hotStream({
     stream: saga.streams,
     groupId: `saga-${saga.name}`,
     handler: async (event: EventicleEvent) => {
-      logger.debug(`Saga event: ${saga.name}`, event)
-
-      const timeoutTimer = setTimeout(() => {
-        logger.warn("Saga processing step is taking an excessive amount of time, check for promise errors ", {
-          saga: saga.name,
-          event
-        })
-      }, 60000)
-
-      // await dataStore().transaction(async () => {
-      try {
-        logger.debug(`  Saga handling notify intents: ${saga.name} :: ` + event.type)
-        if (saga.eventHandler.has(event.type)) {
-          logger.debug(`      saga can handle event: ${saga.name} :: ` + event.type)
-          await checkSagaEventHandlers(saga, event)
-          logger.debug(`      done intents: ${saga.name} :: ` + event.type)
-        } else if (saga.starts.has(event.type)) {
-          logger.debug(`      saga can start: ${saga.name} :: ` + event.type)
-          await startSagaInstance(saga, event)
-        }
-        logger.debug(`  Saga processed: ${saga.name} :: ` + event.type)
-      } catch (e) {
-        await saga.errorHandler(saga, event, e)
-      } finally {
-        clearTimeout(timeoutTimer)
-      }
-      // }, {
-      //   propagation: "requires"
-      // })
+      await dispatchSagaEvent(saga, event)
     }, onError: error => {
       logger.error("Error subscribing to streams", {
         error, saga: saga.name
@@ -491,6 +523,92 @@ export async function registerSaga<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>)
   saga.streamSubs.push(control);
 
   return control;
+}
+
+async function registerSagaWithHotColdLanes<TimeoutNames, Y>(saga: Saga<TimeoutNames, Y>): Promise<EventSubscriptionControl> {
+  const predicate = saga.isHotPredicate!
+  const hotParallel = saga.hotLaneParallelEventCount ?? saga.parallelEventCount
+
+  logger.info(`Registering saga with hot/cold lanes: ${saga.name}`, {
+    coldGroupId: `saga-${saga.name}`,
+    hotGroupId: `saga-${saga.name}-hot`,
+    coldParallel: saga.parallelEventCount,
+    hotParallel
+  })
+
+  const evaluateHot = async (event: EventicleEvent): Promise<boolean> => {
+    try {
+      return await Promise.resolve(predicate(event))
+    } catch (e) {
+      logger.warn(`Hot predicate threw for saga ${saga.name}, defaulting to cold`, {
+        event, error: (e as Error)?.message
+      })
+      return false
+    }
+  }
+
+  let coldControl: EventSubscriptionControl | undefined
+  let hotControl: EventSubscriptionControl | undefined
+
+  try {
+    coldControl = await eventClient().hotStream({
+      stream: saga.streams,
+      groupId: `saga-${saga.name}`,
+      handler: async (event: EventicleEvent) => {
+        if (await evaluateHot(event)) {
+          logger.trace(`Cold lane skipping hot event: ${saga.name} :: ${event.type}`)
+          return
+        }
+        await dispatchSagaEvent(saga, event)
+      }, onError: error => {
+        logger.error("Error subscribing to cold lane", {
+          error, saga: saga.name
+        })
+      },
+      parallelEventCount: saga.parallelEventCount
+    })
+
+    hotControl = await eventClient().hotStream({
+      stream: saga.streams,
+      groupId: `saga-${saga.name}-hot`,
+      handler: async (event: EventicleEvent) => {
+        if (!(await evaluateHot(event))) {
+          logger.trace(`Hot lane skipping cold event: ${saga.name} :: ${event.type}`)
+          return
+        }
+        await dispatchSagaEvent(saga, event)
+      }, onError: error => {
+        logger.error("Error subscribing to hot lane", {
+          error, saga: saga.name
+        })
+      },
+      parallelEventCount: hotParallel
+    })
+  } catch (error) {
+    if (coldControl) {
+      await coldControl.close().catch(closeError => {
+        logger.warn(`Failed to roll back cold lane for saga ${saga.name}`, {
+          error: maybeRenderError(closeError)
+        })
+      })
+    }
+    throw error
+  }
+
+  const combinedControl: EventSubscriptionControl = {
+    close: async () => {
+      const closeResults = await Promise.allSettled([
+        coldControl!.close(),
+        hotControl!.close()
+      ])
+      const rejected = closeResults.find(result => result.status === "rejected") as PromiseRejectedResult | undefined
+      if (rejected) throw rejected.reason
+    }
+  }
+
+  saga.streamSubs.push(combinedControl)
+
+  return combinedControl
 }
 
 export async function allSagaInstances(workspaceId?: string): Promise<SagaInstance<any, any>[]> {
