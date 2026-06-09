@@ -6,3 +6,4 @@ yarn.lock
 .yalc
 yalc.lock
 /*.log
+*.tgz
