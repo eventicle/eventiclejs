@@ -547,44 +547,68 @@ async function registerSagaWithHotColdLanes<TimeoutNames, Y>(saga: Saga<TimeoutN
     }
   }
 
-  const coldControl = await eventClient().hotStream({
-    stream: saga.streams,
-    groupId: `saga-${saga.name}`,
-    handler: async (event: EventicleEvent) => {
-      if (await evaluateHot(event)) {
-        logger.trace(`Cold lane skipping hot event: ${saga.name} :: ${event.type}`)
-        return
-      }
-      await dispatchSagaEvent(saga, event)
-    }, onError: error => {
-      logger.error("Error subscribing to cold lane", {
-        error, saga: saga.name
+  let coldControl: EventSubscriptionControl | undefined
+  let hotControl: EventSubscriptionControl | undefined
+
+  try {
+    coldControl = await eventClient().hotStream({
+      stream: saga.streams,
+      groupId: `saga-${saga.name}`,
+      handler: async (event: EventicleEvent) => {
+        if (await evaluateHot(event)) {
+          logger.trace(`Cold lane skipping hot event: ${saga.name} :: ${event.type}`)
+          return
+        }
+        await dispatchSagaEvent(saga, event)
+      }, onError: error => {
+        logger.error("Error subscribing to cold lane", {
+          error, saga: saga.name
+        })
+      },
+      parallelEventCount: saga.parallelEventCount
+    })
+
+    hotControl = await eventClient().hotStream({
+      stream: saga.streams,
+      groupId: `saga-${saga.name}-hot`,
+      handler: async (event: EventicleEvent) => {
+        if (!(await evaluateHot(event))) {
+          logger.trace(`Hot lane skipping cold event: ${saga.name} :: ${event.type}`)
+          return
+        }
+        await dispatchSagaEvent(saga, event)
+      }, onError: error => {
+        logger.error("Error subscribing to hot lane", {
+          error, saga: saga.name
+        })
+      },
+      parallelEventCount: hotParallel
+    })
+  } catch (error) {
+    if (coldControl) {
+      await coldControl.close().catch(closeError => {
+        logger.warn(`Failed to roll back cold lane for saga ${saga.name}`, {
+          error: maybeRenderError(closeError)
+        })
       })
-    },
-    parallelEventCount: saga.parallelEventCount
-  })
+    }
+    throw error
+  }
 
-  const hotControl = await eventClient().hotStream({
-    stream: saga.streams,
-    groupId: `saga-${saga.name}-hot`,
-    handler: async (event: EventicleEvent) => {
-      if (!(await evaluateHot(event))) {
-        logger.trace(`Hot lane skipping cold event: ${saga.name} :: ${event.type}`)
-        return
-      }
-      await dispatchSagaEvent(saga, event)
-    }, onError: error => {
-      logger.error("Error subscribing to hot lane", {
-        error, saga: saga.name
-      })
-    },
-    parallelEventCount: hotParallel
-  })
+  const combinedControl: EventSubscriptionControl = {
+    close: async () => {
+      const closeResults = await Promise.allSettled([
+        coldControl!.close(),
+        hotControl!.close()
+      ])
+      const rejected = closeResults.find(result => result.status === "rejected") as PromiseRejectedResult | undefined
+      if (rejected) throw rejected.reason
+    }
+  }
 
-  saga.streamSubs.push(coldControl)
-  saga.streamSubs.push(hotControl)
+  saga.streamSubs.push(combinedControl)
 
-  return coldControl
+  return combinedControl
 }
 
 export async function allSagaInstances(workspaceId?: string): Promise<SagaInstance<any, any>[]> {

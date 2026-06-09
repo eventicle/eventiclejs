@@ -1,7 +1,7 @@
 import { ScheduleJobRunner } from "@eventicle/eventicle-utilities/dist/schedule-job-runner";
 import { logger } from "@eventicle/eventicle-utilities";
 import { maybeRenderError } from "@eventicle/eventicle-utilities/dist/logger-util";
-import * as CronParser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import { dataStore } from "@eventicle/eventicle-utilities/dist/datastore";
 import {Queue, QueueEvents, RedisOptions, Worker} from "bullmq";
 import safeStringify from 'fast-safe-stringify';
@@ -188,6 +188,10 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
    */
   constructor(readonly config: RedisOptions) {}
 
+  private nextCronExecutionTime(crontab: string): number {
+    return CronExpressionParser.parse(crontab).next().getTime();
+  }
+
   /**
    * Registers a timer execution handler for a specific component.
    * 
@@ -330,7 +334,7 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
           timerId: id,
           config,
           data,
-          nextExecutionTime: CronParser.parseExpression(config.crontab).next().getTime(),
+          nextExecutionTime: this.nextCronExecutionTime(config.crontab),
         };
 
         await dataStore().saveEntity("system", CRON, existing[0]);
@@ -341,7 +345,7 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
           timerId: id,
           config,
           data,
-          nextExecutionTime: CronParser.parseExpression(config.crontab).next().getTime(),
+          nextExecutionTime: this.nextCronExecutionTime(config.crontab),
         });
       }
     }
