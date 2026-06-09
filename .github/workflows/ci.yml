@@ -15,16 +15,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'yarn'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Build
-        run: yarn build-ts
+        run: npm run build-ts
 
       - name: Unit tests
-        run: yarn unit-test
+        run: npm run unit-test
 
       - name: Integration tests
-        run: yarn integration-test
+        run: npm run integration-test
