@@ -1,4 +1,4 @@
-import {CompressionTypes, Kafka, Message, Partitioners, Producer, ProducerConfig, ProducerRecord} from "kafkajs";
+import {CompressionTypes, Producer, ProducerRecord, Message, Kafka, KafkaJSError} from "@confluentinc/kafka-javascript/lib/kafkajs";
 import {logger} from "@eventicle/eventicle-utilities";
 import {pause} from "../../util";
 import * as uuid from "uuid";
@@ -13,7 +13,7 @@ export interface IKafkaJSProtocolError {
 }
 
 export function isKafkaJSProtocolError(error: unknown): error is IKafkaJSProtocolError {
-  return error && typeof error === 'object' && (error as any).name === 'KafkaJSProtocolError';
+  return error && typeof error === 'object' && 'code' in (error as any) && (error as any) instanceof KafkaJSError;
 }
 
 export interface IQueuedRecord {
@@ -41,10 +41,7 @@ export class ThrottledProducer {
 
   constructor(
     protected kafka: Kafka,
-    protected producerConfig: Omit<
-      ProducerConfig,
-      'allowAutoTopicCreation' | 'maxInFlightRequests' | 'idempotent'
-      > & {maxOutgoingBatchSize?: number; flushIntervalMs?: number} = {
+    protected producerConfig: {maxOutgoingBatchSize?: number; flushIntervalMs?: number} = {
       maxOutgoingBatchSize: 10000,
       flushIntervalMs: 40
     },
@@ -84,17 +81,11 @@ export class ThrottledProducer {
     if (this.isConnected) {
       return;
     }
-    this.producer.on("producer.connect", args => {
-      this.producerHealth.status = "connected"
-      this.producerHealth.healthy = true
-    })
-    this.producer.on("producer.disconnect", args => {
-      this.producerHealth.status = "disconnected"
-      this.producerHealth.healthy = false
-    })
 
     const flushIntervalMs = this.producerConfig.flushIntervalMs || 100;
     await this.producer.connect();
+    this.producerHealth.status = "connected"
+    this.producerHealth.healthy = true
     this.intervalTimeout = setInterval(this.flush, flushIntervalMs);
 
     this.isConnected = true;
@@ -109,6 +100,8 @@ export class ThrottledProducer {
     clearInterval(this.intervalTimeout);
 
     await this.producer.disconnect();
+    this.producerHealth.status = "disconnected"
+    this.producerHealth.healthy = false
     logger.debug('Disconnected');
     this.isConnected = false;
   };
@@ -116,11 +109,14 @@ export class ThrottledProducer {
   private createProducer = () => {
     logger.debug('Creating a new producer');
     this.producer = this.kafka.producer({
-      maxInFlightRequests: 1,
-      idempotent: true,
-      allowAutoTopicCreation: true,
-      ...this.producerConfig
-    });
+      kafkaJS: {
+        maxInFlightRequests: 1,
+        idempotent: true,
+        allowAutoTopicCreation: true,
+        acks: -1,
+        compression: CompressionTypes.GZIP
+      }
+    } as any);
     logger.debug('Created a new producer');
   };
 
@@ -141,10 +137,6 @@ export class ThrottledProducer {
       await pause(retryDelay);
     }
 
-    /**
-     * Ensures that if the interval call ends up being concurrent due latency in sendBatch,
-     * unintentinally overlapping cycles are deferred to the next interval.
-     */
     this.isFlushing = true;
 
     const batchSize = this.producerConfig.maxOutgoingBatchSize || 1000;
@@ -169,8 +161,6 @@ export class ThrottledProducer {
     try {
       await this.producer.sendBatch({
         topicMessages: outgoingRecords.map(({record}) => record),
-        acks: -1,
-        compression: CompressionTypes.GZIP
       });
 
       this.recordsSent += outgoingRecords.length;
@@ -178,12 +168,12 @@ export class ThrottledProducer {
       outgoingRecords.forEach(({resolve}) => resolve());
       this.isFlushing = false;
       return;
-    } catch (error) {
+    } catch (error: any) {
       /**
        * If for some reason this producer is no longer recognized by the broker,
        * create a new producer.
        */
-      if (isKafkaJSProtocolError(error) && error.type === 'UNKNOWN_PRODUCER_ID') {
+      if (isKafkaJSProtocolError(error) && error.code === 59) { // ERR_UNKNOWN_PRODUCER_ID
         await this.producer.disconnect();
         this.createProducer();
         await this.producer.connect();
@@ -194,8 +184,7 @@ export class ThrottledProducer {
         await this.flush(outgoingRecords, retryCounter + 1, batchId);
         return;
       }
-      if (isKafkaJSProtocolError(error) && error.type === 'UNKNOWN_TOPIC_OR_PARTITION') {
-
+      if (isKafkaJSProtocolError(error) && error.code === 3) { // ERR_UNKNOWN_TOPIC_OR_PART
         for (const record of outgoingRecords) {
           const topic = record.record.topic
           const config = await this.onTopicFailure(topic)

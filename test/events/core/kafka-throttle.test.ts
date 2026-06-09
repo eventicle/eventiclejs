@@ -1,5 +1,5 @@
-import {ThrottledProducer} from '../../../src/events/core/kafka-throttle';
-import {Kafka, Message} from "kafkajs";
+import {ThrottledProducer, isKafkaJSProtocolError} from '../../../src/events/core/kafka-throttle';
+import {Kafka, Message, KafkaJSError} from "@confluentinc/kafka-javascript/lib/kafkajs";
 import type {HealthCheckStatus} from "../../../src/events/core/eventclient-kafka";
 
 describe('ThrottledProducer', () => {
@@ -58,8 +58,8 @@ describe('ThrottledProducer', () => {
         await throttledProducer.connect();
 
         expect(mockProducer.connect).toHaveBeenCalledTimes(1);
-        expect(mockProducer.on).toHaveBeenCalled();
-        expect(producerHealth.status).toBe('disconnected');
+        expect(producerHealth.status).toBe('connected');
+        expect(producerHealth.healthy).toBe(true);
     });
 
     it('should call send and add messages to the recordQueue', async () => {
@@ -107,8 +107,6 @@ describe('ThrottledProducer', () => {
         expect(mockProducer.sendBatch).toHaveBeenCalledTimes(1);
         expect(mockProducer.sendBatch).toHaveBeenCalledWith({
             topicMessages: expect.any(Array),
-            acks: -1,
-            compression: expect.any(Number),
         });
         expect(throttledProducer['recordQueue'].length).toBe(15); // 10 sent, 15 remaining
     });
