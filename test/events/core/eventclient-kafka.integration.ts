@@ -10,8 +10,11 @@ import { pause } from "../../../src/util";
 import { setDataStore } from "../../../src";
 import InMemDatastore from "../../../src/datastore/inmem-data-store";
 import { logger } from "@eventicle/eventicle-utilities";
+import { KafkaContainer, StartedKafkaContainer } from "@testcontainers/kafka";
 
-jest.setTimeout(10000);
+jest.setTimeout(120000);
+
+let kafkaContainer: StartedKafkaContainer;
 
 const TEST_STREAMS = {
   hot: `mystream-${uuid.v4()}`,
@@ -20,29 +23,34 @@ const TEST_STREAMS = {
 };
 
 beforeAll(async function () {
-  // await initConfig();
-  let clientId = "testclient-" + uuid.v4();
+  kafkaContainer = await new KafkaContainer("confluentinc/cp-kafka:7.5.0")
+    .withExposedPorts(9093)
+    .start();
+
+  const brokerAddress = `${kafkaContainer.getHost()}:${kafkaContainer.getMappedPort(9093)}`;
 
   setDataStore(new InMemDatastore());
   setEventClient(
     await eventClientOnKafka({
-      brokers: ["localhost:9092"],
-      clientId: clientId,
+      brokers: [brokerAddress],
+      clientId: "testclient-" + uuid.v4(),
     })
   );
   await testDbPurge();
-  await pause(5000);
+  await pause(2000);
 });
+
 beforeEach(async () => {
-  console.log("STARTING DATA PUURGE");
   await testDbPurge();
 });
+
 afterEach(async () => {
   await testDbPurge();
 });
 
 afterAll(async () => {
   await eventClient().shutdown();
+  await kafkaContainer.stop();
 });
 
 test("hot stream receives events", async function () {
@@ -50,7 +58,7 @@ test("hot stream receives events", async function () {
 
   let consumer = await eventClient().hotStream({
     stream: TEST_STREAMS.hot,
-    groupId: "me",
+    groupId: "me-" + uuid.v4(),
     handler: async (event) => {
       myevents.push(event);
     },
@@ -58,6 +66,8 @@ test("hot stream receives events", async function () {
       logger.error("BORKED", error);
     }
   });
+
+  await pause(2000);
 
   await eventClient().emit(
     [
@@ -75,10 +85,8 @@ test("hot stream receives events", async function () {
     TEST_STREAMS.hot
   );
 
-  await pause(1500);
+  await pause(5000);
   await consumer.close();
-
-  console.log("DOOPEY");
 
   expect(myevents.length).toEqual(1);
   expect(myevents[0].id).toEqual("epic");
@@ -87,74 +95,41 @@ test("hot stream receives events", async function () {
 test("cold stream fully replays historical", async function () {
   let myevents = [] as EventicleEvent[];
 
-  await eventClient().emit(
-    [
-      {
-        data: { message: "ends" },
-        type: "fake-event",
-        id: uuid.v4(),
-        createdAt: new Date().getTime(),
-        causedByType: "",
-        causedById: "",
-        source: "",
-        domainId: uuid.v4(),
-      },
-    ],
-    TEST_STREAMS.cold
-  );
+  for (let i = 0; i < 3; i++) {
+    await eventClient().emit(
+      [
+        {
+          data: { message: "ends" },
+          type: "fake-event",
+          id: uuid.v4(),
+          createdAt: new Date().getTime(),
+          causedByType: "",
+          causedById: "",
+          source: "",
+          domainId: uuid.v4(),
+        },
+      ],
+      TEST_STREAMS.cold
+    );
+  }
 
-  await eventClient().emit(
-    [
-      {
-        data: { message: "ends" },
-        type: "fake-event",
-        id: uuid.v4(),
-        createdAt: new Date().getTime(),
-        causedByType: "",
-        causedById: "",
-        source: "",
-        domainId: uuid.v4(),
-      },
-    ],
-    TEST_STREAMS.cold
-  );
+  await pause(1000);
 
-  await eventClient().emit(
-    [
-      {
-        data: { message: "ends" },
-        type: "fake-event",
-        id: uuid.v4(),
-        createdAt: new Date().getTime(),
-        causedByType: "",
-        causedById: "",
-        source: "",
-        domainId: uuid.v4(),
-      },
-    ],
-    TEST_STREAMS.cold
-  );
-
-  await pause(100).catch((reason) => console.log(reason));
-
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     eventClient()
       .coldStream({
         stream: TEST_STREAMS.cold,
         handler: async (event) => {
           myevents.push(event);
         },
-        onError: (done) => console.log("ERROR"),
+        onError: (error) => logger.error("ERROR", error),
         onDone: () => {
-          resolve(null);
+          resolve();
         }
       })
       .catch((reason) => logger.error("Failed cold stream", reason));
   });
 
-  await pause(2000);
-
-  console.log(myevents);
   expect(myevents.length).toEqual(3);
   expect(myevents[0].type).toEqual("fake-event");
 });
@@ -178,17 +153,19 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
     TEST_STREAMS.coldHot
   );
 
-  await pause(500);
+  await pause(1000);
 
   let control = await eventClient().coldHotStream({
     stream: TEST_STREAMS.coldHot,
-    groupId: "test-group",
+    groupId: "test-group-" + uuid.v4(),
     handler: async (event) => {
       myevents.push(event);
     },
-    onError: (done) => console.log("ERROR: " + done),
+    onError: (error) => logger.error("ERROR: " + error),
   });
-  await pause(500);
+
+  await pause(3000);
+
   await eventClient().emit(
     [
       {
@@ -205,10 +182,8 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
     TEST_STREAMS.coldHot
   );
 
-  await pause(3000);
+  await pause(5000);
   await control.close();
-
-  console.log(myevents);
 
   expect(myevents.length).toEqual(2);
   expect(myevents[0].id).toEqual("epic");

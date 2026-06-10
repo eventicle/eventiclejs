@@ -42,5 +42,5 @@ jobs:
       - name: Build
         run: npm run build-ts
 
-      - name: Integration tests (testcontainers)
-        run: npx jest --testPathPattern kafka-regression.integration --forceExit
+      - name: Integration tests
+        run: npm run integration-test
