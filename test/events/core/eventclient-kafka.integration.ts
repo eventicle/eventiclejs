@@ -22,6 +22,13 @@ const TEST_STREAMS = {
   coldHot: `last-stream-${uuid.v4()}`,
 };
 
+async function waitFor(predicate: () => boolean, timeoutMs = 30000, intervalMs = 200): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate() && Date.now() < deadline) {
+    await pause(intervalMs);
+  }
+}
+
 beforeAll(async function () {
   kafkaContainer = await new KafkaContainer("confluentinc/cp-kafka:7.5.0")
     .withExposedPorts(9093)
@@ -95,7 +102,7 @@ test("hot stream receives events", async function () {
     TEST_STREAMS.hot
   );
 
-  await pause(10000);
+  await waitFor(() => myevents.length >= 1);
   await consumer.close();
 
   expect(myevents.length).toEqual(1);
@@ -192,7 +199,7 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
     TEST_STREAMS.coldHot
   );
 
-  await pause(10000);
+  await waitFor(() => myevents.length >= 2);
   await control.close();
 
   expect(myevents.length).toEqual(2);
