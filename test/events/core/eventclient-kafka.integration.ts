@@ -31,13 +31,23 @@ beforeAll(async function () {
 
   setDataStore(new InMemDatastore());
   setEventClient(
-    await eventClientOnKafka({
-      brokers: [brokerAddress],
-      clientId: "testclient-" + uuid.v4(),
-    })
+    await eventClientOnKafka(
+      { brokers: [brokerAddress], clientId: "testclient-" + uuid.v4() },
+      {
+        consumerConfig: (_stream, consumerName, _type) => ({
+          maxWaitTimeInMs: 100,
+          groupId: consumerName,
+        }),
+        consumerRunConfig: (_stream, _consumerName, _type) => ({
+          autoCommit: true,
+          autoCommitInterval: 500,
+          autoCommitThreshold: 50,
+        }),
+      }
+    )
   );
   await testDbPurge();
-  await pause(2000);
+  await pause(3000);
 });
 
 beforeEach(async () => {
@@ -67,7 +77,7 @@ test("hot stream receives events", async function () {
     }
   });
 
-  await pause(2000);
+  await pause(5000);
 
   await eventClient().emit(
     [
@@ -85,7 +95,7 @@ test("hot stream receives events", async function () {
     TEST_STREAMS.hot
   );
 
-  await pause(5000);
+  await pause(10000);
   await consumer.close();
 
   expect(myevents.length).toEqual(1);
@@ -113,7 +123,7 @@ test("cold stream fully replays historical", async function () {
     );
   }
 
-  await pause(1000);
+  await pause(2000);
 
   await new Promise<void>((resolve) => {
     eventClient()
@@ -153,7 +163,7 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
     TEST_STREAMS.coldHot
   );
 
-  await pause(1000);
+  await pause(2000);
 
   let control = await eventClient().coldHotStream({
     stream: TEST_STREAMS.coldHot,
@@ -164,7 +174,7 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
     onError: (error) => logger.error("ERROR: " + error),
   });
 
-  await pause(3000);
+  await pause(5000);
 
   await eventClient().emit(
     [
@@ -182,7 +192,7 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
     TEST_STREAMS.coldHot
   );
 
-  await pause(5000);
+  await pause(10000);
   await control.close();
 
   expect(myevents.length).toEqual(2);
