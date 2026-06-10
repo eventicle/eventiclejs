@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 jobs:
-  test:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,5 +26,21 @@ jobs:
       - name: Unit tests
         run: npm run unit-test
 
-      - name: Integration tests
-        run: npm run integration-test
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build-ts
+
+      - name: Integration tests (testcontainers)
+        run: npx jest --testPathPattern kafka-regression.integration --forceExit
