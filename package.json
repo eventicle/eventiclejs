@@ -17,9 +17,9 @@
     "watch-ts": "tsc -w",
     "integration-test": "NODE_ENV=dev jest --testRegex /test/.*\\.integration.ts$",
     "unit-test": "NODE_ENV=dev jest --testRegex /test/.*\\.test.ts$ ",
-    "test": "yarn unit-test && yarn integration-test",
+    "test": "npm run unit-test && npm run integration-test",
     "lint": "eslint . --ext .ts --fix",
-    "api": "yarn tsc && api-extractor run;api-documenter yaml -i tmp/api -o tmp/api-yaml;api-documenter-yaml-to-antora-asciidoc asciidoc -i tmp/api-yaml"
+    "api": "tsc && api-extractor run && api-documenter yaml -i tmp/api -o tmp/api-yaml && api-documenter-yaml-to-antora-asciidoc asciidoc -i tmp/api-yaml"
   },
   "peerDependencies": {
     "@eventicle/eventicle-utilities": "^0.0.18",

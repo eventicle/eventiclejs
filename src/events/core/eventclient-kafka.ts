@@ -245,23 +245,17 @@ class EventclientKafka implements EventClient {
 
     let cons = kafka.consumer({
       kafkaJS: filterUndefined({
+        ...newConf,
         groupId: newConf.groupId || config.groupId,
         fromBeginning: true,
         autoCommit: true,
         autoCommitInterval: 500,
-        sessionTimeout: newConf.sessionTimeout,
-        rebalanceTimeout: newConf.rebalanceTimeout,
-        heartbeatInterval: newConf.heartbeatInterval,
-        maxWaitTimeInMs: newConf.maxWaitTimeInMs,
       })
     } as any)
 
     consumers.push(cons)
 
     await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
-      healthStatus.healthy = true
-      healthStatus.status = "connected"
-
       const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
       await cons.subscribe({topics, replace: retry})
 
@@ -302,11 +296,16 @@ class EventclientKafka implements EventClient {
           }
         }
       })
+
+      healthStatus.healthy = true
+      healthStatus.status = "connected"
     })
 
     return {
       close: async () => {
         await cons.disconnect()
+        healthStatus.healthy = false
+        healthStatus.status = "disconnected"
         consumerGroups = consumerGroups.filter(value => value !== config.groupId)
       }
     }
@@ -594,23 +593,17 @@ class EventclientKafka implements EventClient {
 
     let cons = kafka.consumer({
       kafkaJS: filterUndefined({
+        ...newConf,
         groupId: newConf.groupId || config.consumerName,
         fromBeginning: false,
         autoCommit: true,
         autoCommitInterval: 500,
-        sessionTimeout: newConf.sessionTimeout,
-        rebalanceTimeout: newConf.rebalanceTimeout,
-        heartbeatInterval: newConf.heartbeatInterval,
-        maxWaitTimeInMs: newConf.maxWaitTimeInMs,
       })
     } as any)
 
     consumers.push(cons)
 
     await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
-      healthStatus.healthy = true
-      healthStatus.status = "connected"
-
       const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
       await cons.subscribe({topics, replace: retry})
 
@@ -645,6 +638,9 @@ class EventclientKafka implements EventClient {
           }
         }
       })
+
+      healthStatus.healthy = true
+      healthStatus.status = "connected"
     })
 
     return {
