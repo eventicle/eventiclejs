@@ -98,7 +98,7 @@ constructors:
       parameters:
         - id: type
           description: ''
-          type: string | <xref uid="@eventicle/eventiclejs!~AggregateConfig:interface" />
+          type: 'string | <xref uid="@eventicle/eventiclejs!~AggregateConfig:interface" />'
 properties:
   - name: config
     uid: '@eventicle/eventiclejs!AggregateRoot#config:member'
@@ -112,7 +112,7 @@ properties:
     syntax:
       content: 'readonly config: AggregateConfig;'
       return:
-        type: <xref uid="@eventicle/eventiclejs!~AggregateConfig:interface" />
+        type: '<xref uid="@eventicle/eventiclejs!~AggregateConfig:interface" />'
   - name: history
     uid: '@eventicle/eventiclejs!AggregateRoot#history:member'
     package: '@eventicle/eventiclejs!'
@@ -125,7 +125,7 @@ properties:
     syntax:
       content: 'history: EventicleEvent[];'
       return:
-        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
   - name: id
     uid: '@eventicle/eventiclejs!AggregateRoot#id:member'
     package: '@eventicle/eventiclejs!'
@@ -151,7 +151,7 @@ properties:
     syntax:
       content: 'newEvents: EventicleEvent[];'
       return:
-        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
   - name: reducers
     uid: '@eventicle/eventiclejs!AggregateRoot#reducers:member'
     package: '@eventicle/eventiclejs!'
@@ -251,7 +251,7 @@ methods:
       parameters:
         - id: event
           description: The event to apply to the aggregate state
-          type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
       return:
         type: void
         description: ''
@@ -289,7 +289,7 @@ methods:
       parameters:
         - id: event
           description: The domain event to raise
-          type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
+          type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
       return:
-        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />&lt;any&gt;
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />&lt;any&gt;'
         description: The event with populated metadata

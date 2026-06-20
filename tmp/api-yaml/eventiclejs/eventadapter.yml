@@ -115,6 +115,24 @@ properties:
       content: 'consumerGroup: string;'
       return:
         type: string
+  - name: deleteConsumerGroupOnClose
+    uid: '@eventicle/eventiclejs!EventAdapter#deleteConsumerGroupOnClose:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: deleteConsumerGroupOnClose
+    summary: >-
+      When true, deletes the Kafka consumer group when the adapter is closed.
+
+
+      Useful for ephemeral adapters with dynamic consumer groups (e.g., UUID-based) to prevent accumulation of stale
+      consumer groups in Kafka.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'deleteConsumerGroupOnClose?: boolean;'
+      return:
+        type: boolean
   - name: errorHandler
     uid: '@eventicle/eventiclejs!EventAdapter#errorHandler:member'
     package: '@eventicle/eventiclejs!'
@@ -186,4 +204,4 @@ properties:
     syntax:
       content: 'streamsToSubscribe: string[];'
       return:
-        type: string[]
+        type: 'string[]'

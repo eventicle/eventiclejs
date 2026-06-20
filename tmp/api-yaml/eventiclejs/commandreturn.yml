@@ -61,7 +61,7 @@ properties:
     syntax:
       content: 'events: EventicleEvent[];'
       return:
-        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />[]'
   - name: response
     uid: '@eventicle/eventiclejs!CommandReturn#response:member'
     package: '@eventicle/eventiclejs!'

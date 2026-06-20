@@ -1,0 +1,77 @@
+### YamlMime:TSType
+name: RedisStreamConfig
+uid: '@eventicle/eventiclejs!RedisStreamConfig:interface'
+package: '@eventicle/eventiclejs!'
+fullName: RedisStreamConfig
+summary: ''
+remarks: ''
+example: []
+isPreview: false
+isDeprecated: false
+type: interface
+properties:
+  - name: blockTimeoutMs
+    uid: '@eventicle/eventiclejs!RedisStreamConfig#blockTimeoutMs:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: blockTimeoutMs
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'blockTimeoutMs?: number;'
+      return:
+        type: number
+  - name: coldBatchSize
+    uid: '@eventicle/eventiclejs!RedisStreamConfig#coldBatchSize:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: coldBatchSize
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'coldBatchSize?: number;'
+      return:
+        type: number
+  - name: consumerNamePrefix
+    uid: '@eventicle/eventiclejs!RedisStreamConfig#consumerNamePrefix:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: consumerNamePrefix
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'consumerNamePrefix?: string;'
+      return:
+        type: string
+  - name: maxStreamLength
+    uid: '@eventicle/eventiclejs!RedisStreamConfig#maxStreamLength:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: maxStreamLength
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'maxStreamLength?: number;'
+      return:
+        type: number
+  - name: redisOptions
+    uid: '@eventicle/eventiclejs!RedisStreamConfig#redisOptions:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: redisOptions
+    summary: ''
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'redisOptions: RedisOptions;'
+      return:
+        type: '<xref uid="ioredis!RedisOptions:type" />'

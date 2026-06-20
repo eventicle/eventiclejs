@@ -49,6 +49,40 @@ eventHandler: Map<string, {
 ----
 
 ========
+[id="eventicle_eventiclejs_Saga_hotLaneParallelEventCount_member"]
+=== hotLaneParallelEventCount
+
+========
+
+Slot count for the hot lane. Defaults to parallelEventCount when isHotPredicate is set.
+
+
+
+
+.Signature
+[source,typescript]
+----
+hotLaneParallelEventCount?: number;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_isHotPredicate_member"]
+=== isHotPredicate
+
+========
+
+Optional predicate that classifies an incoming event as hot (true) or cold (false). When set, the saga registers two Kafka consumer groups: - cold lane (`saga-${name}`): processes only events where the predicate returns false - hot lane (`saga-${name}-hot`): processes only events where the predicate returns true Hot events get a dedicated pool of slots that cannot be saturated by cold flood.
+
+
+
+
+.Signature
+[source,typescript]
+----
+isHotPredicate?: (event: EventicleEvent) => Promise<boolean> | boolean;
+----
+
+========
 [id="eventicle_eventiclejs_Saga_name_member"]
 === name
 
@@ -393,6 +427,66 @@ m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData
 [source,typescript]
 ----
 subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_withHotParallelEvents_member_1"]
+=== withHotParallelEvents(val)
+
+========
+
+Configure dedicated slot count for the hot lane.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|val
+m|number
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+withHotParallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
+----
+
+========
+[id="eventicle_eventiclejs_Saga_withHotPredicate_member_1"]
+=== withHotPredicate(predicate)
+
+========
+
+Enable hot/cold prioritisation by subscribing two Kafka consumer groups. The predicate is evaluated for every event in both lanes; each lane only processes events that match its bucket.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|predicate
+m|(event: xref:eventicle_eventiclejs_EventicleEvent_interface.adoc[EventicleEvent]) =&gt; Promise&lt;boolean&gt; \| boolean
+|
+
+s|Returns
+m|xref:eventicle_eventiclejs_Saga_class.adoc[Saga]&lt;TimeoutNames, InstanceData&gt;
+|
+|===
+
+.Signature
+[source,typescript]
+----
+withHotPredicate(predicate: (event: EventicleEvent) => Promise<boolean> | boolean): Saga<TimeoutNames, InstanceData>;
 ----
 
 ========

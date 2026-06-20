@@ -184,6 +184,7 @@ properties:
                 groupId: string;
                 handler: (event: EncodedEvent) => Promise<void>;
                 onError: (error: any) => void;
+                deleteConsumerGroupOnClose?: boolean;
             }) => Promise<EventSubscriptionControl>;
       return:
         type: |-
@@ -193,6 +194,7 @@ properties:
                   groupId: string;
                   handler: (event: <xref uid="@eventicle/eventiclejs!EncodedEvent:interface" />) =&gt; Promise&lt;void&gt;;
                   onError: (error: any) =&gt; void;
+                  deleteConsumerGroupOnClose?: boolean;
               }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
   - name: hotStream
     uid: '@eventicle/eventiclejs!EventClient#hotStream:member'
@@ -241,6 +243,7 @@ properties:
                 groupId: string;
                 handler: (event: EventicleEvent) => Promise<void>;
                 onError: (error: any) => void;
+                deleteConsumerGroupOnClose?: boolean;
             }) => Promise<EventSubscriptionControl>;
       return:
         type: |-
@@ -250,6 +253,7 @@ properties:
                   groupId: string;
                   handler: (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
                   onError: (error: any) =&gt; void;
+                  deleteConsumerGroupOnClose?: boolean;
               }) =&gt; Promise&lt;<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />&gt;
   - name: isConnected
     uid: '@eventicle/eventiclejs!EventClient#isConnected:member'

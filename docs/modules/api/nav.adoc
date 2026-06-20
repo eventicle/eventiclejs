@@ -13,5 +13,6 @@
 ** xref:eventicle_eventiclejs_InMemoryDatastore_class.adoc[InMemoryDatastore]
 ** xref:eventicle_eventiclejs_LocalScheduleJobRunner_class.adoc[LocalScheduleJobRunner]
 ** xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
+** xref:eventicle_eventiclejs_RedisStreamConfig_interface.adoc[RedisStreamConfig]
 ** xref:eventicle_eventiclejs_Saga_class.adoc[Saga]
 ** xref:eventicle_eventiclejs_SagaInstance_class.adoc[SagaInstance]

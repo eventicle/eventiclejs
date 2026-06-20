@@ -110,6 +110,7 @@ hotRawStream: (config: {
         groupId: string;
         handler: (event: EncodedEvent) => Promise<void>;
         onError: (error: any) => void;
+        deleteConsumerGroupOnClose?: boolean;
     }) => Promise<EventSubscriptionControl>;
 ----
 
@@ -135,6 +136,7 @@ hotStream: (config: {
         groupId: string;
         handler: (event: EventicleEvent) => Promise<void>;
         onError: (error: any) => void;
+        deleteConsumerGroupOnClose?: boolean;
     }) => Promise<EventSubscriptionControl>;
 ----
 

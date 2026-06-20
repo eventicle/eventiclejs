@@ -118,4 +118,4 @@ properties:
     syntax:
       content: 'streamsToSubscribe: string[];'
       return:
-        type: string[]
+        type: 'string[]'

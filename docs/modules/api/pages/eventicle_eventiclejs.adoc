@@ -119,6 +119,9 @@ s|xref:eventicle_eventiclejs_RawEventView_interface.adoc[RawEventView]
 RawEventView enables processing events without decoding them into domain objects, which is useful for scenarios requiring high performance, binary storage, or custom encoding schemes. Events are processed as EncodedEvent objects containing the raw buffer and metadata headers.
 
 Use Cases: - \*\*High Performance\*\*: Avoid decoding overhead for throughput-sensitive scenarios - \*\*Binary Storage\*\*: Store events in their original encoded format - \*\*Custom Processing\*\*: Implement custom decoding or transformation logic - \*\*Event Forwarding\*\*: Route events to external systems without modification - \*\*Audit Trails\*\*: Preserve exact event format for compliance requirements
+
+s|xref:eventicle_eventiclejs_RedisStreamConfig_interface.adoc[RedisStreamConfig]
+|
 |===
 
 == Functions
@@ -573,7 +576,7 @@ export declare function eventClientOnDatastore(): EventClient;
 
 ========
 
-https://kafka.js.org/docs/admin\#a-name-create-topics-a-create-topics
+https://github.com/confluentinc/confluent-kafka-javascript/blob/dev\_early\_access\_development\_branch/MIGRATION.md
 
 
 
@@ -584,11 +587,11 @@ https://kafka.js.org/docs/admin\#a-name-create-topics-a-create-topics
 
 m|config
 m|KafkaConfig
-|as per kafkjs
+|as per @confluentinc/kafka-javascript kafkaJS compat layer
 
 m|consumerConfig
 m|\~ConsumerConfigFactory
-|as per kafkajs
+|consumer configuration factory
 
 m|onTopicFailureConfig
 m|(topicName: any) =&gt; Promise&lt;\~TopicFailureConfiguration&gt;
@@ -603,6 +606,38 @@ m|Promise&lt;xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]&
 [source,typescript]
 ----
 export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
+----
+
+========
+[id="eventicle_eventiclejs_eventClientOnRedis_function_1"]
+=== eventClientOnRedis(config)
+
+========
+
+Factory function to create a Redis Streams-backed EventClient.
+
+The returned client implements the full EventClient interface using Redis Streams for event persistence and delivery. It supports hot, cold, and cold-hot subscriptions with consumer group load balancing.
+
+
+
+.Parameters
+[%header%footer,cols="2,3,4",caption=""]
+|===
+|Name |Type |Description
+
+m|config
+m|xref:eventicle_eventiclejs_RedisStreamConfig_interface.adoc[RedisStreamConfig]
+|Redis connection and stream configuration
+
+s|Returns
+m|Promise&lt;xref:eventicle_eventiclejs_EventClient_interface.adoc[EventClient]&gt;
+|A connected EventClient wrapped with transactional support
+|===
+
+.Signature
+[source,typescript]
+----
+export declare function eventClientOnRedis(config: RedisStreamConfig): Promise<EventClient>;
 ----
 
 ========
@@ -985,6 +1020,23 @@ m|void
 [source,typescript]
 ----
 export declare function setScheduler(scheduler: ScheduleJobRunner): void;
+----
+
+========
+[id="eventicle_eventiclejs_shutdownAllAdapters_function_1"]
+=== shutdownAllAdapters()
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+export declare function shutdownAllAdapters(): Promise<void>;
 ----
 
 ========

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "toolPackage": "@microsoft/api-extractor",
-    "toolVersion": "7.53.1",
+    "toolVersion": "7.52.8",
     "schemaVersion": 1011,
     "oldestForwardsCompatibleVersion": 1001,
     "tsdocConfig": {
@@ -1324,7 +1324,7 @@
             {
               "kind": "Reference",
               "text": "KafkaConfig",
-              "canonicalReference": "kafkajs!KafkaConfig:interface"
+              "canonicalReference": "!unknown"
             },
             {
               "kind": "Content",
@@ -1852,6 +1852,33 @@
             },
             {
               "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!EventAdapter#deleteConsumerGroupOnClose:member",
+              "docComment": "/**\n * When true, deletes the Kafka consumer group when the adapter is closed.\n *\n * Useful for ephemeral adapters with dynamic consumer groups (e.g., UUID-based) to prevent accumulation of stale consumer groups in Kafka.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "deleteConsumerGroupOnClose?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "deleteConsumerGroupOnClose",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
               "canonicalReference": "@eventicle/eventiclejs!EventAdapter#errorHandler:member",
               "docComment": "/**\n * Optional custom error handler for event processing failures.\n *\n * If not provided, a default handler logs the error and continues processing. Use this for custom error reporting, retry logic, or dead letter queues.\n *\n * @param adapter - The adapter that encountered the error\n *\n * @param event - The event that failed to process\n *\n * @param error - The error that occurred\n */\n",
               "excerptTokens": [
@@ -2304,7 +2331,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>;\n        onError: (error: any) => void;\n    }) => "
+                  "text": "<void>;\n        onError: (error: any) => void;\n        deleteConsumerGroupOnClose?: boolean;\n    }) => "
                 },
                 {
                   "kind": "Reference",
@@ -2367,7 +2394,7 @@
                 },
                 {
                   "kind": "Content",
-                  "text": "<void>;\n        onError: (error: any) => void;\n    }) => "
+                  "text": "<void>;\n        onError: (error: any) => void;\n        deleteConsumerGroupOnClose?: boolean;\n    }) => "
                 },
                 {
                   "kind": "Reference",
@@ -2654,7 +2681,7 @@
         {
           "kind": "Function",
           "canonicalReference": "@eventicle/eventiclejs!eventClientOnKafka:function(1)",
-          "docComment": "/**\n * https://kafka.js.org/docs/admin#a-name-create-topics-a-create-topics\n *\n * @param config - as per kafkjs\n *\n * @param consumerConfig - as per kafkajs\n *\n * @param onTopicFailureConfig - If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config\n */\n",
+          "docComment": "/**\n * https://github.com/confluentinc/confluent-kafka-javascript/blob/dev_early_access_development_branch/MIGRATION.md\n *\n * @param config - as per @confluentinc/kafka-javascript kafkaJS compat layer\n *\n * @param consumerConfig - consumer configuration factory\n *\n * @param onTopicFailureConfig - If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -2663,7 +2690,7 @@
             {
               "kind": "Reference",
               "text": "KafkaConfig",
-              "canonicalReference": "kafkajs!KafkaConfig:interface"
+              "canonicalReference": "!unknown"
             },
             {
               "kind": "Content",
@@ -2761,6 +2788,66 @@
             }
           ],
           "name": "eventClientOnKafka"
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "@eventicle/eventiclejs!eventClientOnRedis:function(1)",
+          "docComment": "/**\n * Factory function to create a Redis Streams-backed EventClient.\n *\n * The returned client implements the full EventClient interface using Redis Streams for event persistence and delivery. It supports hot, cold, and cold-hot subscriptions with consumer group load balancing.\n *\n * @param config - Redis connection and stream configuration\n *\n * @returns A connected EventClient wrapped with transactional support\n */\n",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function eventClientOnRedis(config: "
+            },
+            {
+              "kind": "Reference",
+              "text": "RedisStreamConfig",
+              "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Promise",
+              "canonicalReference": "!Promise:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<"
+            },
+            {
+              "kind": "Reference",
+              "text": "EventClient",
+              "canonicalReference": "@eventicle/eventiclejs!EventClient:interface"
+            },
+            {
+              "kind": "Content",
+              "text": ">"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/events/core/eventclient-redis.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 3,
+            "endIndex": 7
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [
+            {
+              "parameterName": "config",
+              "parameterTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isOptional": false
+            }
+          ],
+          "name": "eventClientOnRedis"
         },
         {
           "kind": "Interface",
@@ -4519,7 +4606,7 @@
                 {
                   "kind": "Reference",
                   "text": "nodeCron.ScheduledTask",
-                  "canonicalReference": "@types/node-cron!ScheduledTask:interface"
+                  "canonicalReference": "node-cron!ScheduledTask:interface"
                 },
                 {
                   "kind": "Content",
@@ -4972,6 +5059,160 @@
               "isOptional": false,
               "releaseTag": "Public",
               "name": "streamsToSubscribe",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            }
+          ],
+          "extendsTokenRanges": []
+        },
+        {
+          "kind": "Interface",
+          "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig:interface",
+          "docComment": "",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export interface RedisStreamConfig "
+            }
+          ],
+          "fileUrlPath": "src/events/core/eventclient-redis.ts",
+          "releaseTag": "Public",
+          "name": "RedisStreamConfig",
+          "preserveMemberOrder": false,
+          "members": [
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig#blockTimeoutMs:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "blockTimeoutMs?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "blockTimeoutMs",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig#coldBatchSize:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "coldBatchSize?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "coldBatchSize",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig#consumerNamePrefix:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "consumerNamePrefix?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "string"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "consumerNamePrefix",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig#maxStreamLength:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "maxStreamLength?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "maxStreamLength",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              }
+            },
+            {
+              "kind": "PropertySignature",
+              "canonicalReference": "@eventicle/eventiclejs!RedisStreamConfig#redisOptions:member",
+              "docComment": "",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "redisOptions: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "RedisOptions",
+                  "canonicalReference": "ioredis!RedisOptions:type"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": false,
+              "releaseTag": "Public",
+              "name": "redisOptions",
               "propertyTypeTokenRange": {
                 "startIndex": 1,
                 "endIndex": 2
@@ -5550,6 +5791,84 @@
               "propertyTypeTokenRange": {
                 "startIndex": 1,
                 "endIndex": 11
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "@eventicle/eventiclejs!Saga#hotLaneParallelEventCount:member",
+              "docComment": "/**\n * Slot count for the hot lane. Defaults to parallelEventCount when isHotPredicate is set.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "hotLaneParallelEventCount?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "hotLaneParallelEventCount",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 2
+              },
+              "isStatic": false,
+              "isProtected": false,
+              "isAbstract": false
+            },
+            {
+              "kind": "Property",
+              "canonicalReference": "@eventicle/eventiclejs!Saga#isHotPredicate:member",
+              "docComment": "/**\n * Optional predicate that classifies an incoming event as hot (true) or cold (false). When set, the saga registers two Kafka consumer groups: - cold lane (`saga-${name}`): processes only events where the predicate returns false - hot lane (`saga-${name}-hot`): processes only events where the predicate returns true Hot events get a dedicated pool of slots that cannot be saturated by cold flood.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "isHotPredicate?: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(event: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "EventicleEvent",
+                  "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ") => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<boolean> | boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isReadonly": false,
+              "isOptional": true,
+              "releaseTag": "Public",
+              "name": "isHotPredicate",
+              "propertyTypeTokenRange": {
+                "startIndex": 1,
+                "endIndex": 6
               },
               "isStatic": false,
               "isProtected": false,
@@ -6336,6 +6655,130 @@
               "isStatic": false,
               "isProtected": false,
               "isAbstract": false
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "@eventicle/eventiclejs!Saga#withHotParallelEvents:member(1)",
+              "docComment": "/**\n * Configure dedicated slot count for the hot lane.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withHotParallelEvents(val: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "number"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Saga",
+                  "canonicalReference": "@eventicle/eventiclejs!Saga:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TimeoutNames, InstanceData>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 3,
+                "endIndex": 5
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "val",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 2
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withHotParallelEvents"
+            },
+            {
+              "kind": "Method",
+              "canonicalReference": "@eventicle/eventiclejs!Saga#withHotPredicate:member(1)",
+              "docComment": "/**\n * Enable hot/cold prioritisation by subscribing two Kafka consumer groups. The predicate is evaluated for every event in both lanes; each lane only processes events that match its bucket.\n */\n",
+              "excerptTokens": [
+                {
+                  "kind": "Content",
+                  "text": "withHotPredicate(predicate: "
+                },
+                {
+                  "kind": "Content",
+                  "text": "(event: "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "EventicleEvent",
+                  "canonicalReference": "@eventicle/eventiclejs!EventicleEvent:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": ") => "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Promise",
+                  "canonicalReference": "!Promise:interface"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<boolean> | boolean"
+                },
+                {
+                  "kind": "Content",
+                  "text": "): "
+                },
+                {
+                  "kind": "Reference",
+                  "text": "Saga",
+                  "canonicalReference": "@eventicle/eventiclejs!Saga:class"
+                },
+                {
+                  "kind": "Content",
+                  "text": "<TimeoutNames, InstanceData>"
+                },
+                {
+                  "kind": "Content",
+                  "text": ";"
+                }
+              ],
+              "isStatic": false,
+              "returnTypeTokenRange": {
+                "startIndex": 7,
+                "endIndex": 9
+              },
+              "releaseTag": "Public",
+              "isProtected": false,
+              "overloadIndex": 1,
+              "parameters": [
+                {
+                  "parameterName": "predicate",
+                  "parameterTypeTokenRange": {
+                    "startIndex": 1,
+                    "endIndex": 6
+                  },
+                  "isOptional": false
+                }
+              ],
+              "isOptional": false,
+              "isAbstract": false,
+              "name": "withHotPredicate"
             }
           ],
           "implementsTokenRanges": []
@@ -7163,6 +7606,39 @@
             }
           ],
           "name": "setScheduler"
+        },
+        {
+          "kind": "Function",
+          "canonicalReference": "@eventicle/eventiclejs!shutdownAllAdapters:function(1)",
+          "docComment": "",
+          "excerptTokens": [
+            {
+              "kind": "Content",
+              "text": "export declare function shutdownAllAdapters(): "
+            },
+            {
+              "kind": "Reference",
+              "text": "Promise",
+              "canonicalReference": "!Promise:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<void>"
+            },
+            {
+              "kind": "Content",
+              "text": ";"
+            }
+          ],
+          "fileUrlPath": "src/events/adapter/index.ts",
+          "returnTypeTokenRange": {
+            "startIndex": 1,
+            "endIndex": 3
+          },
+          "releaseTag": "Public",
+          "overloadIndex": 1,
+          "parameters": [],
+          "name": "shutdownAllAdapters"
         }
       ]
     }

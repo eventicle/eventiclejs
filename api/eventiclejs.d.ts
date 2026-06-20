@@ -1,11 +1,11 @@
-import { ConsumerConfig } from 'kafkajs';
-import { ConsumerRunConfig } from 'kafkajs';
+import { ConsumerConfig } from '@confluentinc/kafka-javascript/lib/kafkajs';
+import { ConsumerRunConfig } from '@confluentinc/kafka-javascript/lib/kafkajs';
 import { DataQuery } from '@eventicle/eventicle-utilities/dist/datastore';
 import { DataSorting } from '@eventicle/eventicle-utilities/dist/datastore';
 import { DataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { dataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { EventEmitter } from 'events';
-import { KafkaConfig } from 'kafkajs';
+import { KafkaConfig } from '@confluentinc/kafka-javascript/lib/kafkajs';
 import { LockManager } from '@eventicle/eventicle-utilities';
 import { lockManager } from '@eventicle/eventicle-utilities';
 import { LogApi } from '@eventicle/eventicle-utilities';
@@ -13,6 +13,7 @@ import * as nodeCron from 'node-cron';
 import { PagedRecords } from '@eventicle/eventicle-utilities/dist/datastore';
 import { Query } from '@eventicle/eventicle-utilities/dist/datastore';
 import { Record as Record_2 } from '@eventicle/eventicle-utilities/dist/datastore';
+import { RedisOptions } from 'ioredis';
 import { ScheduleJobRunner } from '@eventicle/eventicle-utilities/dist/schedule-job-runner';
 import { setDataStore } from '@eventicle/eventicle-utilities/dist/datastore';
 import { setLockManager } from '@eventicle/eventicle-utilities';
@@ -1102,13 +1103,26 @@ export declare function eventClientCodec(): EventClientCodec;
 export declare function eventClientOnDatastore(): EventClient;
 
 /**
- * https://kafka.js.org/docs/admin#a-name-create-topics-a-create-topics
+ * https://github.com/confluentinc/confluent-kafka-javascript/blob/dev_early_access_development_branch/MIGRATION.md
  *
- * @param config as per kafkjs
- * @param consumerConfig as per kafkajs
+ * @param config as per @confluentinc/kafka-javascript kafkaJS compat layer
+ * @param consumerConfig consumer configuration factory
  * @param onTopicFailureConfig If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config
  */
 export declare function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName: any) => Promise<TopicFailureConfiguration>): Promise<EventClient>;
+
+/**
+ * Factory function to create a Redis Streams-backed EventClient.
+ *
+ * The returned client implements the full EventClient interface using
+ * Redis Streams for event persistence and delivery. It supports
+ * hot, cold, and cold-hot subscriptions with consumer group
+ * load balancing.
+ *
+ * @param config Redis connection and stream configuration
+ * @returns A connected EventClient wrapped with transactional support
+ */
+export declare function eventClientOnRedis(config: RedisStreamConfig): Promise<EventClient>;
 
 /**
  * Core event interface representing something that happened in the system.
@@ -1391,6 +1405,7 @@ export declare class LocalScheduleJobRunner implements ScheduleJobRunner {
     crons: Map<string, nodeCron.ScheduledTask>;
     events: EventEmitter<[never]>;
     constructor();
+    private nextCronExecutionTime;
     addScheduleTaskListener(component: string, exec: (name: string, id: string, data: any) => Promise<void>): Promise<void>;
     addScheduledTask(component: string, name: string, id: string, config: {
         isCron: true;
@@ -1509,6 +1524,14 @@ export declare interface RawEventView {
 
 export { Record_2 as Record }
 
+export declare interface RedisStreamConfig {
+    redisOptions: RedisOptions;
+    blockTimeoutMs?: number;
+    coldBatchSize?: number;
+    consumerNamePrefix?: string;
+    maxStreamLength?: number;
+}
+
 /**
  * This will connect the given EventAdapter to event streams.
  *
@@ -1618,6 +1641,16 @@ export declare class Saga<TimeoutNames, InstanceData> {
     streams: string[];
     streamSubs: EventSubscriptionControl[];
     parallelEventCount: number;
+    /**
+     * Optional predicate that classifies an incoming event as hot (true) or cold (false).
+     * When set, the saga registers two Kafka consumer groups:
+     *   - cold lane (`saga-${name}`): processes only events where the predicate returns false
+     *   - hot lane (`saga-${name}-hot`): processes only events where the predicate returns true
+     * Hot events get a dedicated pool of slots that cannot be saturated by cold flood.
+     */
+    isHotPredicate?: (event: EventicleEvent) => Promise<boolean> | boolean;
+    /** Slot count for the hot lane. Defaults to parallelEventCount when isHotPredicate is set. */
+    hotLaneParallelEventCount?: number;
     starts: Map<string, {
         config: StartHandlerConfig<any, InstanceData, TimeoutNames>;
         handle: (saga: SagaInstance<TimeoutNames, InstanceData>, event: EventicleEvent) => Promise<void>;
@@ -1632,6 +1665,14 @@ export declare class Saga<TimeoutNames, InstanceData> {
     }>;
     constructor(name: string);
     parallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
+    /**
+     * Enable hot/cold prioritisation by subscribing two Kafka consumer groups.
+     * The predicate is evaluated for every event in both lanes; each lane only
+     * processes events that match its bucket.
+     */
+    withHotPredicate(predicate: (event: EventicleEvent) => Promise<boolean> | boolean): Saga<TimeoutNames, InstanceData>;
+    /** Configure dedicated slot count for the hot lane. */
+    withHotParallelEvents(val: number): Saga<TimeoutNames, InstanceData>;
     subscribeStreams(streams: string[]): Saga<TimeoutNames, InstanceData>;
     /**
      * Register a handler for a timer triggered saga step.

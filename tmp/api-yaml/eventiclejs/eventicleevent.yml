@@ -157,7 +157,7 @@ properties:
     uid: '@eventicle/eventiclejs!EventicleEvent#type:member'
     package: '@eventicle/eventiclejs!'
     fullName: type
-    summary: Event type name (e.g., 'UserCreated', 'OrderShipped')
+    summary: 'Event type name (e.g., ''UserCreated'', ''OrderShipped'')'
     remarks: ''
     example: []
     isPreview: false

@@ -31,6 +31,8 @@ items:
             uid: '@eventicle/eventiclejs!LocalScheduleJobRunner:class'
           - name: RawEventView
             uid: '@eventicle/eventiclejs!RawEventView:interface'
+          - name: RedisStreamConfig
+            uid: '@eventicle/eventiclejs!RedisStreamConfig:interface'
           - name: Saga
             uid: '@eventicle/eventiclejs!Saga:class'
           - name: SagaInstance

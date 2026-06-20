@@ -125,6 +125,36 @@ properties:
                   config: <xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;any, InstanceData, TimeoutNames&gt;;
                   handle: (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;void&gt;;
               }&gt;
+  - name: hotLaneParallelEventCount
+    uid: '@eventicle/eventiclejs!Saga#hotLaneParallelEventCount:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: hotLaneParallelEventCount
+    summary: Slot count for the hot lane. Defaults to parallelEventCount when isHotPredicate is set.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'hotLaneParallelEventCount?: number;'
+      return:
+        type: number
+  - name: isHotPredicate
+    uid: '@eventicle/eventiclejs!Saga#isHotPredicate:member'
+    package: '@eventicle/eventiclejs!'
+    fullName: isHotPredicate
+    summary: >-
+      Optional predicate that classifies an incoming event as hot (true) or cold (false). When set, the saga registers
+      two Kafka consumer groups: - cold lane (`saga-${name}`<!-- -->): processes only events where the predicate returns
+      false - hot lane (`saga-${name}-hot`<!-- -->): processes only events where the predicate returns true Hot events
+      get a dedicated pool of slots that cannot be saturated by cold flood.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'isHotPredicate?: (event: EventicleEvent) => Promise<boolean> | boolean;'
+      return:
+        type: '(event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;boolean&gt; | boolean'
   - name: name
     uid: '@eventicle/eventiclejs!Saga#name:member'
     package: '@eventicle/eventiclejs!'
@@ -184,7 +214,7 @@ properties:
     syntax:
       content: 'streams: string[];'
       return:
-        type: string[]
+        type: 'string[]'
   - name: streamSubs
     uid: '@eventicle/eventiclejs!Saga#streamSubs:member'
     package: '@eventicle/eventiclejs!'
@@ -197,7 +227,7 @@ properties:
     syntax:
       content: 'streamSubs: EventSubscriptionControl[];'
       return:
-        type: <xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />[]
+        type: '<xref uid="@eventicle/eventiclejs!~EventSubscriptionControl:interface" />[]'
   - name: timerHandler
     uid: '@eventicle/eventiclejs!Saga#timerHandler:member'
     package: '@eventicle/eventiclejs!'
@@ -218,10 +248,10 @@ properties:
                   handle: (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;) =&gt; Promise&lt;void&gt;;
               }&gt;
 methods:
-  - name: on(eventName, config, handler)
+  - name: 'on(eventName, config, handler)'
     uid: '@eventicle/eventiclejs!Saga#on:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: on(eventName, config, handler)
+    fullName: 'on(eventName, config, handler)'
     summary: >-
       Registers an event handler for existing saga instances.
 
@@ -257,14 +287,14 @@ methods:
           type: string
         - id: config
           description: Configuration for instance matching and locking
-          type: <xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;
+          type: '<xref uid="@eventicle/eventiclejs!~HandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;'
         - id: handler
           description: The function to execute for matching instances
           type: >-
             (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: T)
             =&gt; Promise&lt;void&gt;
       return:
-        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
         description: ''
   - name: onError(handler)
     uid: '@eventicle/eventiclejs!Saga#onError:member(1)'
@@ -286,12 +316,12 @@ methods:
             (saga: any, event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />, error: Error) =&gt;
             Promise&lt;void&gt;
       return:
-        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
         description: ''
-  - name: onTimer(name, handle)
+  - name: 'onTimer(name, handle)'
     uid: '@eventicle/eventiclejs!Saga#onTimer:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: onTimer(name, handle)
+    fullName: 'onTimer(name, handle)'
     summary: |-
       Register a handler for a timer triggered saga step.
 
@@ -316,7 +346,7 @@ methods:
             (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;) =&gt;
             Promise&lt;void&gt;
       return:
-        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
         description: ''
   - name: parallelEvents(val)
     uid: '@eventicle/eventiclejs!Saga#parallelEvents:member(1)'
@@ -334,12 +364,12 @@ methods:
           description: ''
           type: number
       return:
-        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
         description: ''
-  - name: startOn(eventName, config, handler)
+  - name: 'startOn(eventName, config, handler)'
     uid: '@eventicle/eventiclejs!Saga#startOn:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: startOn(eventName, config, handler)
+    fullName: 'startOn(eventName, config, handler)'
     summary: >-
       Registers an event handler that can start new saga instances.
 
@@ -371,14 +401,14 @@ methods:
           type: string
         - id: config
           description: Configuration for instance creation
-          type: <xref uid="@eventicle/eventiclejs!~StartHandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;
+          type: '<xref uid="@eventicle/eventiclejs!~StartHandlerConfig:interface" />&lt;T, InstanceData, TimeoutNames&gt;'
         - id: handler
           description: The function to execute when starting a new instance
           type: >-
             (saga: <xref uid="@eventicle/eventiclejs!SagaInstance:class" />&lt;TimeoutNames, InstanceData&gt;, event: T)
             =&gt; Promise&lt;void&gt;
       return:
-        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
         description: ''
   - name: subscribeStreams(streams)
     uid: '@eventicle/eventiclejs!Saga#subscribeStreams:member(1)'
@@ -394,7 +424,49 @@ methods:
       parameters:
         - id: streams
           description: ''
-          type: string[]
+          type: 'string[]'
       return:
-        type: <xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''
+  - name: withHotParallelEvents(val)
+    uid: '@eventicle/eventiclejs!Saga#withHotParallelEvents:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: withHotParallelEvents(val)
+    summary: Configure dedicated slot count for the hot lane.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: 'withHotParallelEvents(val: number): Saga<TimeoutNames, InstanceData>;'
+      parameters:
+        - id: val
+          description: ''
+          type: number
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
+        description: ''
+  - name: withHotPredicate(predicate)
+    uid: '@eventicle/eventiclejs!Saga#withHotPredicate:member(1)'
+    package: '@eventicle/eventiclejs!'
+    fullName: withHotPredicate(predicate)
+    summary: >-
+      Enable hot/cold prioritisation by subscribing two Kafka consumer groups. The predicate is evaluated for every
+      event in both lanes; each lane only processes events that match its bucket.
+    remarks: ''
+    example: []
+    isPreview: false
+    isDeprecated: false
+    syntax:
+      content: >-
+        withHotPredicate(predicate: (event: EventicleEvent) => Promise<boolean> | boolean): Saga<TimeoutNames,
+        InstanceData>;
+      parameters:
+        - id: predicate
+          description: ''
+          type: >-
+            (event: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />) =&gt; Promise&lt;boolean&gt; |
+            boolean
+      return:
+        type: '<xref uid="@eventicle/eventiclejs!Saga:class" />&lt;TimeoutNames, InstanceData&gt;'
         description: ''

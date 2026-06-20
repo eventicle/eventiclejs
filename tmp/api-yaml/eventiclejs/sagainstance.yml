@@ -43,10 +43,10 @@ isPreview: false
 isDeprecated: false
 type: class
 constructors:
-  - name: (constructor)(internalData, record)
+  - name: '(constructor)(internalData, record)'
     uid: '@eventicle/eventiclejs!SagaInstance:constructor(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: (constructor)(internalData, record)
+    fullName: '(constructor)(internalData, record)'
     summary: Constructs a new instance of the `SagaInstance` class
     remarks: ''
     example: []
@@ -60,7 +60,7 @@ constructors:
           type: any
         - id: record
           description: ''
-          type: <xref uid="@eventicle/eventicle-utilities!Record:interface" />
+          type: '<xref uid="@eventicle/eventicle-utilities!Record:interface" />'
 properties:
   - name: internalData
     uid: '@eventicle/eventiclejs!SagaInstance#internalData:member'
@@ -87,7 +87,7 @@ properties:
     syntax:
       content: 'readonly record?: Record;'
       return:
-        type: <xref uid="@eventicle/eventicle-utilities!Record:interface" />
+        type: '<xref uid="@eventicle/eventicle-utilities!Record:interface" />'
   - name: timersToAdd
     uid: '@eventicle/eventiclejs!SagaInstance#timersToAdd:member'
     package: '@eventicle/eventiclejs!'
@@ -133,7 +133,7 @@ properties:
     syntax:
       content: 'readonly timersToRemove: TimeoutNames[];'
       return:
-        type: TimeoutNames[]
+        type: 'TimeoutNames[]'
 methods:
   - name: endSaga(preserveInstanceData)
     uid: '@eventicle/eventiclejs!SagaInstance#endSaga:member(1)'
@@ -187,7 +187,7 @@ methods:
           description: The key of the data to retrieve
           type: K
       return:
-        type: T[K]
+        type: 'T[K]'
         description: The value associated with the key
   - name: lastEvent()
     uid: '@eventicle/eventiclejs!SagaInstance#lastEvent:member(1)'
@@ -201,7 +201,7 @@ methods:
     syntax:
       content: 'lastEvent(): EventicleEvent;'
       return:
-        type: <xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />
+        type: '<xref uid="@eventicle/eventiclejs!EventicleEvent:interface" />'
         description: ''
   - name: removeTimer(name)
     uid: '@eventicle/eventiclejs!SagaInstance#removeTimer:member(1)'
@@ -221,10 +221,10 @@ methods:
       return:
         type: void
         description: ''
-  - name: set(name, value)
+  - name: 'set(name, value)'
     uid: '@eventicle/eventiclejs!SagaInstance#set:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: set(name, value)
+    fullName: 'set(name, value)'
     summary: >-
       Sets a piece of data in the saga instance state.
 
@@ -253,10 +253,10 @@ methods:
       return:
         type: void
         description: ''
-  - name: upsertTimer(name, config)
+  - name: 'upsertTimer(name, config)'
     uid: '@eventicle/eventiclejs!SagaInstance#upsertTimer:member(1)'
     package: '@eventicle/eventiclejs!'
-    fullName: upsertTimer(name, config)
+    fullName: 'upsertTimer(name, config)'
     summary: |-
       Create (or overwrite) a timer to call. Can be either a simple timer (millis to wait), or a cron timer.
 

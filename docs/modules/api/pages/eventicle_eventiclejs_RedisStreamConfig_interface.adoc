@@ -1,0 +1,93 @@
+= interface RedisStreamConfig
+
+
+
+
+
+== Properties
+
+[id="eventicle_eventiclejs_RedisStreamConfig_blockTimeoutMs_member"]
+=== blockTimeoutMs
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+blockTimeoutMs?: number;
+----
+
+========
+[id="eventicle_eventiclejs_RedisStreamConfig_coldBatchSize_member"]
+=== coldBatchSize
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+coldBatchSize?: number;
+----
+
+========
+[id="eventicle_eventiclejs_RedisStreamConfig_consumerNamePrefix_member"]
+=== consumerNamePrefix
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+consumerNamePrefix?: string;
+----
+
+========
+[id="eventicle_eventiclejs_RedisStreamConfig_maxStreamLength_member"]
+=== maxStreamLength
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+maxStreamLength?: number;
+----
+
+========
+[id="eventicle_eventiclejs_RedisStreamConfig_redisOptions_member"]
+=== redisOptions
+
+========
+
+
+
+
+
+
+.Signature
+[source,typescript]
+----
+redisOptions: RedisOptions;
+----
+
+========
