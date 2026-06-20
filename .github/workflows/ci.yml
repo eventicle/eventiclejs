@@ -1,28 +1,46 @@
 name: CI
+
 on:
-  workflow_dispatch:
   push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
 jobs:
-  build:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
       - name: Install dependencies
-        run: yarn
-#      - name: Run tests
-#        run: yarn test
-      - name: Update API Docs
-        run: yarn api
-      - uses: stefanzweifel/git-auto-commit-action@v4
+        run: npm ci
+
+      - name: Build
+        run: npm run build-ts
+
+      - name: Unit tests
+        run: npm run unit-test
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          commit_message: Update generated files as of ${{ github.sha }}
-          file_pattern: api docs
-          commit_user_name: daviddawson
-          commit_user_email: daviddawson@users.noreply.github.com
-          commit_author: Eventicle Bot <daviddawson@users.noreply.github.com>
-      - name: "Trigger Docs Update"
-        run: |
-          curl -XPOST -u "build_docs:${{ secrets.DOCS_SECRET }}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/$GITHUB_REPOSITORY_OWNER/eventicle-docs/actions/workflows/publish.yml/dispatches --data '{"ref": "master"}'
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build-ts
+
+      - name: Integration tests
+        run: npm run integration-test

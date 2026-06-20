@@ -1,4 +1,4 @@
-import {Consumer, ConsumerConfig, ConsumerRunConfig, ICustomPartitioner, Kafka, KafkaConfig, Message} from "kafkajs";
+import {Kafka, KafkaConfig, Consumer, ConsumerConfig, ConsumerRunConfig, Message} from "@confluentinc/kafka-javascript/lib/kafkajs";
 import {
   EncodedEvent,
   EventClient,
@@ -39,21 +39,17 @@ let consumerConfigFactory: ConsumerConfigFactory = {
   consumerConfig: (stream, consumerName, type) => {
     return {
       maxWaitTimeInMs: 100,
-      groupId: consumerName
+      groupId: consumerName,
+      allowAutoTopicCreation: true,
     }
   },
   consumerRunConfig: (stream, consumerName, type, partitionsConsumedConcurrently) => {
     if (type === "COLD") {
       return {
-        autoCommit: true,
-        autoCommitInterval: 500,
-        autoCommitThreshold: 50
+        partitionsConsumedConcurrently: partitionsConsumedConcurrently ?? 1,
       }
     }
     const config =  {
-      autoCommit: true,
-      autoCommitInterval: 500,
-      autoCommitThreshold: 50,
       partitionsConsumedConcurrently: partitionsConsumedConcurrently ?? 50,
     }
     logger.debug(`Creating topic consumer ${consumerName} for stream ${stream} with run config `, config)
@@ -77,13 +73,13 @@ export function getKafkaClientHealth(): KafkaClientHealth {
 }
 
 export async function connectBroker(config: KafkaConfig) {
-  kafka = new Kafka(config)
+  kafka = new Kafka({kafkaJS: config} as any)
 }
 
 export type TopicFailureConfiguration = {
   createTopic: boolean,
-  numPartitions?: number,     // default: -1 (uses broker `num.partitions` configuration)
-  replicationFactor?: number, // default: -1 (uses broker `default.replication.factor` configuration)
+  numPartitions?: number,
+  replicationFactor?: number,
   configEntries?: {
     name: string, value: string
   }[]
@@ -126,7 +122,19 @@ export async function maybeCreateTopic(config: TopicFailureConfiguration, topicN
   }
 }
 
-async function connectConsumerWithOptionalCreation<T>(topicNames: string | string[], executor: () => Promise<T>) {
+function filterUndefined(obj: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined))
+}
+
+// These keys were valid in kafkajs run() config but are now consumer-level config in confluent.
+// Strip them from the run config to maintain backward compatibility with existing ConsumerConfigFactory implementations.
+const RUN_CONFIG_DISALLOWED_KEYS = ['autoCommit', 'autoCommitInterval', 'autoCommitThreshold']
+
+function sanitizeRunConfig(config: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(config).filter(([k]) => !RUN_CONFIG_DISALLOWED_KEYS.includes(k)))
+}
+
+async function connectConsumerWithOptionalCreation<T>(topicNames: string | string[], consumer: Consumer, executor: (retry?: boolean) => Promise<T>) {
   let topics: string[]
   if (!Array.isArray(topicNames)) {
     topics = [topicNames]
@@ -134,7 +142,9 @@ async function connectConsumerWithOptionalCreation<T>(topicNames: string | strin
     topics = topicNames
   }
 
-  return executor().catch(async reason => {
+  await consumer.connect()
+
+  return executor(false).catch(async reason => {
     await Promise.all(topics.map(async topicName => {
       logger.warn(`Error when connecting to topic ${topicName}, checking fallback configuration`, {
         topicName, maybeRenderError: reason
@@ -143,7 +153,7 @@ async function connectConsumerWithOptionalCreation<T>(topicNames: string | strin
       const config = await onTopicFailure(topicName)
       await maybeCreateTopic(config, topicName, reason);
     }))
-    return executor()
+    return executor(true)
   })
 }
 
@@ -160,7 +170,6 @@ class EventclientKafka implements EventClient {
   }
 
   async connect(): Promise<EventclientKafka> {
-    // Use this throttle to work around this - https://github.com/tulios/kafkajs/issues/598
     producerHealth = {
       healthy: false, status: "disconnected", name: "message-sender"
     }
@@ -235,27 +244,22 @@ class EventclientKafka implements EventClient {
     let newConf = consumerConfigFactory.consumerConfig(config.stream, config.groupId, "COLD_HOT")
 
     let cons = kafka.consumer({
-      groupId: newConf.groupId || config.groupId,
-      ...newConf
-    })
-
-
-    setupMonitor(healthStatus, cons)
+      kafkaJS: filterUndefined({
+        ...newConf,
+        groupId: newConf.groupId || config.groupId,
+        fromBeginning: true,
+        autoCommit: true,
+        autoCommitInterval: 500,
+      })
+    } as any)
 
     consumers.push(cons)
 
-    await connectConsumerWithOptionalCreation(config.stream, async () => {
-      await cons.connect()
+    await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
+      const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
+      await cons.subscribe({topics, replace: retry})
 
-      if (Array.isArray(config.stream)) {
-        for (let str of config.stream) {
-          await cons.subscribe({topic: str, fromBeginning: true})
-        }
-      } else {
-        await cons.subscribe({topic: config.stream, fromBeginning: true})
-      }
-
-      let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount)
+      let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount))
       await cons.run({
         ...newRunConf,
         eachMessage: async payload => {
@@ -292,11 +296,16 @@ class EventclientKafka implements EventClient {
           }
         }
       })
+
+      healthStatus.healthy = true
+      healthStatus.status = "connected"
     })
 
     return {
       close: async () => {
         await cons.disconnect()
+        healthStatus.healthy = false
+        healthStatus.status = "disconnected"
         consumerGroups = consumerGroups.filter(value => value !== config.groupId)
       }
     }
@@ -310,20 +319,22 @@ class EventclientKafka implements EventClient {
     onDone: () => void
   }): Promise<EventSubscriptionControl> {
 
-    // Always use a unique group ID for cold replay to ensure we get all partitions
     const groupId = `cold-replay-${uuid.v4()}`
     let newConf = consumerConfigFactory.consumerConfig(config.stream, groupId, "COLD")
 
-    // Force sessionTimeout to be high enough to allow time for processing
     let cons = kafka.consumer({
-      groupId: groupId, // Don't use newConf.groupId to ensure uniqueness
-      sessionTimeout: 60000, // 60 seconds
-      rebalanceTimeout: 60000, // 60 seconds
-      heartbeatInterval: 3000, // 3 seconds
-      ...newConf
-    })
+      kafkaJS: filterUndefined({
+        groupId: groupId,
+        fromBeginning: true,
+        autoCommit: true,
+        autoCommitInterval: 500,
+        sessionTimeout: 60000,
+        rebalanceTimeout: 60000,
+        heartbeatInterval: 3000,
+        maxWaitTimeInMs: newConf.maxWaitTimeInMs,
+      })
+    } as any)
 
-    // Create a map to track the latest offsets and consumed offsets
     const latestOffsets = new Map();
     const consumedOffsets = new Map();
     const emptyPartitions = new Set();
@@ -331,24 +342,22 @@ class EventclientKafka implements EventClient {
     let allPartitions = [];
     let messagesProcessed = false;
 
-    // Connect to admin client to get topic metadata
     let adm = kafka.admin()
     try {
       await adm.connect()
 
-      // Fetch metadata about the topic to get a complete list of partitions
       const metadata = await adm.fetchTopicMetadata({ topics: [config.stream] }).catch(async reason => {
         return null
       })
-      let topicMetadata = metadata?.topics?.find(t => t.name === config.stream)
+
+      let topicMetadata = metadata ? metadata.find(t => t.name === config.stream) : null
 
       if (!topicMetadata) {
         const createConfig = await onTopicFailure(config.stream);
         await maybeCreateTopic(createConfig, config.stream, new Error('Topic not found in metadata'));
 
-        // Retry fetching metadata after topic creation
         const newMetadata = await adm.fetchTopicMetadata({topics: [config.stream]});
-        const newTopicMetadata = newMetadata.topics.find(t => t.name === config.stream);
+        const newTopicMetadata = newMetadata.find(t => t.name === config.stream);
 
         if (!newTopicMetadata) {
           throw new Error(`Failed to create topic ${config.stream}`);
@@ -357,28 +366,22 @@ class EventclientKafka implements EventClient {
         topicMetadata = newTopicMetadata;
       }
 
-      // Get a complete list of partitions for this topic
       allPartitions = topicMetadata.partitions.map(p => p.partitionId)
 
-      // Now fetch offsets for each partition
       let topicOffsets = await adm.fetchTopicOffsets(config.stream)
 
-      // Log if the number of partitions from metadata doesn't match offset data
       if (allPartitions.length !== topicOffsets.length) {
         logger.warn(`Mismatch between metadata partitions (${allPartitions.length}) and offset partitions (${topicOffsets.length})`)
       }
 
-      // Initialize tracking for all partitions from metadata
       allPartitions.forEach(partition => {
         consumedOffsets.set(partition, BigInt(-1))
       })
 
-      // Process offset information
       topicOffsets.forEach(({ partition, high }) => {
         const highOffset = BigInt(high);
         latestOffsets.set(partition, highOffset);
 
-        // If this partition is empty (high offset is 0), mark it as empty
         if (highOffset === BigInt(0)) {
           emptyPartitions.add(partition);
         } else {
@@ -393,7 +396,6 @@ class EventclientKafka implements EventClient {
 
     const partitionsToProcess = allPartitions.length;
 
-    // Convert BigInt values to strings for logging
     const serializableLatestOffsets = {};
     latestOffsets.forEach((value, key) => {
       serializableLatestOffsets[key] = value.toString();
@@ -406,35 +408,23 @@ class EventclientKafka implements EventClient {
       latestOffsets: serializableLatestOffsets
     });
 
-    // Connect the consumer
     try {
-      await connectConsumerWithOptionalCreation(config.stream, async () => {
-        await cons.connect()
+      await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
+        const topics = [config.stream]
+        await cons.subscribe({topics, replace: retry})
       })
 
-      // Subscribe to the topic from the beginning
-      await cons.subscribe({
-        topic: config.stream,
-        fromBeginning: true
-      })
+      let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, groupId, "COLD", config.parallelEventCount))
 
-      // Get the run config
-      let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, groupId, "COLD", config.parallelEventCount)
-
-      // Setup a heartbeat interval to keep checking if we're stuck
       let stuckCheckInterval;
       let lastActivity = Date.now();
-
-      // Track the partitions we've seen messages from
       const seenPartitions = new Set();
 
       stuckCheckInterval = setInterval(() => {
         const now = Date.now();
         const timeWithoutActivity = now - lastActivity;
 
-        // If we have partitions we've never seen messages from and we've been idle for more than 10 seconds
         if (timeWithoutActivity > 10000) {
-          // Convert BigInt values to strings for logging
           const serializableConsumedOffsets = {};
           consumedOffsets.forEach((value, key) => {
             serializableConsumedOffsets[key] = value.toString();
@@ -446,14 +436,12 @@ class EventclientKafka implements EventClient {
             partitionsWithMessages: Array.from(partitionsWithMessages)
           });
 
-          // Check for missing partitions but continue anyway
           partitionsWithMessages.forEach(partition => {
             if (!seenPartitions.has(partition)) {
               logger.warn(`Ignoring partition ${partition} that has messages but wasn't seen`);
             }
           });
 
-          // Clear interval and finish
           clearInterval(stuckCheckInterval);
           config.onDone();
           setTimeout(() => {
@@ -462,13 +450,10 @@ class EventclientKafka implements EventClient {
         }
       }, 10000);
 
-      // Run the consumer
       await cons.run({
         ...newRunConf,
         eachMessage: async ({ topic, partition, message }) => {
           lastActivity = Date.now();
-
-          // Track that we've seen this partition
           seenPartitions.add(partition);
 
           logger.trace(`Cold message from partition ${partition}, offset ${message.offset}`)
@@ -485,21 +470,17 @@ class EventclientKafka implements EventClient {
             await config.handler(decoded)
             messagesProcessed = true;
           } finally {
-            // Update consumed offset
             consumedOffsets.set(partition, BigInt(message.offset));
 
-            // Check if we've caught up on all partitions
             const allCaughtUp = Array.from(latestOffsets.entries()).every(([partition, endOffset]) => {
-              // If this partition is empty, we consider it caught up
               if (emptyPartitions.has(partition)) {
                 return true;
               }
               const currentOffset = consumedOffsets.get(partition);
-              return currentOffset >= endOffset - BigInt(1); // Subtract 1 because offset is 0-based
+              return currentOffset >= endOffset - BigInt(1);
             });
 
             if (allCaughtUp) {
-              // Convert BigInt values to strings for logging
               const serializableConsumedOffsets = {};
               const serializableLatestOffsets = {};
 
@@ -520,13 +501,10 @@ class EventclientKafka implements EventClient {
                 messagesProcessed
               });
 
-              // Clear the stuck check interval
               clearInterval(stuckCheckInterval);
 
-              // Call onDone and disconnect
               await pause(5000)
               config.onDone();
-              // let it commit the offsets of the last batch
               setTimeout(() => {
                 cons.disconnect();
               }, 3000)
@@ -535,16 +513,13 @@ class EventclientKafka implements EventClient {
         }
       });
 
-      // Handle the case of completely empty topics
       if (emptyPartitions.size === partitionsToProcess) {
         logger.debug(`Topic ${config.stream} is completely empty, finishing immediately`);
         clearInterval(stuckCheckInterval);
         config.onDone();
         await cons.disconnect();
         return {
-          close: async () => {
-            // Already disconnected
-          }
+          close: async () => {}
         };
       }
     } catch (error) {
@@ -617,25 +592,22 @@ class EventclientKafka implements EventClient {
     let newConf = consumerConfigFactory.consumerConfig(config.stream, config.consumerName, "HOT")
 
     let cons = kafka.consumer({
+      kafkaJS: filterUndefined({
+        ...newConf,
         groupId: newConf.groupId || config.consumerName,
-        ...newConf
+        fromBeginning: false,
+        autoCommit: true,
+        autoCommitInterval: 500,
       })
+    } as any)
 
-    setupMonitor(healthStatus, cons)
     consumers.push(cons)
 
-    await connectConsumerWithOptionalCreation(config.stream, async () => {
-      await cons.connect()
+    await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
+      const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
+      await cons.subscribe({topics, replace: retry})
 
-      if (Array.isArray(config.stream)) {
-        for (let str of config.stream) {
-          await cons.subscribe({topic: str})
-        }
-      } else {
-        await cons.subscribe({topic: config.stream})
-      }
-
-      let newRunConf = consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount)
+      let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount))
 
       await cons.run({
         ...newRunConf,
@@ -666,6 +638,9 @@ class EventclientKafka implements EventClient {
           }
         }
       })
+
+      healthStatus.healthy = true
+      healthStatus.status = "connected"
     })
 
     return {
@@ -683,6 +658,8 @@ class EventclientKafka implements EventClient {
           }
         }
         await cons.disconnect()
+        healthStatus.healthy = false
+        healthStatus.status = "disconnected"
         consumerGroups = consumerGroups.filter(value => value !== config.consumerName)
       }
     }
@@ -726,32 +703,8 @@ class EventclientKafka implements EventClient {
 
   async shutdown(): Promise<void> {
     await this.throttle.disconnect()
-    await Promise.all(consumers.map(value => value.disconnect()))
+    await Promise.all(consumers.map(value => value.disconnect().catch(e => logger.debug("Error disconnecting consumer during shutdown", e))))
   }
-}
-
-function setupMonitor(healthStatus: HealthCheckStatus, cons: Consumer) {
-  cons.on("consumer.stop", args => {
-    healthStatus.healthy = false
-    healthStatus.status = "disconnected"
-  })
-  cons.on("consumer.crash", args => {
-    (healthStatus as any).args = args
-    healthStatus.healthy = false
-    healthStatus.status = "error"
-  })
-  cons.on("consumer.disconnect", args => {
-    healthStatus.healthy = false
-    healthStatus.status = "disconnected"
-  })
-  cons.on("consumer.connect", args => {
-    healthStatus.healthy = true
-    healthStatus.status = "connected"
-  })
-  cons.on("consumer.group_join", args => {
-    healthStatus.healthy = true
-    healthStatus.status = "active"
-  })
 }
 
 export type ConsumerConfigStreamType = "HOT" | "COLD" | "COLD_HOT"
@@ -764,10 +717,10 @@ export interface ConsumerConfigFactory {
 
 
 /**
- * https://kafka.js.org/docs/admin#a-name-create-topics-a-create-topics
+ * https://github.com/confluentinc/confluent-kafka-javascript/blob/dev_early_access_development_branch/MIGRATION.md
  *
- * @param config as per kafkjs
- * @param consumerConfig as per kafkajs
+ * @param config as per @confluentinc/kafka-javascript kafkaJS compat layer
+ * @param consumerConfig consumer configuration factory
  * @param onTopicFailureConfig If a consumer fails because the topic doesn't exist, configure this to request the topic is auto generated with the given config
  */
 export async function eventClientOnKafka(config: KafkaConfig, consumerConfig?: ConsumerConfigFactory, onTopicFailureConfig?: (topicName) => Promise<TopicFailureConfiguration>): Promise<EventClient> {

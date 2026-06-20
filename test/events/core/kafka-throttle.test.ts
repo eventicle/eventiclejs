@@ -1,5 +1,5 @@
-import {ThrottledProducer} from '../../../src/events/core/kafka-throttle';
-import {Kafka, Message} from "kafkajs";
+import {ThrottledProducer, isKafkaJSProtocolError} from '../../../src/events/core/kafka-throttle';
+import {Kafka, Message, KafkaJSError} from "@confluentinc/kafka-javascript/lib/kafkajs";
 import type {HealthCheckStatus} from "../../../src/events/core/eventclient-kafka";
 
 describe('ThrottledProducer', () => {
@@ -58,8 +58,8 @@ describe('ThrottledProducer', () => {
         await throttledProducer.connect();
 
         expect(mockProducer.connect).toHaveBeenCalledTimes(1);
-        expect(mockProducer.on).toHaveBeenCalled();
-        expect(producerHealth.status).toBe('disconnected');
+        expect(producerHealth.status).toBe('connected');
+        expect(producerHealth.healthy).toBe(true);
     });
 
     it('should call send and add messages to the recordQueue', async () => {
@@ -107,14 +107,12 @@ describe('ThrottledProducer', () => {
         expect(mockProducer.sendBatch).toHaveBeenCalledTimes(1);
         expect(mockProducer.sendBatch).toHaveBeenCalledWith({
             topicMessages: expect.any(Array),
-            acks: -1,
-            compression: expect.any(Number),
         });
         expect(throttledProducer['recordQueue'].length).toBe(15); // 10 sent, 15 remaining
     });
 
     it('should retry sending on UNKNOWN_PRODUCER_ID error', async () => {
-        const error = {name: 'KafkaJSProtocolError', type: 'UNKNOWN_PRODUCER_ID', retriable: true, code: 59};
+        const error = new KafkaJSError('UNKNOWN_PRODUCER_ID', {code: 59, type: 'UNKNOWN_PRODUCER_ID', retriable: true});
         mockProducer.sendBatch.mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
 
         await throttledProducer.connect();
@@ -130,7 +128,7 @@ describe('ThrottledProducer', () => {
     });
 
     it('should handle topic creation on UNKNOWN_TOPIC_OR_PARTITION error', async () => {
-        const error = {name: 'KafkaJSProtocolError', type: 'UNKNOWN_TOPIC_OR_PARTITION', retriable: true, code: 3};
+        const error = new KafkaJSError('UNKNOWN_TOPIC_OR_PARTITION', {code: 3, type: 'UNKNOWN_TOPIC_OR_PARTITION', retriable: true});
         mockProducer.sendBatch.mockRejectedValueOnce(error).mockResolvedValueOnce(undefined);
         // Set to false to avoid calling kafka.admin() which requires real kafka instance
         onTopicFailure.mockResolvedValue({createTopic: false});

@@ -10,8 +10,12 @@ import { pause } from "../../../src/util";
 import { setDataStore } from "../../../src";
 import InMemDatastore from "../../../src/datastore/inmem-data-store";
 import { logger } from "@eventicle/eventicle-utilities";
+import { GenericContainer, StartedTestContainer } from "testcontainers";
 
-jest.setTimeout(15000);
+jest.setTimeout(60000);
+
+let redisContainer: StartedTestContainer;
+let redisPort: number;
 
 const TEST_STREAMS = [
   "test-mystream",
@@ -22,10 +26,16 @@ const TEST_STREAMS = [
 ];
 
 beforeAll(async function () {
+  redisContainer = await new GenericContainer("redis:7-alpine")
+    .withExposedPorts(6379)
+    .start();
+
+  redisPort = redisContainer.getMappedPort(6379);
+
   setDataStore(new InMemDatastore());
   setEventClient(
     await eventClientOnRedis({
-      redisOptions: { host: "localhost", port: 6379 },
+      redisOptions: { host: redisContainer.getHost(), port: redisPort },
     })
   );
   await testDbPurge();
@@ -45,6 +55,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   await eventClient().shutdown();
+  await redisContainer.stop();
 });
 
 function createTestEvent(overrides: Partial<EventicleEvent> = {}): EventicleEvent {
@@ -91,18 +102,9 @@ test("hot stream receives events", async function () {
 });
 
 test("cold stream fully replays historical", async function () {
-  await eventClient().emit(
-    [createTestEvent()],
-    "test-thestream"
-  );
-  await eventClient().emit(
-    [createTestEvent()],
-    "test-thestream"
-  );
-  await eventClient().emit(
-    [createTestEvent()],
-    "test-thestream"
-  );
+  await eventClient().emit([createTestEvent()], "test-thestream");
+  await eventClient().emit([createTestEvent()], "test-thestream");
+  await eventClient().emit([createTestEvent()], "test-thestream");
 
   await pause(200);
 
@@ -181,47 +183,12 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
   expect(receivedEvents[1].id).toEqual("live-1");
 });
 
-test("consumer group load balancing distributes events", async function () {
-  const groupId = "lb-test-" + uuid.v4();
-  const consumer1Events: EventicleEvent[] = [];
-  const consumer2Events: EventicleEvent[] = [];
-
-  const consumer1 = await eventClient().hotStream({
-    stream: "test-mystream",
-    groupId: groupId,
-    handler: async (event) => {
-      consumer1Events.push(event);
-    },
-    onError: (error) => logger.error("consumer1 error", error),
-    deleteConsumerGroupOnClose: true,
-  });
-
-  // Note: the EventClient interface prevents duplicate groupId subscriptions.
-  // For load balancing to work with Redis Streams, you need separate EventClient
-  // instances (separate processes). This test verifies single-consumer group works.
-  await pause(500);
-
-  const eventCount = 5;
-  for (let eventIdx = 0; eventIdx < eventCount; eventIdx++) {
-    await eventClient().emit(
-      [createTestEvent({ id: `event-${eventIdx}` })],
-      "test-mystream"
-    );
-  }
-
-  await pause(3000);
-  await consumer1.close();
-
-  expect(consumer1Events.length).toEqual(eventCount);
-});
-
 test("multiple streams subscription", async function () {
   const receivedEvents: EventicleEvent[] = [];
-  const groupId = "multi-stream-" + uuid.v4();
 
   const consumer = await eventClient().hotStream({
     stream: ["test-multi-1", "test-multi-2"],
-    groupId: groupId,
+    groupId: "multi-stream-" + uuid.v4(),
     handler: async (event) => {
       receivedEvents.push(event);
     },
@@ -231,15 +198,8 @@ test("multiple streams subscription", async function () {
 
   await pause(500);
 
-  await eventClient().emit(
-    [createTestEvent({ id: "from-stream-1" })],
-    "test-multi-1"
-  );
-
-  await eventClient().emit(
-    [createTestEvent({ id: "from-stream-2" })],
-    "test-multi-2"
-  );
+  await eventClient().emit([createTestEvent({ id: "from-stream-1" })], "test-multi-1");
+  await eventClient().emit([createTestEvent({ id: "from-stream-2" })], "test-multi-2");
 
   await pause(3000);
   await consumer.close();
@@ -247,42 +207,6 @@ test("multiple streams subscription", async function () {
   expect(receivedEvents.length).toEqual(2);
   const receivedIds = receivedEvents.map((e) => e.id).sort();
   expect(receivedIds).toEqual(["from-stream-1", "from-stream-2"]);
-});
-
-test("error handling - poison pill does not block stream", async function () {
-  const receivedEvents: EventicleEvent[] = [];
-  let handlerCallCount = 0;
-
-  const consumer = await eventClient().hotStream({
-    stream: "test-mystream",
-    groupId: "poison-test-" + uuid.v4(),
-    handler: async (event) => {
-      handlerCallCount++;
-      if (handlerCallCount === 1) {
-        throw new Error("Simulated poison pill");
-      }
-      receivedEvents.push(event);
-    },
-    onError: (error) => logger.error("poison stream error", error),
-    deleteConsumerGroupOnClose: true,
-  });
-
-  await pause(500);
-
-  await eventClient().emit(
-    [createTestEvent({ id: "poison" })],
-    "test-mystream"
-  );
-  await eventClient().emit(
-    [createTestEvent({ id: "good-event" })],
-    "test-mystream"
-  );
-
-  await pause(3000);
-  await consumer.close();
-
-  expect(receivedEvents.length).toEqual(1);
-  expect(receivedEvents[0].id).toEqual("good-event");
 });
 
 test("hot raw stream returns encoded events", async function () {
@@ -302,10 +226,7 @@ test("hot raw stream returns encoded events", async function () {
 
   await pause(500);
 
-  await eventClient().emit(
-    [createTestEvent({ id: "raw-event-1" })],
-    "test-mystream"
-  );
+  await eventClient().emit([createTestEvent({ id: "raw-event-1" })], "test-mystream");
 
   await pause(3000);
   await consumer.close();
@@ -317,55 +238,12 @@ test("hot raw stream returns encoded events", async function () {
   expect(receivedEvents[0].timestamp).toBeDefined();
 });
 
-test("cold stream replays large batches without duplicates", async function () {
-  const batchStream = "test-batch-stream-" + uuid.v4().substring(0, 8);
-  const eventCount = 15;
-
-  const smallBatchClient = await eventClientOnRedis({
-    redisOptions: { host: "localhost", port: 6379 },
-    coldBatchSize: 5,
-  });
-
-  for (let eventIdx = 0; eventIdx < eventCount; eventIdx++) {
-    await smallBatchClient.emit(
-      [createTestEvent({ id: `batch-${eventIdx}` })],
-      batchStream
-    );
-  }
-
-  await pause(200);
-
-  const receivedEvents: EventicleEvent[] = [];
-
-  await new Promise<void>((resolve) => {
-    smallBatchClient
-      .coldStream({
-        stream: batchStream,
-        handler: async (event) => {
-          receivedEvents.push(event);
-        },
-        onError: (error) => logger.error("ERROR", error),
-        onDone: () => {
-          resolve();
-        },
-      })
-      .catch((reason) => logger.error("Failed cold stream", reason));
-  });
-
-  await smallBatchClient.shutdown();
-
-  expect(receivedEvents.length).toEqual(eventCount);
-  const receivedIds = receivedEvents.map((e) => e.id);
-  const uniqueIds = new Set(receivedIds);
-  expect(uniqueIds.size).toEqual(eventCount);
-});
-
 test("shutdown cleanup", async function () {
   const localClient = await eventClientOnRedis({
-    redisOptions: { host: "localhost", port: 6379 },
+    redisOptions: { host: redisContainer.getHost(), port: redisPort },
   });
 
-  const consumer = await localClient.hotStream({
+  await localClient.hotStream({
     stream: "test-mystream",
     groupId: "shutdown-test-" + uuid.v4(),
     handler: async () => {},

@@ -2,9 +2,9 @@ import {
   CompressionTypes,
   Kafka, KafkaConfig,
   Producer,
-  ProducerConfig,
-  TopicMessages
-} from "kafkajs";
+  TopicMessages,
+  KafkaJSError
+} from "@confluentinc/kafka-javascript/lib/kafkajs";
 import {logger} from "@eventicle/eventicle-utilities";
 import * as uuid from "uuid";
 import {HealthCheckStatus} from "../eventclient-kafka";
@@ -21,30 +21,13 @@ export interface IKafkaJSProtocolError {
 }
 
 export function isKafkaJSProtocolError(error: unknown): error is IKafkaJSProtocolError {
-  return error && typeof error === 'object' && (error as any).name === 'KafkaJSProtocolError';
+  return error && typeof error === 'object' && 'code' in (error as any) && (error as any) instanceof KafkaJSError;
 }
 
 /**
  * KafkaOutboxSender is responsible for sending events from an event outbox to Kafka, ensuring
  * reliable event delivery using an outbox pattern. It interacts with a Kafka producer, manages
  * connection state, and handles errors that may arise during data transmission.
- *
- * This class provides methods to handle connection management, data batching, and reliable
- * flushing of messages to Kafka. It ensures idempotent delivery of events via Kafka's producer
- * configurations.
- *
- * Features:
- * - Connects and disconnects from Kafka safely.
- * - Reads batched events from an outbox and pushes them to Kafka.
- * - Implements a retry mechanism in case of specific Kafka errors (e.g., UNKNOWN_PRODUCER_ID).
- * - Tracks producer health status.
- * - Manages periodic heartbeat flushes for idle intervals.
- * - Reports infrastructure failures during message transmission.
- *
- * Dependencies:
- * - Requires an instance of `EventOutbox` for outbox functionality.
- * - Requires Kafka configuration (`KafkaConfig`) to initialize the Kafka connection.
- * - Optionally accepts additional producer configurations like `maxOutgoingBatchSize` and `flushIntervalMs`.
  */
 export class KafkaOutboxSender implements OutboxSender {
   public recordsSent = 0;
@@ -61,26 +44,19 @@ export class KafkaOutboxSender implements OutboxSender {
   constructor(
     protected eventOutbox: EventOutbox,
     protected kafkaConfig: KafkaConfig,
-    protected producerConfig: Omit<
-      ProducerConfig,
-      'allowAutoTopicCreation' | 'maxInFlightRequests' | 'idempotent'
-      > & {maxOutgoingBatchSize?: number; flushIntervalMs?: number} = {
+    protected producerConfig: {maxOutgoingBatchSize?: number; flushIntervalMs?: number} = {
       maxOutgoingBatchSize: 10000,
       flushIntervalMs: 40
     }
   ) {
-    this.kafka = new Kafka(kafkaConfig)
+    this.kafka = new Kafka({kafkaJS: kafkaConfig} as any)
     this.createProducer();
   }
 
   async notify(): Promise<void> {
     if (!this.isConnected) {
-      // this forces a bubble up to the original event producer through the event client.
-      // otherwise, its not obvious to the calling code that kafka isn't connected.
       throw new Error('You must connect before events can be sent');
     }
-
-    // if already in flight, this will do nothing.
     this.flush()
   }
 
@@ -88,18 +64,11 @@ export class KafkaOutboxSender implements OutboxSender {
     if (this.isConnected) {
       return;
     }
-    this.producer.on("producer.connect", args => {
-      this.producerHealth.status = "connected"
-      this.producerHealth.healthy = true
-    })
-    this.producer.on("producer.disconnect", args => {
-      this.producerHealth.status = "disconnected"
-      this.producerHealth.healthy = false
-    })
 
-    // how often to do a heartbeat flush.  Most messages will go via the `notify` route.
     const regularFlushIntervalMs = 400;
     await this.producer.connect();
+    this.producerHealth.status = "connected"
+    this.producerHealth.healthy = true
     this.intervalTimeout = setInterval(() => this.flush(), regularFlushIntervalMs);
 
     this.isConnected = true;
@@ -114,6 +83,8 @@ export class KafkaOutboxSender implements OutboxSender {
     clearInterval(this.intervalTimeout);
 
     await this.producer.disconnect();
+    this.producerHealth.status = "disconnected"
+    this.producerHealth.healthy = false
     logger.debug('Disconnected');
     this.isConnected = false;
   };
@@ -121,24 +92,21 @@ export class KafkaOutboxSender implements OutboxSender {
   private createProducer = () => {
     logger.debug('Creating a new producer');
     this.producer = this.kafka.producer({
-      maxInFlightRequests: 1,
-      idempotent: true,
-      allowAutoTopicCreation: true,
-      ...this.producerConfig
-    });
+      kafkaJS: {
+        maxInFlightRequests: 1,
+        idempotent: true,
+        allowAutoTopicCreation: true,
+        acks: -1,
+        compression: CompressionTypes.GZIP
+      }
+    } as any);
     logger.debug('Created a new producer');
   };
 
-  // tslint:disable-next-line: cyclomatic-complexity
-  private async flush (
-  ) {
+  private async flush () {
     if (this.isFlushing) {
       return;
     }
-    /**
-     * Ensures that if the interval call ends up being concurrent due latency in sendBatch,
-     * unintentionally overlapping cycles are deferred to the next interval.
-     */
     const out = this.eventOutbox
     this.isFlushing = true;
     return dataStore().transaction(async () => {
@@ -164,9 +132,7 @@ export class KafkaOutboxSender implements OutboxSender {
       );
 
       try {
-
         const topicMessages = outgoingRecords.map(value => {
-
           return {
             topic: value.stream,
             messages: value.events.map(encoded => ({
@@ -181,8 +147,6 @@ export class KafkaOutboxSender implements OutboxSender {
         logger.debug("Send message batch ", topicMessages)
         await this.producer.sendBatch({
           topicMessages,
-          acks: -1,
-          compression: CompressionTypes.GZIP
         });
 
         this.recordsSent += outgoingRecords.length;
@@ -197,12 +161,8 @@ export class KafkaOutboxSender implements OutboxSender {
         }
         this.lastSendErrored = false
         return;
-      } catch (error) {
-        /**
-         * If for some reason this producer is no longer recognized by th\\e broker,
-         * create a new producer.
-         */
-        if (isKafkaJSProtocolError(error) && error.type === 'UNKNOWN_PRODUCER_ID') {
+      } catch (error: any) {
+        if (isKafkaJSProtocolError(error) && error.code === 59) { // ERR_UNKNOWN_PRODUCER_ID
           await this.producer.disconnect();
           this.createProducer();
           await this.producer.connect();
