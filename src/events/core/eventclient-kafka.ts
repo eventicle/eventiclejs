@@ -255,8 +255,9 @@ class EventclientKafka implements EventClient {
 
     consumers.push(cons)
 
+    const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
+
     await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
-      const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
       await cons.subscribe({topics, replace: retry})
 
       let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount))
@@ -307,7 +308,9 @@ class EventclientKafka implements EventClient {
         healthStatus.healthy = false
         healthStatus.status = "disconnected"
         consumerGroups = consumerGroups.filter(value => value !== config.groupId)
-      }
+      },
+      pause: () => { cons.pause(topics.map(t => ({ topic: t }))) },
+      resume: () => { cons.resume(topics.map(t => ({ topic: t }))) },
     }
   }
 
@@ -603,8 +606,9 @@ class EventclientKafka implements EventClient {
 
     consumers.push(cons)
 
+    const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
+
     await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
-      const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
       await cons.subscribe({topics, replace: retry})
 
       let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount))
@@ -661,7 +665,9 @@ class EventclientKafka implements EventClient {
         healthStatus.healthy = false
         healthStatus.status = "disconnected"
         consumerGroups = consumerGroups.filter(value => value !== config.consumerName)
-      }
+      },
+      pause: () => { cons.pause(topics.map(t => ({ topic: t }))) },
+      resume: () => { cons.resume(topics.map(t => ({ topic: t }))) },
     }
   }
 

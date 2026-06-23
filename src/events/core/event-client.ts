@@ -248,6 +248,10 @@ export interface EventicleEvent<T = any> {
 export interface EventSubscriptionControl {
   /** Closes the subscription and releases associated resources */
   close: () => Promise<void>
+  /** Pauses consumption on all subscribed topics */
+  pause?: () => void
+  /** Resumes consumption on all subscribed topics */
+  resume?: () => void
 }
 
 /**
