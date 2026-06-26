@@ -73,7 +73,8 @@ export function getKafkaClientHealth(): KafkaClientHealth {
 }
 
 export async function connectBroker(config: KafkaConfig) {
-  kafka = new Kafka({kafkaJS: config} as any)
+  const {logCreator, ...rest} = config as any
+  kafka = new Kafka({kafkaJS: rest} as any)
 }
 
 export type TopicFailureConfiguration = {
