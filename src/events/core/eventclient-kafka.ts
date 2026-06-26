@@ -294,7 +294,15 @@ class EventclientKafka implements EventClient {
       })
     })
 
+    const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
+
     return {
+      pause: () => {
+        cons.pause(topics.map(t => ({ topic: t })))
+      },
+      resume: () => {
+        cons.resume(topics.map(t => ({ topic: t })))
+      },
       close: async () => {
         await cons.disconnect()
         consumerGroups = consumerGroups.filter(value => value !== config.groupId)
@@ -668,7 +676,15 @@ class EventclientKafka implements EventClient {
       })
     })
 
+    const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
+
     return {
+      pause: () => {
+        cons.pause(topics.map(t => ({ topic: t })))
+      },
+      resume: () => {
+        cons.resume(topics.map(t => ({ topic: t })))
+      },
       close: async () => {
         if (config.deleteConsumerGroupOnClose) {
           const admin = kafka.admin()
