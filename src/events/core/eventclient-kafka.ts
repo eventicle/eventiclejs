@@ -64,6 +64,17 @@ export function getKafkaClient(): Kafka {
   return kafka;
 }
 
+/**
+ * Returns current health status for all Kafka consumers and the producer.
+ *
+ * Known limitation: The confluent KafkaJS compatibility layer does not expose
+ * consumer lifecycle events (consumer.crash, consumer.disconnect, consumer.stop)
+ * that the original kafkajs client provided. Health status is only updated at
+ * consumer startup (after successful subscribe/run) and explicit close/disconnect.
+ * Runtime disconnects or broker-initiated rebalances will NOT be reflected here.
+ * The confluent client handles reconnection internally via librdkafka, but this
+ * health check cannot detect transient disconnected states.
+ */
 export function getKafkaClientHealth(): KafkaClientHealth {
   return {
     consumers: consumerGroupHealth,
