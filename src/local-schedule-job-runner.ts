@@ -4,7 +4,7 @@ import {logger} from "@eventicle/eventicle-utilities";
 import {maybeRenderError} from "@eventicle/eventicle-utilities/dist/logger-util";
 import {dataStore} from "./";
 import * as nodeCron from "node-cron"
-import {CronExpressionParser} from "cron-parser"
+import * as CronParser from "cron-parser"
 
 
 /**
@@ -22,7 +22,7 @@ export class LocalScheduleJobRunner implements ScheduleJobRunner {
   }
 
   private nextCronExecutionTime(crontab: string): number {
-    return CronExpressionParser.parse(crontab).next().getTime()
+    return CronParser.parseExpression(crontab).next().getTime()
   }
 
   async addScheduleTaskListener(component: string, exec: (name: string, id: string, data: any) => Promise<void>): Promise<void> {
