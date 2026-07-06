@@ -207,3 +207,80 @@ test("cold hot stream fully replays historical and also events afterwards", asyn
   expect(myevents.length).toEqual(2);
   expect(myevents[0].id).toEqual("epic");
 });
+
+
+test("hotStream returns working pause/resume that stops and restarts message delivery", async function () {
+  const stream = `pause-resume-test-${uuid.v4()}`;
+  let received: EventicleEvent[] = [];
+
+  const control = await eventClient().hotStream({
+    stream,
+    groupId: "pause-test-" + uuid.v4(),
+    handler: async (event) => {
+      received.push(event);
+    },
+    onError: (error) => logger.error("ERROR in pause test: " + error),
+  });
+
+  // Verify pause and resume exist on the real control object
+  expect(control.pause).toBeDefined();
+  expect(typeof control.pause).toBe("function");
+  expect(control.resume).toBeDefined();
+  expect(typeof control.resume).toBe("function");
+
+  // Emit repeatedly until consumer is active (handles rebalance delays)
+  const deadline = Date.now() + 60000;
+  while (received.length === 0 && Date.now() < deadline) {
+    await eventClient().emit(
+      [{
+        data: { seq: 1 },
+        type: "pause-test-event",
+        id: uuid.v4(),
+        createdAt: Date.now(),
+        causedByType: "",
+        causedById: "",
+        source: "",
+        domainId: uuid.v4(),
+      }],
+      stream
+    );
+    await pause(2000);
+  }
+
+  expect(received.length).toBeGreaterThanOrEqual(1);
+  const countBeforePause = received.length;
+
+  // Pause consumption
+  control.pause!();
+  await pause(2000);
+
+  // Emit 3 events while paused
+  for (let i = 0; i < 3; i++) {
+    await eventClient().emit(
+      [{
+        data: { seq: countBeforePause + i + 1 },
+        type: "pause-test-event",
+        id: uuid.v4(),
+        createdAt: Date.now(),
+        causedByType: "",
+        causedById: "",
+        source: "",
+        domainId: uuid.v4(),
+      }],
+      stream
+    );
+  }
+
+  // Wait 10s. If pause works, nothing new should arrive.
+  await pause(10000);
+  expect(received.length).toBe(countBeforePause);
+
+  // Resume consumption
+  control.resume!();
+
+  // Events emitted during pause should now be delivered
+  await waitFor(() => received.length >= countBeforePause + 3, 30000);
+  expect(received.length).toBeGreaterThanOrEqual(countBeforePause + 3);
+
+  await control.close();
+});
