@@ -58,6 +58,8 @@ export async function cleanStartingProxyEventClient(createClient: () => Promise<
       })
 
       return Promise.resolve({
+        pause: () => { subControl?.pause?.() },
+        resume: () => { subControl?.resume?.() },
         close: () => {
           if (!subControl) {
             logger.warn("Attempted to close hot subscription, but the event client has not yet successfully connected. This is a no-op")
@@ -75,6 +77,8 @@ export async function cleanStartingProxyEventClient(createClient: () => Promise<
       })
 
       return Promise.resolve({
+        pause: () => { subControl?.pause?.() },
+        resume: () => { subControl?.resume?.() },
         close: () => {
           if (!subControl) {
             logger.warn("Attempted to close hot subscription, but the event client has not yet successfully connected. This is a no-op")
