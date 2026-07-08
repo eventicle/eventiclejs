@@ -1,7 +1,7 @@
 import { ScheduleJobRunner } from "@eventicle/eventicle-utilities/dist/schedule-job-runner";
 import { logger } from "@eventicle/eventicle-utilities";
 import { maybeRenderError } from "@eventicle/eventicle-utilities/dist/logger-util";
-import { CronExpressionParser } from "cron-parser";
+import * as CronParser from "cron-parser";
 import { dataStore } from "@eventicle/eventicle-utilities/dist/datastore";
 import {Queue, QueueEvents, RedisOptions, Worker} from "bullmq";
 import safeStringify from 'fast-safe-stringify';
@@ -189,7 +189,7 @@ export class BullMQScheduleJobRunner implements ScheduleJobRunner {
   constructor(readonly config: RedisOptions) {}
 
   private nextCronExecutionTime(crontab: string): number {
-    return CronExpressionParser.parse(crontab).next().getTime();
+    return CronParser.parseExpression(crontab).next().getTime();
   }
 
   /**
