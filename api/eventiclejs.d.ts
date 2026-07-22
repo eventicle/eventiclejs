@@ -1209,6 +1209,10 @@ export declare function eventSourceName(): string;
 declare interface EventSubscriptionControl {
     /** Closes the subscription and releases associated resources */
     close: () => Promise<void>;
+    /** Pauses consumption from the subscribed streams */
+    pause?: () => void;
+    /** Resumes consumption after a pause */
+    resume?: () => void;
 }
 
 /**
