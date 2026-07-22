@@ -267,8 +267,8 @@ class EventclientKafka implements EventClient {
 
     consumers.push(cons)
 
+    const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
     await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
-      const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
       await cons.subscribe({topics, replace: retry})
 
       let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, config.groupId, "COLD_HOT", config.parallelEventCount))
@@ -314,6 +314,12 @@ class EventclientKafka implements EventClient {
     })
 
     return {
+      pause: () => {
+        cons.pause(topics.map(t => ({ topic: t })))
+      },
+      resume: () => {
+        cons.resume(topics.map(t => ({ topic: t })))
+      },
       close: async () => {
         await cons.disconnect()
         healthStatus.healthy = false
@@ -615,8 +621,8 @@ class EventclientKafka implements EventClient {
 
     consumers.push(cons)
 
+    const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
     await connectConsumerWithOptionalCreation(config.stream, cons, async (retry) => {
-      const topics = Array.isArray(config.stream) ? config.stream : [config.stream]
       await cons.subscribe({topics, replace: retry})
 
       let newRunConf = sanitizeRunConfig(consumerConfigFactory.consumerRunConfig(config.stream, config.consumerName, "HOT", config.parallelEventCount))
@@ -656,6 +662,12 @@ class EventclientKafka implements EventClient {
     })
 
     return {
+      pause: () => {
+        cons.pause(topics.map(t => ({ topic: t })))
+      },
+      resume: () => {
+        cons.resume(topics.map(t => ({ topic: t })))
+      },
       close: async () => {
         if (config.deleteConsumerGroupOnClose) {
           const admin = kafka.admin()
