@@ -7,6 +7,7 @@ import {
   isEncodedEvent
 } from "../event-client";
 import {dataStore} from "@eventicle/eventicle-utilities/dist/datastore";
+import {logger} from "@eventicle/eventicle-utilities";
 
 
 export type OutboxEventList = {
@@ -32,6 +33,19 @@ export interface EventOutbox {
  */
 export interface OutboxSender {
   notify(): Promise<void>
+
+  /**
+   * Stop sending and release the transport.
+   *
+   * Implementations must stop any periodic flush, wait for a flush already in
+   * progress, and only then release the connection. Called by
+   * {@link OutboxEventClient.shutdown}.
+   *
+   * Optional so that existing `OutboxSender` implementations keep compiling. A
+   * sender without it leaks its flush loop past shutdown, which is the defect
+   * this exists to close, so implement it.
+   */
+  disconnect?(): Promise<void>
 }
 
 /**
@@ -106,8 +120,47 @@ export class OutboxEventClient implements EventClient {
     return this.delegate.isConnected();
   }
 
-  shutdown(): Promise<void> {
-    return this.delegate.shutdown();
+  /**
+   * Shut the client down: the sender first, then the wrapped delegate.
+   *
+   * This previously shut down only the delegate. The sender's 400ms flush
+   * interval therefore survived `shutdown()` completely and kept flushing until
+   * the process was killed on its exit timer. A flush caught by that kill can
+   * have published to Kafka and lost the `DELETE` that records it, so the rows
+   * are re-sent on restart.
+   *
+   * Sender before delegate: the sender is the outbound path and must stop
+   * producing before the consumers behind the delegate go away. A sender that
+   * fails to stop cleanly must not prevent the delegate from shutting down, so
+   * its failure is logged and re-raised only after the delegate has had its
+   * turn.
+   *
+   * The caller is responsible for ordering: run this *after* the HTTP server has
+   * closed. `notify()` throws once the sender is disconnected, so any request
+   * still in flight would see its emit fail.
+   */
+  async shutdown(): Promise<void> {
+    let senderError: unknown;
+
+    if (this.sender.disconnect) {
+      try {
+        await this.sender.disconnect();
+      } catch (error) {
+        senderError = error;
+        logger.error("Outbox sender failed to disconnect during shutdown", error);
+      }
+    } else {
+      logger.warn(
+        "Outbox sender does not implement disconnect(). Its flush loop, if any, will " +
+        "outlive shutdown and may be killed mid-transaction on process exit."
+      );
+    }
+
+    await this.delegate.shutdown();
+
+    if (senderError) {
+      throw senderError;
+    }
   }
 
 }
